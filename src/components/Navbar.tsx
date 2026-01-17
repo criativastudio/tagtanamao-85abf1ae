@@ -1,10 +1,13 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { Menu, X, QrCode } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Menu, X, QrCode, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const { user, signOut, loading } = useAuth();
 
   const navLinks = [
     { name: "Produtos", href: "#produtos" },
@@ -24,12 +27,12 @@ const Navbar = () => {
         <div className="glass-strong rounded-2xl">
           <div className="container flex items-center justify-between h-16 px-4">
             {/* Logo */}
-            <a href="/" className="flex items-center gap-2">
+            <Link to="/" className="flex items-center gap-2">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-glow-secondary flex items-center justify-center">
                 <QrCode className="w-6 h-6 text-primary-foreground" />
               </div>
               <span className="font-display font-bold text-xl">QRPet</span>
-            </a>
+            </Link>
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-8">
@@ -46,12 +49,39 @@ const Navbar = () => {
 
             {/* Desktop CTA */}
             <div className="hidden md:flex items-center gap-3">
-              <Button variant="ghost" size="sm">
-                Entrar
-              </Button>
-              <Button variant="glow" size="sm">
-                Começar Agora
-              </Button>
+              {loading ? (
+                <div className="w-20 h-10 bg-muted/50 animate-pulse rounded-lg" />
+              ) : user ? (
+                <>
+                  <Link to="/dashboard">
+                    <Button variant="ghost" size="sm">
+                      <User className="w-4 h-4 mr-2" />
+                      Dashboard
+                    </Button>
+                  </Link>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => signOut()}
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sair
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Link to="/auth">
+                    <Button variant="ghost" size="sm">
+                      Entrar
+                    </Button>
+                  </Link>
+                  <Link to="/auth">
+                    <Button variant="glow" size="sm">
+                      Começar Agora
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
 
             {/* Mobile Menu Button */}
@@ -83,12 +113,40 @@ const Navbar = () => {
                   </a>
                 ))}
                 <div className="flex flex-col gap-2 pt-4 border-t border-border/50">
-                  <Button variant="outline" className="w-full">
-                    Entrar
-                  </Button>
-                  <Button variant="glow" className="w-full">
-                    Começar Agora
-                  </Button>
+                  {user ? (
+                    <>
+                      <Link to="/dashboard" onClick={() => setIsOpen(false)}>
+                        <Button variant="outline" className="w-full">
+                          <User className="w-4 h-4 mr-2" />
+                          Dashboard
+                        </Button>
+                      </Link>
+                      <Button 
+                        variant="ghost" 
+                        className="w-full"
+                        onClick={() => {
+                          signOut();
+                          setIsOpen(false);
+                        }}
+                      >
+                        <LogOut className="w-4 h-4 mr-2" />
+                        Sair
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Link to="/auth" onClick={() => setIsOpen(false)}>
+                        <Button variant="outline" className="w-full">
+                          Entrar
+                        </Button>
+                      </Link>
+                      <Link to="/auth" onClick={() => setIsOpen(false)}>
+                        <Button variant="glow" className="w-full">
+                          Começar Agora
+                        </Button>
+                      </Link>
+                    </>
+                  )}
                 </div>
               </div>
             </motion.div>

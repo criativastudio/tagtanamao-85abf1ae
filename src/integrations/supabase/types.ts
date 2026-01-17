@@ -14,13 +14,374 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      business_displays: {
+        Row: {
+          business_name: string | null
+          buttons: Json | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_activated: boolean | null
+          logo_url: string | null
+          qr_code: string
+          slug: string | null
+          theme_color: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          business_name?: string | null
+          buttons?: Json | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_activated?: boolean | null
+          logo_url?: string | null
+          qr_code?: string
+          slug?: string | null
+          theme_color?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          business_name?: string | null
+          buttons?: Json | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_activated?: boolean | null
+          logo_url?: string | null
+          qr_code?: string
+          slug?: string | null
+          theme_color?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_displays_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_items: {
+        Row: {
+          created_at: string | null
+          display_id: string | null
+          id: string
+          order_id: string | null
+          pet_tag_id: string | null
+          product_id: string | null
+          quantity: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string | null
+          display_id?: string | null
+          id?: string
+          order_id?: string | null
+          pet_tag_id?: string | null
+          product_id?: string | null
+          quantity?: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string | null
+          display_id?: string | null
+          id?: string
+          order_id?: string | null
+          pet_tag_id?: string | null
+          product_id?: string | null
+          quantity?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_display_id_fkey"
+            columns: ["display_id"]
+            isOneToOne: false
+            referencedRelation: "business_displays"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_pet_tag_id_fkey"
+            columns: ["pet_tag_id"]
+            isOneToOne: false
+            referencedRelation: "pet_tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          created_at: string | null
+          id: string
+          notes: string | null
+          payment_method: string | null
+          shipping_address: string | null
+          shipping_city: string | null
+          shipping_name: string | null
+          shipping_phone: string | null
+          shipping_state: string | null
+          shipping_zip: string | null
+          status: string | null
+          total_amount: number
+          tracking_code: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          shipping_address?: string | null
+          shipping_city?: string | null
+          shipping_name?: string | null
+          shipping_phone?: string | null
+          shipping_state?: string | null
+          shipping_zip?: string | null
+          status?: string | null
+          total_amount: number
+          tracking_code?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          shipping_address?: string | null
+          shipping_city?: string | null
+          shipping_name?: string | null
+          shipping_phone?: string | null
+          shipping_state?: string | null
+          shipping_zip?: string | null
+          status?: string | null
+          total_amount?: number
+          tracking_code?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pet_tags: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          id: string
+          is_activated: boolean | null
+          owner_name: string | null
+          pet_name: string | null
+          pet_photo_url: string | null
+          phone: string | null
+          qr_code: string
+          reward_enabled: boolean | null
+          reward_text: string | null
+          slug: string | null
+          updated_at: string | null
+          user_id: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          id?: string
+          is_activated?: boolean | null
+          owner_name?: string | null
+          pet_name?: string | null
+          pet_photo_url?: string | null
+          phone?: string | null
+          qr_code?: string
+          reward_enabled?: boolean | null
+          reward_text?: string | null
+          slug?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          id?: string
+          is_activated?: boolean | null
+          owner_name?: string | null
+          pet_name?: string | null
+          pet_photo_url?: string | null
+          phone?: string | null
+          qr_code?: string
+          reward_enabled?: boolean | null
+          reward_text?: string | null
+          slug?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pet_tags_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          name: string
+          price: number
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          name: string
+          price: number
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          name?: string
+          price?: number
+          type?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          is_admin: boolean | null
+          phone: string | null
+          updated_at: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id: string
+          is_admin?: boolean | null
+          phone?: string | null
+          updated_at?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          is_admin?: boolean | null
+          phone?: string | null
+          updated_at?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
+      qr_scans: {
+        Row: {
+          city: string | null
+          country: string | null
+          display_id: string | null
+          id: string
+          ip_address: string | null
+          latitude: number | null
+          longitude: number | null
+          pet_tag_id: string | null
+          scanned_at: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          display_id?: string | null
+          id?: string
+          ip_address?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          pet_tag_id?: string | null
+          scanned_at?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          display_id?: string | null
+          id?: string
+          ip_address?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          pet_tag_id?: string | null
+          scanned_at?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qr_scans_display_id_fkey"
+            columns: ["display_id"]
+            isOneToOne: false
+            referencedRelation: "business_displays"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qr_scans_pet_tag_id_fkey"
+            columns: ["pet_tag_id"]
+            isOneToOne: false
+            referencedRelation: "pet_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
