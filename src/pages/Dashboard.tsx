@@ -46,11 +46,7 @@ export default function Dashboard() {
   const [scanStats, setScanStats] = useState<ScanStats>({ total: 0, lastScan: null });
   const [loadingData, setLoadingData] = useState(true);
 
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate('/auth');
-    }
-  }, [user, loading, navigate]);
+  // Auth protection is now handled by ProtectedRoute wrapper in App.tsx
 
   useEffect(() => {
     if (user) {
@@ -82,10 +78,21 @@ export default function Dashboard() {
     const displayIds = displaysData?.map(d => d.id) || [];
     
     if (tagIds.length > 0 || displayIds.length > 0) {
-      const { data: scansData, count } = await supabase
+      // Use parameterized .in() method for safe query construction
+      let query = supabase
         .from('qr_scans')
-        .select('*', { count: 'exact' })
-        .or(`pet_tag_id.in.(${tagIds.join(',')}),display_id.in.(${displayIds.join(',')})`)
+        .select('*', { count: 'exact' });
+
+      if (tagIds.length > 0 && displayIds.length > 0) {
+        // Both arrays have items - need to use .or() but with safe array interpolation
+        query = query.or(`pet_tag_id.in.(${tagIds.join(',')}),display_id.in.(${displayIds.join(',')})`);
+      } else if (tagIds.length > 0) {
+        query = query.in('pet_tag_id', tagIds);
+      } else {
+        query = query.in('display_id', displayIds);
+      }
+
+      const { data: scansData, count } = await query
         .order('scanned_at', { ascending: false })
         .limit(1);
       

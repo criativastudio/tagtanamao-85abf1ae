@@ -125,7 +125,10 @@ export default function ActivateProduct() {
       });
 
     } catch (error) {
-      console.error('Activation error:', error);
+      // Only log error details in development mode to prevent info leakage
+      if (import.meta.env.DEV) {
+        console.error('Activation error:', error);
+      }
       toast({
         title: 'Erro ao ativar',
         description: 'Ocorreu um erro ao ativar o produto. Tente novamente.',
