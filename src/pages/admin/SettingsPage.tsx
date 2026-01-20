@@ -26,7 +26,8 @@ import {
   Mail,
   Key,
   Hash,
-  ChevronDown
+  ChevronDown,
+  Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -180,6 +181,42 @@ export default function SettingsPage() {
     description: 'Tags QR inteligentes que conectam seus pets e negócios ao mundo digital.',
     ctaText: 'Comprar Agora',
   });
+
+  // Search functionality
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Define searchable sections
+  const sections = [
+    { 
+      id: 'pix', 
+      keywords: ['pix', 'pagamento', 'chave', 'whatsapp', 'notificação', 'notificações', 'telefone', 'email', 'cpf', 'cnpj'],
+      title: 'Configurações PIX'
+    },
+    { 
+      id: 'security', 
+      keywords: ['segurança', 'senha', 'exclusão', 'deletar', 'apagar', 'password'],
+      title: 'Segurança'
+    },
+    { 
+      id: 'qr-export', 
+      keywords: ['exportar', 'impressão', 'qr', 'qrcode', 'código', 'categoria', 'svg', 'corel', '1m', 'metro'],
+      title: 'Exportação para Impressão'
+    },
+    { 
+      id: 'landing', 
+      keywords: ['landing', 'página', 'inicial', 'hero', 'título', 'subtítulo', 'cta', 'botão'],
+      title: 'Landing Page'
+    },
+  ];
+
+  const filteredSections = searchQuery.trim() 
+    ? sections.filter(section => 
+        section.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        section.keywords.some(kw => kw.includes(searchQuery.toLowerCase()))
+      )
+    : sections;
+
+  const visibleSectionIds = new Set(filteredSections.map(s => s.id));
 
   useEffect(() => {
     if (!authLoading && profile && !profile.is_admin) {
@@ -427,19 +464,55 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-background p-6">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/admin')}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Configurações</h1>
-          <p className="text-muted-foreground">Todas as configurações do sistema em um só lugar</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/admin')}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Configurações</h1>
+            <p className="text-muted-foreground">Todas as configurações do sistema em um só lugar</p>
+          </div>
+        </div>
+        
+        {/* Search bar */}
+        <div className="relative w-full sm:w-80">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar funcionalidade..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 bg-muted/30"
+          />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+              onClick={() => setSearchQuery('')}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       </div>
 
+      {/* Search Results Info */}
+      {searchQuery && (
+        <div className="max-w-4xl mb-4">
+          <p className="text-sm text-muted-foreground">
+            {filteredSections.length === 0 
+              ? 'Nenhuma funcionalidade encontrada' 
+              : `${filteredSections.length} seção(ões) encontrada(s)`
+            }
+          </p>
+        </div>
+      )}
+
       <div className="max-w-4xl space-y-4">
-        <Accordion type="multiple" defaultValue={['pix']} className="space-y-4">
+        <Accordion type="multiple" defaultValue={searchQuery ? filteredSections.map(s => s.id) : ['pix']} className="space-y-4">
           {/* PIX Settings */}
+          {visibleSectionIds.has('pix') && (
           <AccordionItem value="pix" className="glass-card rounded-xl border-0 overflow-hidden">
             <AccordionTrigger className="px-6 py-4 hover:no-underline">
               <div className="flex items-center gap-3">
@@ -518,8 +591,10 @@ export default function SettingsPage() {
               </div>
             </AccordionContent>
           </AccordionItem>
+          )}
 
           {/* Security Settings */}
+          {visibleSectionIds.has('security') && (
           <AccordionItem value="security" className="glass-card rounded-xl border-0 overflow-hidden">
             <AccordionTrigger className="px-6 py-4 hover:no-underline">
               <div className="flex items-center gap-3">
@@ -597,10 +672,12 @@ export default function SettingsPage() {
               </div>
             </AccordionContent>
           </AccordionItem>
+          )}
 
         </Accordion>
 
         {/* QR Export Settings - Seção Direta (sem accordion) */}
+        {visibleSectionIds.has('qr-export') && (
         <Card className="glass-card border-0">
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -710,8 +787,10 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+        )}
 
         {/* Landing Page Settings */}
+        {visibleSectionIds.has('landing') && (
         <Card className="glass-card border-0">
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -769,6 +848,7 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+        )}
       </div>
 
       {/* Dialogs */}
