@@ -1,0 +1,486 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Dog, 
+  ArrowLeft, 
+  Eye, 
+  Edit2, 
+  MapPin, 
+  Gift,
+  Save,
+  X,
+  ExternalLink,
+  QrCode,
+  Clock
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { ImageUpload } from '@/components/bio/ImageUpload';
+import { useAuth as useAuthContext } from '@/hooks/useAuth';
+
+interface PetTag {
+  id: string;
+  qr_code: string;
+  slug: string | null;
+  is_activated: boolean;
+  pet_name: string | null;
+  pet_photo_url: string | null;
+  owner_name: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  address: string | null;
+  reward_enabled: boolean | null;
+  reward_text: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+interface ScanInfo {
+  count: number;
+  lastScan: string | null;
+  lastLocation: string | null;
+}
+
+export default function PetTagsManager() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  const [petTags, setPetTags] = useState<PetTag[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedTag, setSelectedTag] = useState<PetTag | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [scanStats, setScanStats] = useState<Record<string, ScanInfo>>({});
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    pet_name: '',
+    pet_photo_url: '',
+    owner_name: '',
+    phone: '',
+    whatsapp: '',
+    address: '',
+    reward_enabled: false,
+    reward_text: ''
+  });
+
+  useEffect(() => {
+    if (user) {
+      fetchPetTags();
+    }
+  }, [user]);
+
+  const fetchPetTags = async () => {
+    setLoading(true);
+    
+    const { data, error } = await supabase
+      .from('pet_tags')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      toast({
+        title: 'Erro ao carregar tags',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } else if (data) {
+      setPetTags(data);
+      
+      // Fetch scan stats for each tag
+      const stats: Record<string, ScanInfo> = {};
+      for (const tag of data) {
+        const { data: scans, count } = await supabase
+          .from('qr_scans')
+          .select('*', { count: 'exact' })
+          .eq('pet_tag_id', tag.id)
+          .order('scanned_at', { ascending: false })
+          .limit(1);
+        
+        stats[tag.id] = {
+          count: count || 0,
+          lastScan: scans?.[0]?.scanned_at || null,
+          lastLocation: scans?.[0]?.city ? `${scans[0].city}, ${scans[0].country}` : null
+        };
+      }
+      setScanStats(stats);
+    }
+    
+    setLoading(false);
+  };
+
+  const handleSelectTag = (tag: PetTag) => {
+    setSelectedTag(tag);
+    setFormData({
+      pet_name: tag.pet_name || '',
+      pet_photo_url: tag.pet_photo_url || '',
+      owner_name: tag.owner_name || '',
+      phone: tag.phone || '',
+      whatsapp: tag.whatsapp || '',
+      address: tag.address || '',
+      reward_enabled: tag.reward_enabled || false,
+      reward_text: tag.reward_text || ''
+    });
+    setEditMode(false);
+  };
+
+  const handleSave = async () => {
+    if (!selectedTag) return;
+    
+    setSaving(true);
+    
+    const { error } = await supabase
+      .from('pet_tags')
+      .update({
+        pet_name: formData.pet_name || null,
+        pet_photo_url: formData.pet_photo_url || null,
+        owner_name: formData.owner_name || null,
+        phone: formData.phone || null,
+        whatsapp: formData.whatsapp || null,
+        address: formData.address || null,
+        reward_enabled: formData.reward_enabled,
+        reward_text: formData.reward_text || null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', selectedTag.id);
+    
+    if (error) {
+      toast({
+        title: 'Erro ao salvar',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } else {
+      toast({
+        title: 'Tag atualizada!',
+        description: 'As informações foram salvas com sucesso.'
+      });
+      setEditMode(false);
+      fetchPetTags();
+      setSelectedTag({ ...selectedTag, ...formData });
+    }
+    
+    setSaving(false);
+  };
+
+  const handlePhotoUpload = (url: string) => {
+    setFormData(prev => ({ ...prev, pet_photo_url: url }));
+  };
+
+  const handlePhotoRemove = () => {
+    setFormData(prev => ({ ...prev, pet_photo_url: '' }));
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                <Dog className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-foreground">Tags Pet</h1>
+                <p className="text-xs text-muted-foreground">{petTags.length} tags cadastradas</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="container mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Tags List */}
+          <div className="lg:col-span-1">
+            <div className="glass-card rounded-xl p-4">
+              <h2 className="text-sm font-semibold text-muted-foreground mb-4">SUAS TAGS</h2>
+              
+              {petTags.length === 0 ? (
+                <div className="text-center py-8">
+                  <Dog className="w-12 h-12 mx-auto text-muted-foreground/50 mb-2" />
+                  <p className="text-muted-foreground">Nenhuma tag cadastrada</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-4"
+                    onClick={() => navigate('/dashboard/activate')}
+                  >
+                    Ativar Tag
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {petTags.map((tag) => (
+                    <motion.button
+                      key={tag.id}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleSelectTag(tag)}
+                      className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left ${
+                        selectedTag?.id === tag.id 
+                          ? 'bg-primary/20 border border-primary/30' 
+                          : 'bg-muted/30 hover:bg-muted/50'
+                      }`}
+                    >
+                      {tag.pet_photo_url ? (
+                        <img 
+                          src={tag.pet_photo_url} 
+                          alt={tag.pet_name || 'Pet'}
+                          className="w-12 h-12 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                          <Dog className="w-6 h-6 text-primary" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground truncate">
+                          {tag.pet_name || 'Pet sem nome'}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Eye className="w-3 h-3" />
+                          <span>{scanStats[tag.id]?.count || 0} leituras</span>
+                        </div>
+                      </div>
+                      <div className={`w-2 h-2 rounded-full ${tag.is_activated ? 'bg-primary' : 'bg-muted'}`} />
+                    </motion.button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Tag Details / Editor */}
+          <div className="lg:col-span-2">
+            <AnimatePresence mode="wait">
+              {selectedTag ? (
+                <motion.div
+                  key={selectedTag.id}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="glass-card rounded-xl overflow-hidden"
+                >
+                  {/* Tag Header */}
+                  <div className="relative h-48 bg-gradient-to-br from-primary/30 to-primary/10">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      {formData.pet_photo_url ? (
+                        <img 
+                          src={formData.pet_photo_url} 
+                          alt={formData.pet_name || 'Pet'}
+                          className="w-32 h-32 rounded-full object-cover border-4 border-background shadow-xl"
+                        />
+                      ) : (
+                        <div className="w-32 h-32 rounded-full bg-background/80 flex items-center justify-center border-4 border-background shadow-xl">
+                          <Dog className="w-16 h-16 text-primary" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Actions */}
+                    <div className="absolute top-4 right-4 flex gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => window.open(`/pet/${selectedTag.qr_code}`, '_blank')}
+                      >
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Ver Página
+                      </Button>
+                      {editMode ? (
+                        <>
+                          <Button variant="ghost" size="sm" onClick={() => setEditMode(false)}>
+                            <X className="w-4 h-4" />
+                          </Button>
+                          <Button variant="hero" size="sm" onClick={handleSave} disabled={saving}>
+                            <Save className="w-4 h-4 mr-2" />
+                            Salvar
+                          </Button>
+                        </>
+                      ) : (
+                        <Button variant="outline" size="sm" onClick={() => setEditMode(true)}>
+                          <Edit2 className="w-4 h-4 mr-2" />
+                          Editar
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-6">
+                    {/* Stats */}
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      <div className="text-center p-4 rounded-lg bg-muted/30">
+                        <Eye className="w-5 h-5 mx-auto mb-1 text-primary" />
+                        <p className="text-2xl font-bold text-foreground">{scanStats[selectedTag.id]?.count || 0}</p>
+                        <p className="text-xs text-muted-foreground">Leituras</p>
+                      </div>
+                      <div className="text-center p-4 rounded-lg bg-muted/30">
+                        <Clock className="w-5 h-5 mx-auto mb-1 text-blue-400" />
+                        <p className="text-sm font-medium text-foreground">
+                          {scanStats[selectedTag.id]?.lastScan 
+                            ? new Date(scanStats[selectedTag.id].lastScan!).toLocaleDateString('pt-BR')
+                            : '-'
+                          }
+                        </p>
+                        <p className="text-xs text-muted-foreground">Última leitura</p>
+                      </div>
+                      <div className="text-center p-4 rounded-lg bg-muted/30">
+                        <MapPin className="w-5 h-5 mx-auto mb-1 text-orange-400" />
+                        <p className="text-sm font-medium text-foreground truncate">
+                          {scanStats[selectedTag.id]?.lastLocation || '-'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Local</p>
+                      </div>
+                    </div>
+
+                    {/* QR Code Info */}
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 mb-6">
+                      <QrCode className="w-5 h-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <p className="text-xs text-muted-foreground">Código do Produto</p>
+                        <p className="font-mono text-sm text-foreground">{selectedTag.qr_code}</p>
+                      </div>
+                    </div>
+
+                    {/* Form */}
+                    <div className="space-y-4">
+                      {editMode && user && (
+                        <div>
+                          <Label>Foto do Pet</Label>
+                          <ImageUpload
+                            userId={user.id}
+                            currentUrl={formData.pet_photo_url || null}
+                            onUpload={handlePhotoUpload}
+                            onRemove={handlePhotoRemove}
+                            type="profile"
+                          />
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="pet_name">Nome do Pet</Label>
+                          <Input
+                            id="pet_name"
+                            value={formData.pet_name}
+                            onChange={(e) => setFormData(prev => ({ ...prev, pet_name: e.target.value }))}
+                            disabled={!editMode}
+                            placeholder="Ex: Rex"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="owner_name">Nome do Dono</Label>
+                          <Input
+                            id="owner_name"
+                            value={formData.owner_name}
+                            onChange={(e) => setFormData(prev => ({ ...prev, owner_name: e.target.value }))}
+                            disabled={!editMode}
+                            placeholder="Ex: João Silva"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="phone">Telefone</Label>
+                          <Input
+                            id="phone"
+                            value={formData.phone}
+                            onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                            disabled={!editMode}
+                            placeholder="Ex: (11) 99999-9999"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="whatsapp">WhatsApp</Label>
+                          <Input
+                            id="whatsapp"
+                            value={formData.whatsapp}
+                            onChange={(e) => setFormData(prev => ({ ...prev, whatsapp: e.target.value }))}
+                            disabled={!editMode}
+                            placeholder="Ex: 5511999999999"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="address">Endereço</Label>
+                        <Textarea
+                          id="address"
+                          value={formData.address}
+                          onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                          disabled={!editMode}
+                          placeholder="Endereço para localização no mapa"
+                          rows={2}
+                        />
+                      </div>
+
+                      {/* Reward Section */}
+                      <div className="p-4 rounded-lg border border-border bg-muted/20">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <Gift className="w-5 h-5 text-primary" />
+                            <Label htmlFor="reward">Recompensa</Label>
+                          </div>
+                          <Switch
+                            id="reward"
+                            checked={formData.reward_enabled}
+                            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, reward_enabled: checked }))}
+                            disabled={!editMode}
+                          />
+                        </div>
+                        {formData.reward_enabled && (
+                          <Textarea
+                            value={formData.reward_text}
+                            onChange={(e) => setFormData(prev => ({ ...prev, reward_text: e.target.value }))}
+                            disabled={!editMode}
+                            placeholder="Ex: Ofereço R$ 100 de recompensa para quem encontrar meu pet!"
+                            rows={2}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="glass-card rounded-xl p-12 text-center"
+                >
+                  <Dog className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Selecione uma Tag</h3>
+                  <p className="text-muted-foreground">
+                    Escolha uma tag na lista ao lado para ver e editar as informações
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -13,6 +13,8 @@ import ActivateProduct from "./pages/ActivateProduct";
 import PublicPetPage from "./pages/PublicPetPage";
 import PublicBioPage from "./pages/PublicBioPage";
 import BioEditor from "./pages/BioEditor";
+import PetTagsManager from "./pages/PetTagsManager";
+import DisplaysManager from "./pages/DisplaysManager";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +42,22 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <ActivateProduct />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/tags"
+              element={
+                <ProtectedRoute>
+                  <PetTagsManager />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/displays"
+              element={
+                <ProtectedRoute>
+                  <DisplaysManager />
                 </ProtectedRoute>
               }
             />
