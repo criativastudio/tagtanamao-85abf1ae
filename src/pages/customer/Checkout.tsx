@@ -8,7 +8,8 @@ import {
   CreditCard,
   Truck,
   Check,
-  Loader2
+  Loader2,
+  Ticket
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +26,22 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/hooks/useCart';
 import { ShippingQuote } from '@/types/ecommerce';
+import CouponInput from '@/components/checkout/CouponInput';
+
+interface AppliedCoupon {
+  id: string;
+  code: string;
+  description: string | null;
+  discount_type: 'percentage' | 'fixed';
+  discount_value: number;
+  min_order_value: number | null;
+  max_discount: number | null;
+  max_uses: number | null;
+  current_uses: number;
+  valid_from: string | null;
+  valid_until: string | null;
+  is_active: boolean;
+}
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -53,6 +70,10 @@ export default function Checkout() {
   const [shippingQuotes, setShippingQuotes] = useState<ShippingQuote[]>([]);
   const [selectedShipping, setSelectedShipping] = useState<ShippingQuote | null>(null);
   
+  // Coupon
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  
   // Order result
   const [orderResult, setOrderResult] = useState<{
     orderId: string;
@@ -80,7 +101,12 @@ export default function Checkout() {
   }, [profile]);
 
   const getTotalWithShipping = () => {
-    return getCartTotal() + (selectedShipping?.price || 0);
+    return getCartTotal() - discountAmount + (selectedShipping?.price || 0);
+  };
+
+  const handleApplyCoupon = (coupon: AppliedCoupon | null, discount: number) => {
+    setAppliedCoupon(coupon);
+    setDiscountAmount(discount);
   };
 
   const formatCurrency = (value: number) => {
@@ -179,11 +205,21 @@ export default function Checkout() {
           shipping_zip: shippingData.zip,
           shipping_cost: selectedShipping?.price || 0,
           shipping_method: selectedShipping?.service,
+          coupon_id: appliedCoupon?.id || null,
+          discount_amount: discountAmount,
         })
         .select()
         .single();
 
       if (orderError) throw orderError;
+
+      // Increment coupon usage if applied
+      if (appliedCoupon) {
+        await supabase
+          .from('coupons')
+          .update({ current_uses: appliedCoupon.current_uses + 1 })
+          .eq('id', appliedCoupon.id);
+      }
 
       // Create order items - only include product_id if it's a valid UUID
       const isValidUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
@@ -509,6 +545,26 @@ export default function Checkout() {
                     <span className="text-muted-foreground">Subtotal</span>
                     <span>{formatCurrency(getCartTotal())}</span>
                   </div>
+                  
+                  {/* Coupon Input */}
+                  <div className="py-2">
+                    <CouponInput
+                      orderTotal={getCartTotal()}
+                      appliedCoupon={appliedCoupon}
+                      onApplyCoupon={handleApplyCoupon}
+                    />
+                  </div>
+                  
+                  {discountAmount > 0 && (
+                    <div className="flex justify-between text-sm text-primary">
+                      <span className="flex items-center gap-1">
+                        <Ticket className="w-3 h-3" />
+                        Desconto
+                      </span>
+                      <span>-{formatCurrency(discountAmount)}</span>
+                    </div>
+                  )}
+                  
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Frete</span>
                     <span className={selectedShipping?.price === 0 ? 'text-primary' : ''}>

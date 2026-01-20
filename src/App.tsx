@@ -21,6 +21,7 @@ import NotFound from "./pages/NotFound";
 import OrdersManager from "./pages/admin/OrdersManager";
 import TemplatesManager from "./pages/admin/TemplatesManager";
 import ProductsManager from "./pages/admin/ProductsManager";
+import CouponsManager from "./pages/admin/CouponsManager";
 import Shop from "./pages/customer/Shop";
 import Checkout from "./pages/customer/Checkout";
 import MyOrders from "./pages/customer/MyOrders";
@@ -107,6 +108,7 @@ const App = () => (
             <Route path="/admin/pedidos" element={<ProtectedRoute><OrdersManager /></ProtectedRoute>} />
             <Route path="/admin/templates" element={<ProtectedRoute><TemplatesManager /></ProtectedRoute>} />
             <Route path="/admin/produtos" element={<ProtectedRoute><ProductsManager /></ProtectedRoute>} />
+            <Route path="/admin/cupons" element={<ProtectedRoute><CouponsManager /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
