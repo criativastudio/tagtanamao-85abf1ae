@@ -20,6 +20,7 @@ import Shop from "./pages/customer/Shop";
 import Checkout from "./pages/customer/Checkout";
 import ArtCustomizer from "./pages/customer/ArtCustomizer";
 import MyOrders from "./pages/customer/MyOrders";
+import UserSettings from "./pages/customer/UserSettings";
 import ProductsManager from "./pages/admin/ProductsManager";
 import OrdersManager from "./pages/admin/OrdersManager";
 import TemplatesManager from "./pages/admin/TemplatesManager";
@@ -104,6 +105,7 @@ const App = () => (
               <Route path="/loja" element={<Shop />} />
               <Route path="/loja/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
               <Route path="/meus-pedidos" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
+              <Route path="/dashboard/configuracoes" element={<ProtectedRoute><UserSettings /></ProtectedRoute>} />
               <Route path="/arte/:templateId" element={<ProtectedRoute><ArtCustomizer /></ProtectedRoute>} />
               <Route path="/arte/:templateId/:artId" element={<ProtectedRoute><ArtCustomizer /></ProtectedRoute>} />
               {/* Admin routes */}
