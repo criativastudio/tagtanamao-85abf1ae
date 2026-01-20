@@ -16,18 +16,29 @@ import {
   Search,
   Trash2,
   AlertTriangle,
-  User
+  User,
+  CheckSquare,
+  Square,
+  Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ImageUpload } from '@/components/bio/ImageUpload';
-import { useAuth as useAuthContext } from '@/hooks/useAuth';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface PetTag {
   id: string;
@@ -52,8 +63,10 @@ interface ScanInfo {
   lastLocation: string | null;
 }
 
+const ADMIN_PASSWORD = 'admin123'; // Em produção, use verificação via backend
+
 export default function PetTagsManager() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -65,6 +78,12 @@ export default function PetTagsManager() {
   const [scanStats, setScanStats] = useState<Record<string, ScanInfo>>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  
+  // Bulk delete state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [deletingBulk, setDeletingBulk] = useState(false);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -210,6 +229,70 @@ export default function PetTagsManager() {
     setDeleteConfirm(null);
   };
 
+  // Toggle selection for bulk delete
+  const toggleSelection = (id: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  // Select/deselect all filtered items
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredTags.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredTags.map(t => t.id)));
+    }
+  };
+
+  // Bulk delete with password confirmation
+  const handleBulkDelete = async () => {
+    if (passwordInput !== ADMIN_PASSWORD) {
+      toast({
+        title: 'Senha incorreta',
+        description: 'A senha de confirmação está incorreta.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setDeletingBulk(true);
+    const idsToDelete = Array.from(selectedIds);
+    
+    const { error } = await supabase
+      .from('pet_tags')
+      .delete()
+      .in('id', idsToDelete);
+
+    if (error) {
+      toast({
+        title: 'Erro ao excluir',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } else {
+      toast({
+        title: 'Tags excluídas',
+        description: `${idsToDelete.length} tags foram removidas com sucesso.`
+      });
+      if (selectedTag && selectedIds.has(selectedTag.id)) {
+        setSelectedTag(null);
+      }
+      setSelectedIds(new Set());
+      fetchPetTags();
+    }
+    
+    setDeletingBulk(false);
+    setBulkDeleteOpen(false);
+    setPasswordInput('');
+  };
+
   // Filter tags based on search term
   const filteredTags = petTags.filter(tag => {
     const term = searchTerm.toLowerCase();
@@ -258,7 +341,19 @@ export default function PetTagsManager() {
           {/* Tags List */}
           <div className="lg:col-span-1">
             <div className="glass-card rounded-xl p-4">
-              <h2 className="text-sm font-semibold text-muted-foreground mb-4">SUAS TAGS</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-muted-foreground">SUAS TAGS</h2>
+                {profile?.is_admin && selectedIds.size > 0 && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setBulkDeleteOpen(true)}
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Excluir ({selectedIds.size})
+                  </Button>
+                )}
+              </div>
               
               {/* Search Input */}
               <div className="relative mb-4">
@@ -270,6 +365,20 @@ export default function PetTagsManager() {
                   className="pl-10"
                 />
               </div>
+              
+              {/* Select All (Admin only) */}
+              {profile?.is_admin && filteredTags.length > 0 && (
+                <div className="flex items-center gap-2 mb-3 p-2 rounded-lg bg-muted/30">
+                  <Checkbox
+                    id="select-all"
+                    checked={selectedIds.size === filteredTags.length && filteredTags.length > 0}
+                    onCheckedChange={toggleSelectAll}
+                  />
+                  <Label htmlFor="select-all" className="text-sm cursor-pointer">
+                    Selecionar todos ({filteredTags.length})
+                  </Label>
+                </div>
+              )}
               
               {petTags.length === 0 ? (
                 <div className="text-center py-8">
@@ -296,19 +405,30 @@ export default function PetTagsManager() {
                     <motion.div
                       key={tag.id}
                       whileHover={{ scale: 1.02 }}
-                      className={`relative flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                      className={`relative flex items-center gap-2 p-3 rounded-lg transition-colors ${
                         selectedTag?.id === tag.id 
                           ? 'bg-primary/20 border border-primary/30' 
-                          : 'bg-muted/30 hover:bg-muted/50'
+                          : selectedIds.has(tag.id)
+                            ? 'bg-destructive/10 border border-destructive/30'
+                            : 'bg-muted/30 hover:bg-muted/50'
                       }`}
                     >
+                      {/* Checkbox for bulk selection (Admin only) */}
+                      {profile?.is_admin && (
+                        <Checkbox
+                          checked={selectedIds.has(tag.id)}
+                          onCheckedChange={() => toggleSelection(tag.id)}
+                          className="shrink-0"
+                        />
+                      )}
+                      
                       <button
                         onClick={() => handleSelectTag(tag)}
                         className="flex items-center gap-3 flex-1 text-left"
                       >
                         {tag.pet_photo_url ? (
                           <img 
-                            src={tag.pet_photo_url} 
+                            src={tag.pet_photo_url}
                             alt={tag.pet_name || 'Pet'}
                             className="w-12 h-12 rounded-full object-cover"
                           />
@@ -585,6 +705,62 @@ export default function PetTagsManager() {
           </div>
         </div>
       </div>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              Excluir {selectedIds.size} tags
+            </DialogTitle>
+            <DialogDescription>
+              Esta ação é irreversível. Digite a senha de administrador para confirmar a exclusão.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <Label htmlFor="password">Senha de confirmação</Label>
+            <div className="relative mt-2">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                id="password"
+                type="password"
+                placeholder="Digite a senha..."
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setBulkDeleteOpen(false);
+              setPasswordInput('');
+            }}>
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleBulkDelete}
+              disabled={deletingBulk || !passwordInput}
+            >
+              {deletingBulk ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  Excluindo...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Confirmar Exclusão
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
