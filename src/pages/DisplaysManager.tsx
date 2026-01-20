@@ -14,7 +14,9 @@ import {
   Palette,
   Link2,
   Plus,
-  Trash2
+  Trash2,
+  Search,
+  User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -75,6 +77,8 @@ export default function DisplaysManager() {
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [scanStats, setScanStats] = useState<Record<string, ScanInfo>>({});
+  const [searchTerm, setSearchTerm] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -229,6 +233,42 @@ export default function DisplaysManager() {
     }));
   };
 
+  const handleDelete = async (displayId: string) => {
+    const { error } = await supabase
+      .from('business_displays')
+      .delete()
+      .eq('id', displayId);
+
+    if (error) {
+      toast({
+        title: 'Erro ao excluir',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } else {
+      toast({
+        title: 'Display excluído',
+        description: 'O display foi removido com sucesso.'
+      });
+      if (selectedDisplay?.id === displayId) {
+        setSelectedDisplay(null);
+      }
+      fetchDisplays();
+    }
+    setDeleteConfirm(null);
+  };
+
+  // Filter displays based on search term
+  const filteredDisplays = displays.filter(display => {
+    const term = searchTerm.toLowerCase();
+    return (
+      display.qr_code.toLowerCase().includes(term) ||
+      display.id.toLowerCase().includes(term) ||
+      (display.business_name || '').toLowerCase().includes(term) ||
+      (display.description || '').toLowerCase().includes(term)
+    );
+  });
+
   const themeColors = [
     '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', 
     '#f59e0b', '#ef4444', '#06b6d4', '#84cc16'
@@ -271,6 +311,17 @@ export default function DisplaysManager() {
             <div className="glass-card rounded-xl p-4">
               <h2 className="text-sm font-semibold text-muted-foreground mb-4">SEUS DISPLAYS</h2>
               
+              {/* Search Input */}
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por código, nome, ID..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
               {displays.length === 0 ? (
                 <div className="text-center py-8">
                   <Building2 className="w-12 h-12 mx-auto text-muted-foreground/50 mb-2" />
@@ -284,47 +335,96 @@ export default function DisplaysManager() {
                     Ativar Display
                   </Button>
                 </div>
+              ) : filteredDisplays.length === 0 ? (
+                <div className="text-center py-8">
+                  <Search className="w-12 h-12 mx-auto text-muted-foreground/50 mb-2" />
+                  <p className="text-muted-foreground">Nenhum display encontrado</p>
+                  <p className="text-xs text-muted-foreground mt-1">Tente outro termo de busca</p>
+                </div>
               ) : (
-                <div className="space-y-2">
-                  {displays.map((display) => (
-                    <motion.button
+                <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                  {filteredDisplays.map((display) => (
+                    <motion.div
                       key={display.id}
                       whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleSelectDisplay(display)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left ${
+                      className={`relative flex items-center gap-3 p-3 rounded-lg transition-colors ${
                         selectedDisplay?.id === display.id 
                           ? 'bg-blue-500/20 border border-blue-500/30' 
                           : 'bg-muted/30 hover:bg-muted/50'
                       }`}
                     >
-                      {display.logo_url ? (
-                        <img 
-                          src={display.logo_url} 
-                          alt={display.business_name || 'Logo'}
-                          className="w-12 h-12 rounded-lg object-cover"
-                        />
+                      <button
+                        onClick={() => handleSelectDisplay(display)}
+                        className="flex items-center gap-3 flex-1 text-left"
+                      >
+                        {display.logo_url ? (
+                          <img 
+                            src={display.logo_url} 
+                            alt={display.business_name || 'Logo'}
+                            className="w-12 h-12 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <div 
+                            className="w-12 h-12 rounded-lg flex items-center justify-center"
+                            style={{ backgroundColor: `${display.theme_color}20` }}
+                          >
+                            <Building2 className="w-6 h-6" style={{ color: display.theme_color || '#3b82f6' }} />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground truncate">
+                            {display.business_name || 'Empresa sem nome'}
+                          </p>
+                          <p className="text-xs text-muted-foreground font-mono">{display.qr_code}</p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Eye className="w-3 h-3" />
+                            <span>{scanStats[display.id]?.count || 0} leituras</span>
+                          </div>
+                        </div>
+                      </button>
+                      
+                      {/* Delete button */}
+                      {deleteConfirm === display.id ? (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => handleDelete(display.id)}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => setDeleteConfirm(null)}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
                       ) : (
-                        <div 
-                          className="w-12 h-12 rounded-lg flex items-center justify-center"
-                          style={{ backgroundColor: `${display.theme_color}20` }}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 opacity-50 hover:opacity-100"
+                          onClick={() => setDeleteConfirm(display.id)}
                         >
-                          <Building2 className="w-6 h-6" style={{ color: display.theme_color || '#3b82f6' }} />
-                        </div>
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
                       )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-foreground truncate">
-                          {display.business_name || 'Empresa sem nome'}
-                        </p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Eye className="w-3 h-3" />
-                          <span>{scanStats[display.id]?.count || 0} leituras</span>
-                        </div>
-                      </div>
+                      
                       <div className={`w-2 h-2 rounded-full ${display.is_activated ? 'bg-blue-400' : 'bg-muted'}`} />
-                    </motion.button>
+                    </motion.div>
                   ))}
                 </div>
+              )}
+              
+              {/* Results count */}
+              {searchTerm && filteredDisplays.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-3 text-center">
+                  {filteredDisplays.length} de {displays.length} displays encontrados
+                </p>
               )}
             </div>
           </div>

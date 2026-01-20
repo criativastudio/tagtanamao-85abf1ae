@@ -12,7 +12,11 @@ import {
   X,
   ExternalLink,
   QrCode,
-  Clock
+  Clock,
+  Search,
+  Trash2,
+  AlertTriangle,
+  User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,6 +63,8 @@ export default function PetTagsManager() {
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [scanStats, setScanStats] = useState<Record<string, ScanInfo>>({});
+  const [searchTerm, setSearchTerm] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -179,6 +185,44 @@ export default function PetTagsManager() {
     setFormData(prev => ({ ...prev, pet_photo_url: '' }));
   };
 
+  const handleDelete = async (tagId: string) => {
+    const { error } = await supabase
+      .from('pet_tags')
+      .delete()
+      .eq('id', tagId);
+
+    if (error) {
+      toast({
+        title: 'Erro ao excluir',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } else {
+      toast({
+        title: 'Tag excluída',
+        description: 'A tag foi removida com sucesso.'
+      });
+      if (selectedTag?.id === tagId) {
+        setSelectedTag(null);
+      }
+      fetchPetTags();
+    }
+    setDeleteConfirm(null);
+  };
+
+  // Filter tags based on search term
+  const filteredTags = petTags.filter(tag => {
+    const term = searchTerm.toLowerCase();
+    return (
+      tag.qr_code.toLowerCase().includes(term) ||
+      tag.id.toLowerCase().includes(term) ||
+      (tag.pet_name || '').toLowerCase().includes(term) ||
+      (tag.owner_name || '').toLowerCase().includes(term) ||
+      (tag.phone || '').toLowerCase().includes(term) ||
+      (tag.whatsapp || '').toLowerCase().includes(term)
+    );
+  });
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -216,6 +260,17 @@ export default function PetTagsManager() {
             <div className="glass-card rounded-xl p-4">
               <h2 className="text-sm font-semibold text-muted-foreground mb-4">SUAS TAGS</h2>
               
+              {/* Search Input */}
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por código, nome, ID..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
               {petTags.length === 0 ? (
                 <div className="text-center py-8">
                   <Dog className="w-12 h-12 mx-auto text-muted-foreground/50 mb-2" />
@@ -229,44 +284,93 @@ export default function PetTagsManager() {
                     Ativar Tag
                   </Button>
                 </div>
+              ) : filteredTags.length === 0 ? (
+                <div className="text-center py-8">
+                  <Search className="w-12 h-12 mx-auto text-muted-foreground/50 mb-2" />
+                  <p className="text-muted-foreground">Nenhuma tag encontrada</p>
+                  <p className="text-xs text-muted-foreground mt-1">Tente outro termo de busca</p>
+                </div>
               ) : (
-                <div className="space-y-2">
-                  {petTags.map((tag) => (
-                    <motion.button
+                <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                  {filteredTags.map((tag) => (
+                    <motion.div
                       key={tag.id}
                       whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleSelectTag(tag)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left ${
+                      className={`relative flex items-center gap-3 p-3 rounded-lg transition-colors ${
                         selectedTag?.id === tag.id 
                           ? 'bg-primary/20 border border-primary/30' 
                           : 'bg-muted/30 hover:bg-muted/50'
                       }`}
                     >
-                      {tag.pet_photo_url ? (
-                        <img 
-                          src={tag.pet_photo_url} 
-                          alt={tag.pet_name || 'Pet'}
-                          className="w-12 h-12 rounded-full object-cover"
-                        />
+                      <button
+                        onClick={() => handleSelectTag(tag)}
+                        className="flex items-center gap-3 flex-1 text-left"
+                      >
+                        {tag.pet_photo_url ? (
+                          <img 
+                            src={tag.pet_photo_url} 
+                            alt={tag.pet_name || 'Pet'}
+                            className="w-12 h-12 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                            <Dog className="w-6 h-6 text-primary" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground truncate">
+                            {tag.pet_name || 'Pet sem nome'}
+                          </p>
+                          <p className="text-xs text-muted-foreground font-mono">{tag.qr_code}</p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Eye className="w-3 h-3" />
+                            <span>{scanStats[tag.id]?.count || 0} leituras</span>
+                          </div>
+                        </div>
+                      </button>
+                      
+                      {/* Delete button */}
+                      {deleteConfirm === tag.id ? (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => handleDelete(tag.id)}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => setDeleteConfirm(null)}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
                       ) : (
-                        <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                          <Dog className="w-6 h-6 text-primary" />
-                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 opacity-50 hover:opacity-100"
+                          onClick={() => setDeleteConfirm(tag.id)}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
                       )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-foreground truncate">
-                          {tag.pet_name || 'Pet sem nome'}
-                        </p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Eye className="w-3 h-3" />
-                          <span>{scanStats[tag.id]?.count || 0} leituras</span>
-                        </div>
-                      </div>
+                      
                       <div className={`w-2 h-2 rounded-full ${tag.is_activated ? 'bg-primary' : 'bg-muted'}`} />
-                    </motion.button>
+                    </motion.div>
                   ))}
                 </div>
+              )}
+              
+              {/* Results count */}
+              {searchTerm && filteredTags.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-3 text-center">
+                  {filteredTags.length} de {petTags.length} tags encontradas
+                </p>
               )}
             </div>
           </div>
