@@ -9,7 +9,10 @@ import {
   Truck,
   Check,
   Loader2,
-  Ticket
+  Ticket,
+  QrCode,
+  Copy,
+  CheckCircle2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,6 +46,13 @@ interface AppliedCoupon {
   is_active: boolean;
 }
 
+// Configuração do PIX - Em produção, mova para configurações do admin
+const PIX_CONFIG = {
+  chave: 'tagtanamao@gmail.com', // Chave PIX (email, telefone, CPF ou aleatória)
+  nome: 'Tag Tá Na Mão',
+  cidade: 'São Paulo',
+};
+
 export default function Checkout() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -52,6 +62,10 @@ export default function Checkout() {
   const [step, setStep] = useState<'shipping' | 'payment' | 'confirmation'>('shipping');
   const [loading, setLoading] = useState(false);
   const [loadingShipping, setLoadingShipping] = useState(false);
+  
+  // Payment method
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'asaas'>('pix');
+  const [pixCopied, setPixCopied] = useState(false);
   
   // Shipping form
   const [shippingData, setShippingData] = useState({
@@ -78,6 +92,7 @@ export default function Checkout() {
   const [orderResult, setOrderResult] = useState<{
     orderId: string;
     paymentLink: string;
+    paymentMethod: 'pix' | 'asaas';
   } | null>(null);
 
   useEffect(() => {
@@ -183,13 +198,29 @@ export default function Checkout() {
     return true;
   };
 
+  const generatePixPayload = (amount: number) => {
+    // Gera payload PIX simplificado (em produção, usar biblioteca pix-payload)
+    const payload = `${PIX_CONFIG.chave}`;
+    return payload;
+  };
+
+  const copyPixKey = () => {
+    navigator.clipboard.writeText(PIX_CONFIG.chave);
+    setPixCopied(true);
+    toast({
+      title: 'Chave PIX copiada!',
+      description: 'Cole no app do seu banco para pagar.',
+    });
+    setTimeout(() => setPixCopied(false), 3000);
+  };
+
   const handleCreateOrder = async () => {
     if (!validateShipping()) return;
     
     setLoading(true);
     
     try {
-      // Create order
+      // Create order with payment method info
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -197,6 +228,7 @@ export default function Checkout() {
           total_amount: getTotalWithShipping(),
           status: 'pending',
           payment_status: 'pending',
+          payment_method: paymentMethod,
           shipping_name: shippingData.name,
           shipping_phone: shippingData.phone,
           shipping_address: `${shippingData.address}, ${shippingData.number}${shippingData.complement ? ` - ${shippingData.complement}` : ''} - ${shippingData.neighborhood}`,
@@ -207,6 +239,7 @@ export default function Checkout() {
           shipping_method: selectedShipping?.service,
           coupon_id: appliedCoupon?.id || null,
           discount_amount: discountAmount,
+          notes: paymentMethod === 'pix' ? `Pagamento PIX - Aguardando confirmação manual` : null,
         })
         .select()
         .single();
@@ -237,14 +270,17 @@ export default function Checkout() {
 
       if (itemsError) throw itemsError;
 
-      // Generate payment link (placeholder - would integrate with Asaas)
-      const paymentLink = `https://sandbox.asaas.com/c/${order.id.slice(0, 8)}`;
-      
-      // Update order with payment link
-      await supabase
-        .from('orders')
-        .update({ asaas_payment_link: paymentLink })
-        .eq('id', order.id);
+      // Generate payment link based on method
+      let paymentLink = '';
+      if (paymentMethod === 'asaas') {
+        paymentLink = `https://sandbox.asaas.com/c/${order.id.slice(0, 8)}`;
+        
+        // Update order with payment link
+        await supabase
+          .from('orders')
+          .update({ asaas_payment_link: paymentLink })
+          .eq('id', order.id);
+      }
 
       // Send confirmation email
       try {
@@ -266,7 +302,9 @@ export default function Checkout() {
             shippingCity: shippingData.city,
             shippingState: shippingData.state,
             shippingZip: shippingData.zip,
-            paymentLink,
+            paymentLink: paymentMethod === 'pix' ? 'PIX Manual' : paymentLink,
+            paymentMethod,
+            pixKey: paymentMethod === 'pix' ? PIX_CONFIG.chave : undefined,
           },
         });
       } catch (emailError) {
@@ -280,6 +318,7 @@ export default function Checkout() {
       setOrderResult({
         orderId: order.id,
         paymentLink,
+        paymentMethod,
       });
       
       setStep('confirmation');
@@ -480,6 +519,69 @@ export default function Checkout() {
                   </Card>
                 )}
 
+                {/* Payment Method Selection */}
+                {selectedShipping && (
+                  <Card className="glass-card mt-6">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <CreditCard className="w-5 h-5" />
+                        Forma de Pagamento
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <RadioGroup
+                        value={paymentMethod}
+                        onValueChange={(value) => setPaymentMethod(value as 'pix' | 'asaas')}
+                      >
+                        <div
+                          className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-colors ${
+                            paymentMethod === 'pix'
+                              ? 'border-primary bg-primary/5'
+                              : 'border-border hover:border-primary/50'
+                          }`}
+                          onClick={() => setPaymentMethod('pix')}
+                        >
+                          <div className="flex items-center gap-3">
+                            <RadioGroupItem value="pix" id="pix" />
+                            <div>
+                              <p className="font-medium flex items-center gap-2">
+                                <QrCode className="w-4 h-4 text-primary" />
+                                PIX
+                                <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded">Recomendado</span>
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                Pagamento instantâneo • Liberação imediata
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div
+                          className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-colors mt-2 ${
+                            paymentMethod === 'asaas'
+                              ? 'border-primary bg-primary/5'
+                              : 'border-border hover:border-primary/50'
+                          }`}
+                          onClick={() => setPaymentMethod('asaas')}
+                        >
+                          <div className="flex items-center gap-3">
+                            <RadioGroupItem value="asaas" id="asaas" />
+                            <div>
+                              <p className="font-medium flex items-center gap-2">
+                                <CreditCard className="w-4 h-4" />
+                                Cartão / Boleto
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                Via plataforma de pagamento
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </RadioGroup>
+                    </CardContent>
+                  </Card>
+                )}
+
                 <Button
                   className="w-full mt-6"
                   size="lg"
@@ -488,10 +590,12 @@ export default function Checkout() {
                 >
                   {loading ? (
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : paymentMethod === 'pix' ? (
+                    <QrCode className="w-4 h-4 mr-2" />
                   ) : (
                     <CreditCard className="w-4 h-4 mr-2" />
                   )}
-                  Ir para Pagamento
+                  {paymentMethod === 'pix' ? 'Finalizar e Ver PIX' : 'Ir para Pagamento'}
                 </Button>
               </motion.div>
             )}
@@ -510,21 +614,81 @@ export default function Checkout() {
                   Pedido #{orderResult.orderId.slice(0, 8)}
                 </p>
                 
-                <Card className="glass-card mb-6">
-                  <CardContent className="pt-6">
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Clique no botão abaixo para efetuar o pagamento:
-                    </p>
-                    <Button
-                      size="lg"
-                      className="w-full"
-                      onClick={() => window.open(orderResult.paymentLink, '_blank')}
-                    >
-                      <CreditCard className="w-4 h-4 mr-2" />
-                      Pagar Agora
-                    </Button>
-                  </CardContent>
-                </Card>
+                {/* PIX Payment Instructions */}
+                {orderResult.paymentMethod === 'pix' && (
+                  <Card className="glass-card mb-6 text-left">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-primary">
+                        <QrCode className="w-5 h-5" />
+                        Pagamento via PIX
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="p-4 rounded-lg bg-muted/30 border border-primary/20">
+                        <p className="text-sm text-muted-foreground mb-2">Valor a pagar:</p>
+                        <p className="text-3xl font-bold text-primary">{formatCurrency(getTotalWithShipping())}</p>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Chave PIX ({PIX_CONFIG.chave.includes('@') ? 'E-mail' : 'Chave'})</Label>
+                        <div className="flex gap-2">
+                          <Input 
+                            value={PIX_CONFIG.chave} 
+                            readOnly 
+                            className="font-mono text-sm"
+                          />
+                          <Button
+                            variant={pixCopied ? 'default' : 'outline'}
+                            onClick={copyPixKey}
+                            className="shrink-0"
+                          >
+                            {pixCopied ? (
+                              <CheckCircle2 className="w-4 h-4" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                        <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                          <strong>Importante:</strong> Após o pagamento, envie o comprovante por WhatsApp para agilizar a liberação do seu pedido.
+                        </p>
+                      </div>
+                      
+                      <Button
+                        className="w-full"
+                        variant="hero"
+                        onClick={() => {
+                          const message = `Olá! Acabei de fazer o pedido #${orderResult.orderId.slice(0, 8)} e paguei via PIX. Segue comprovante:`;
+                          window.open(`https://wa.me/5511999999999?text=${encodeURIComponent(message)}`, '_blank');
+                        }}
+                      >
+                        Enviar Comprovante por WhatsApp
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+                
+                {/* Asaas Payment */}
+                {orderResult.paymentMethod === 'asaas' && (
+                  <Card className="glass-card mb-6">
+                    <CardContent className="pt-6">
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Clique no botão abaixo para efetuar o pagamento:
+                      </p>
+                      <Button
+                        size="lg"
+                        className="w-full"
+                        onClick={() => window.open(orderResult.paymentLink, '_blank')}
+                      >
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        Pagar Agora
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Info about tracking */}
                 <Card className="glass-card mb-6 text-left">
