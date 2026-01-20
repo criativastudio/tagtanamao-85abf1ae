@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.validate-admin-password]
 verify_jwt = false
+
+[functions.get-pet-tag]
+verify_jwt = false

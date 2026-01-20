@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Phone, MessageCircle, MapPin, Gift, AlertTriangle } from "lucide-react";
+import { Phone, MessageCircle, MapPin, Gift, AlertTriangle, ShieldCheck } from "lucide-react";
 
 interface PetTag {
   id: string;
@@ -17,6 +17,7 @@ interface PetTag {
   reward_enabled: boolean | null;
   reward_text: string | null;
   is_activated: boolean | null;
+  lost_mode: boolean | null;
 }
 
 const PublicPetPage = () => {
@@ -34,14 +35,13 @@ const PublicPetPage = () => {
       }
 
       try {
-        // Fetch pet tag by qr_code
-        const { data, error } = await supabase
-          .from("pet_tags")
-          .select("*")
-          .eq("qr_code", qrCode)
-          .single();
+        // Fetch pet tag via secure edge function that respects privacy settings
+        const { data, error } = await supabase.functions.invoke("get-pet-tag", {
+          body: { qrCode },
+        });
 
-        if (error || !data) {
+        if (error || data?.notFound || data?.error) {
+          console.error("Pet tag fetch error:", error || data?.error);
           setNotFound(true);
           setLoading(false);
           return;
@@ -154,6 +154,9 @@ const PublicPetPage = () => {
     );
   }
 
+  // Check if contact details are hidden (not in lost mode)
+  const hasContactInfo = pet.whatsapp || pet.phone || pet.address;
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary/10 to-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md overflow-hidden">
@@ -194,47 +197,66 @@ const PublicPetPage = () => {
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="space-y-3">
-            {pet.whatsapp && (
-              <Button
-                onClick={handleWhatsApp}
-                className="w-full h-12 bg-green-600 hover:bg-green-700 text-white"
-                size="lg"
-              >
-                <MessageCircle className="mr-2 h-5 w-5" />
-                Enviar WhatsApp
-              </Button>
-            )}
+          {/* Privacy Notice - when contact info is hidden */}
+          {!hasContactInfo && (
+            <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 flex items-start gap-3">
+              <ShieldCheck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-foreground">Pet Seguro em Casa</p>
+                <p className="text-sm text-muted-foreground">
+                  O tutor não marcou este pet como perdido. Se você encontrou este pet sozinho, 
+                  peça ao tutor para ativar o modo "Pet Perdido" no dashboard.
+                </p>
+              </div>
+            </div>
+          )}
 
-            {pet.phone && (
-              <Button
-                onClick={handleCall}
-                variant="outline"
-                className="w-full h-12"
-                size="lg"
-              >
-                <Phone className="mr-2 h-5 w-5" />
-                Ligar para o Tutor
-              </Button>
-            )}
+          {/* Action Buttons - only shown when contact info is available */}
+          {hasContactInfo && (
+            <div className="space-y-3">
+              {pet.whatsapp && (
+                <Button
+                  onClick={handleWhatsApp}
+                  className="w-full h-12 bg-green-600 hover:bg-green-700 text-white"
+                  size="lg"
+                >
+                  <MessageCircle className="mr-2 h-5 w-5" />
+                  Enviar WhatsApp
+                </Button>
+              )}
 
-            {pet.address && (
-              <Button
-                onClick={handleMaps}
-                variant="outline"
-                className="w-full h-12"
-                size="lg"
-              >
-                <MapPin className="mr-2 h-5 w-5" />
-                Ver Endereço no Mapa
-              </Button>
-            )}
-          </div>
+              {pet.phone && (
+                <Button
+                  onClick={handleCall}
+                  variant="outline"
+                  className="w-full h-12"
+                  size="lg"
+                >
+                  <Phone className="mr-2 h-5 w-5" />
+                  Ligar para o Tutor
+                </Button>
+              )}
+
+              {pet.address && (
+                <Button
+                  onClick={handleMaps}
+                  variant="outline"
+                  className="w-full h-12"
+                  size="lg"
+                >
+                  <MapPin className="mr-2 h-5 w-5" />
+                  Ver Endereço no Mapa
+                </Button>
+              )}
+            </div>
+          )}
 
           {/* Footer Message */}
           <p className="text-center text-sm text-muted-foreground">
-            Obrigado por ajudar a encontrar este pet! 💚
+            {hasContactInfo 
+              ? "Obrigado por ajudar a encontrar este pet! 💚"
+              : "Este pet está identificado com TagNaMão 🏷️"
+            }
           </p>
         </CardContent>
       </Card>

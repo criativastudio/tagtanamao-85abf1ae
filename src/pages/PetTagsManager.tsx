@@ -19,7 +19,9 @@ import {
   User,
   CheckSquare,
   Square,
-  Lock
+  Lock,
+  ShieldAlert,
+  ShieldCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,6 +55,7 @@ interface PetTag {
   address: string | null;
   reward_enabled: boolean | null;
   reward_text: string | null;
+  lost_mode: boolean | null;
   created_at: string | null;
   updated_at: string | null;
 }
@@ -88,6 +91,7 @@ export default function PetTagsManager() {
   // Form state
   const [formData, setFormData] = useState({
     pet_name: '',
+    lost_mode: false,
     pet_photo_url: '',
     owner_name: '',
     phone: '',
@@ -152,7 +156,8 @@ export default function PetTagsManager() {
       whatsapp: tag.whatsapp || '',
       address: tag.address || '',
       reward_enabled: tag.reward_enabled || false,
-      reward_text: tag.reward_text || ''
+      reward_text: tag.reward_text || '',
+      lost_mode: tag.lost_mode || false
     });
     setEditMode(false);
   };
@@ -173,6 +178,7 @@ export default function PetTagsManager() {
         address: formData.address || null,
         reward_enabled: formData.reward_enabled,
         reward_text: formData.reward_text || null,
+        lost_mode: formData.lost_mode,
         updated_at: new Date().toISOString()
       })
       .eq('id', selectedTag.id);
@@ -688,6 +694,33 @@ export default function PetTagsManager() {
                           placeholder="Endereço para localização no mapa"
                           rows={2}
                         />
+                      </div>
+
+                      {/* Lost Mode Section - Important privacy control */}
+                      <div className={`p-4 rounded-lg border-2 ${formData.lost_mode ? 'border-red-500 bg-red-500/10' : 'border-primary/30 bg-primary/5'}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            {formData.lost_mode ? (
+                              <ShieldAlert className="w-5 h-5 text-red-500" />
+                            ) : (
+                              <ShieldCheck className="w-5 h-5 text-primary" />
+                            )}
+                            <Label htmlFor="lost_mode" className={formData.lost_mode ? 'text-red-500 font-semibold' : 'font-semibold'}>
+                              {formData.lost_mode ? 'Pet Perdido!' : 'Pet Seguro em Casa'}
+                            </Label>
+                          </div>
+                          <Switch
+                            id="lost_mode"
+                            checked={formData.lost_mode}
+                            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, lost_mode: checked }))}
+                            disabled={!editMode}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {formData.lost_mode 
+                            ? 'Seus dados de contato (telefone, WhatsApp, endereço) estão VISÍVEIS para quem escanear o QR code.'
+                            : 'Seus dados de contato estão PROTEGIDOS. Ative o modo "Pet Perdido" para permitir que quem encontrar seu pet entre em contato.'}
+                        </p>
                       </div>
 
                       {/* Reward Section */}
