@@ -32,6 +32,42 @@ const MM_TO_PIXELS = 11.811; // 300 DPI conversion
 const QR_DIAMETER_MM = 23;
 const QR_DIAMETER_PX = Math.round(QR_DIAMETER_MM * MM_TO_PIXELS); // ~272 pixels
 
+// Generate a unique 6-digit numeric code
+const generateUniqueCode = async (): Promise<string> => {
+  const generateCode = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  };
+  
+  let code = generateCode();
+  let attempts = 0;
+  const maxAttempts = 100;
+  
+  while (attempts < maxAttempts) {
+    // Check if code exists in pet_tags
+    const { data: petData } = await supabase
+      .from('pet_tags')
+      .select('id')
+      .eq('qr_code', code)
+      .maybeSingle();
+    
+    // Check if code exists in business_displays
+    const { data: displayData } = await supabase
+      .from('business_displays')
+      .select('id')
+      .eq('qr_code', code)
+      .maybeSingle();
+    
+    if (!petData && !displayData) {
+      return code;
+    }
+    
+    code = generateCode();
+    attempts++;
+  }
+  
+  throw new Error('Não foi possível gerar um código único. Tente novamente.');
+};
+
 export default function AdminDashboard() {
   const { user, profile, loading } = useAuth();
   const navigate = useNavigate();
@@ -62,13 +98,17 @@ export default function AdminDashboard() {
     
     try {
       for (let i = 0; i < count; i++) {
-        // Insert into database to get the qr_code
+        // Generate unique 6-digit code
+        const uniqueCode = await generateUniqueCode();
+        
+        // Insert into database with the generated code
         const table = type === 'pet_tag' ? 'pet_tags' : 'business_displays';
         
         const { data, error } = await supabase
           .from(table)
           .insert({
-            user_id: user?.id
+            user_id: user?.id,
+            qr_code: uniqueCode
           })
           .select('id, qr_code')
           .single();
@@ -81,9 +121,12 @@ export default function AdminDashboard() {
           ? `${baseUrl}/pet/${data.qr_code}`
           : `${baseUrl}/display/${data.qr_code}`;
         
+        // Calculate QR size to fit inside circle with text
+        const qrSize = Math.round(QR_DIAMETER_PX * 0.65); // QR takes 65% of diameter
+        
         const dataUrl = await QRCodeLib.toDataURL(url, {
-          width: QR_DIAMETER_PX,
-          margin: 1,
+          width: qrSize,
+          margin: 0,
           color: {
             dark: '#000000',
             light: '#FFFFFF'
@@ -120,54 +163,52 @@ export default function AdminDashboard() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    // Canvas size with padding for text
-    const padding = 40;
-    const textHeight = 30;
-    canvas.width = QR_DIAMETER_PX + padding * 2;
-    canvas.height = QR_DIAMETER_PX + padding * 2 + textHeight;
+    // Canvas exactly 23mm diameter (circular)
+    canvas.width = QR_DIAMETER_PX;
+    canvas.height = QR_DIAMETER_PX;
     
-    // White background
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Create circular clipping path for QR code
-    const centerX = canvas.width / 2;
-    const centerY = padding + QR_DIAMETER_PX / 2;
+    const centerX = QR_DIAMETER_PX / 2;
+    const centerY = QR_DIAMETER_PX / 2;
     const radius = QR_DIAMETER_PX / 2;
+    
+    // White circular background
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fill();
     
     // Draw circular border
     ctx.beginPath();
-    ctx.arc(centerX, centerY, radius + 2, 0, Math.PI * 2);
+    ctx.arc(centerX, centerY, radius - 2, 0, Math.PI * 2);
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 3;
     ctx.stroke();
     
-    // Clip to circle and draw QR
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    ctx.clip();
-    
+    // Load and draw QR code (square, centered in upper portion)
     const img = new Image();
     img.src = code.dataUrl;
     
     await new Promise<void>((resolve) => {
       img.onload = () => {
-        ctx.drawImage(img, padding, padding, QR_DIAMETER_PX, QR_DIAMETER_PX);
+        const qrSize = Math.round(QR_DIAMETER_PX * 0.60); // QR takes 60% of diameter
+        const qrX = (QR_DIAMETER_PX - qrSize) / 2;
+        const qrY = Math.round(QR_DIAMETER_PX * 0.10); // 10% from top
+        
+        ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
         resolve();
       };
     });
     
-    ctx.restore();
-    
-    // Draw activation code text below
-    const activationCode = code.qr_code.split('-')[0].toUpperCase();
+    // Draw activation code text below QR but inside circle
+    const activationCode = code.qr_code;
     ctx.fillStyle = '#000000';
-    ctx.font = 'bold 16px Arial';
+    ctx.font = `bold ${Math.round(QR_DIAMETER_PX * 0.11)}px Arial`;
     ctx.textAlign = 'center';
-    ctx.fillText(activationCode, centerX, canvas.height - 10);
+    ctx.textBaseline = 'middle';
+    const textY = QR_DIAMETER_PX * 0.82; // Position text at 82% from top
+    ctx.fillText(activationCode, centerX, textY);
     
-    // Download
+    // Download with activation code as filename
     const link = document.createElement('a');
     link.download = `qrcode-${activationCode}.png`;
     link.href = canvas.toDataURL('image/png');
@@ -391,7 +432,7 @@ export default function AdminDashboard() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {generatedCodes.map((code) => {
-              const activationCode = code.qr_code.split('-')[0].toUpperCase();
+              const activationCode = code.qr_code;
               const isSelected = selectedCodes.has(code.id);
               
               return (
