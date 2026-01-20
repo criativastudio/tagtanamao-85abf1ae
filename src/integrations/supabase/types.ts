@@ -219,6 +219,57 @@ export type Database = {
           },
         ]
       }
+      coupons: {
+        Row: {
+          code: string
+          created_at: string
+          current_uses: number | null
+          description: string | null
+          discount_type: string
+          discount_value: number
+          id: string
+          is_active: boolean | null
+          max_discount: number | null
+          max_uses: number | null
+          min_order_value: number | null
+          updated_at: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          current_uses?: number | null
+          description?: string | null
+          discount_type: string
+          discount_value: number
+          id?: string
+          is_active?: boolean | null
+          max_discount?: number | null
+          max_uses?: number | null
+          min_order_value?: number | null
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          current_uses?: number | null
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          id?: string
+          is_active?: boolean | null
+          max_discount?: number | null
+          max_uses?: number | null
+          min_order_value?: number | null
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       customer_arts: {
         Row: {
           created_at: string
@@ -346,7 +397,9 @@ export type Database = {
         Row: {
           asaas_payment_id: string | null
           asaas_payment_link: string | null
+          coupon_id: string | null
           created_at: string | null
+          discount_amount: number | null
           id: string
           notes: string | null
           payment_method: string | null
@@ -369,7 +422,9 @@ export type Database = {
         Insert: {
           asaas_payment_id?: string | null
           asaas_payment_link?: string | null
+          coupon_id?: string | null
           created_at?: string | null
+          discount_amount?: number | null
           id?: string
           notes?: string | null
           payment_method?: string | null
@@ -392,7 +447,9 @@ export type Database = {
         Update: {
           asaas_payment_id?: string | null
           asaas_payment_link?: string | null
+          coupon_id?: string | null
           created_at?: string | null
+          discount_amount?: number | null
           id?: string
           notes?: string | null
           payment_method?: string | null
@@ -413,6 +470,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_user_id_fkey"
             columns: ["user_id"]
