@@ -11,10 +11,6 @@ import {
   Building2,
   Trash2,
   Check,
-  Grid3X3,
-  FolderPlus,
-  X,
-  FileDown,
   Settings
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -23,13 +19,6 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -583,95 +572,6 @@ export default function AdminDashboard() {
         </Button>
       </div>
 
-      {/* Categories Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="glass-card p-6 rounded-xl mb-6"
-      >
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <Grid3X3 className="w-6 h-6 text-primary" />
-            <h2 className="text-lg font-semibold text-foreground">Categorias para Impressão</h2>
-          </div>
-          
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setShowCategoryDialog(true)}
-            >
-              <FolderPlus className="w-4 h-4 mr-2" />
-              Nova Categoria
-            </Button>
-            
-            {categories.length > 0 && (
-              <Button 
-                variant="hero" 
-                size="sm"
-                onClick={() => setShowExportDialog(true)}
-              >
-                <FileDown className="w-4 h-4 mr-2" />
-                Exportar para Impressão
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {categories.length === 0 ? (
-          <p className="text-muted-foreground text-sm text-center py-4">
-            Crie categorias para organizar QR Codes e gerar arquivos prontos para impressão em 1m².
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {categories.map((category) => (
-              <div 
-                key={category.id}
-                className="p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-all"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-foreground">{category.name}</span>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => deleteCategory(category.id)}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground mb-3">
-                  {category.codes.length} QR Code(s)
-                </p>
-                <div className="flex gap-2">
-                  {selectedCodes.size > 0 && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => addSelectedToCategory(category.id)}
-                    >
-                      <Plus className="w-3 h-3 mr-1" />
-                      Adicionar ({selectedCodes.size})
-                    </Button>
-                  )}
-                  {category.codes.length > 0 && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => exportCategoryAsSVG(category.id)}
-                    >
-                      <Download className="w-3 h-3 mr-1" />
-                      Exportar
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Pet Tags Generator */}
@@ -917,94 +817,6 @@ export default function AdminDashboard() {
       {/* Hidden canvas for image generation */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-      {/* Create Category Dialog */}
-      <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Nova Categoria</DialogTitle>
-            <DialogDescription>
-              Crie uma categoria para organizar QR Codes e gerar arquivos para impressão.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 mt-4">
-            <div>
-              <Label htmlFor="categoryName">Nome da categoria</Label>
-              <Input
-                id="categoryName"
-                placeholder="Ex: Lote Janeiro 2025"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-            
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowCategoryDialog(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={createCategory} disabled={!newCategoryName.trim()}>
-                Criar Categoria
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Export Dialog */}
-      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Exportar para Impressão</DialogTitle>
-            <DialogDescription>
-              Selecione uma categoria para gerar arquivo SVG com QR Codes em grade (1m² / ~1600 códigos).
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 mt-4">
-            <div>
-              <Label>Categoria</Label>
-              <Select value={exportCategory} onValueChange={setExportCategory}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Selecione uma categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map(cat => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.name} ({cat.codes.length} códigos)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {exportCategory && (
-              <div className="p-3 bg-muted/50 rounded-lg text-sm">
-                <p className="font-medium">Informações do arquivo:</p>
-                <ul className="text-muted-foreground mt-1 space-y-1">
-                  <li>• Formato: SVG (compatível com CorelDRAW)</li>
-                  <li>• Tamanho: 1000mm × 1000mm (1m²)</li>
-                  <li>• Grade: ~40 × 40 códigos</li>
-                  <li>• Espaçamento: 2mm entre círculos</li>
-                </ul>
-              </div>
-            )}
-            
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowExportDialog(false)}>
-                Cancelar
-              </Button>
-              <Button 
-                onClick={() => exportCategory && exportCategoryAsSVG(exportCategory)} 
-                disabled={!exportCategory}
-              >
-                <FileDown className="w-4 h-4 mr-2" />
-                Exportar SVG
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

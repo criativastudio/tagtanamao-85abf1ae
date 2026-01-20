@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Settings,
   FileImage,
+  FileDown,
   QrCode,
   ShieldCheck,
   Dog,
@@ -64,6 +65,14 @@ const adminMenuItems: SettingItem[] = [
 ];
 
 const settingsItems: SettingItem[] = [
+  {
+    id: 'qr-export',
+    title: 'Exportação para Impressão',
+    description: 'Organize QR Codes em categorias e exporte para impressão em 1m².',
+    icon: FileDown,
+    path: '/admin/configuracoes/exportacao-qr',
+    color: 'text-emerald-400'
+  },
   {
     id: 'pix',
     title: 'Configurações PIX',
