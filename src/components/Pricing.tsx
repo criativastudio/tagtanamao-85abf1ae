@@ -1,6 +1,10 @@
 import { motion } from "framer-motion";
-import { Check, Star, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Check, Star, Sparkles, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useCart } from "@/hooks/useCart";
+import { useToast } from "@/hooks/use-toast";
+import { Product } from "@/types/ecommerce";
 
 const pricingPlans = [
   {
@@ -53,6 +57,37 @@ const pricingPlans = [
 ];
 
 const Pricing = () => {
+  const navigate = useNavigate();
+  const { addToCart, getCartCount } = useCart();
+  const { toast } = useToast();
+
+  const handleBuyNow = (plan: typeof pricingPlans[0]) => {
+    // Create product based on plan
+    const quantity = plan.name.includes("3") ? 3 : plan.name.includes("2") ? 2 : 1;
+    const product: Product = {
+      id: `pet-tag-pack-${quantity}`,
+      name: plan.name,
+      description: plan.description,
+      price: parseFloat(plan.price.replace(",", ".")),
+      type: 'pet_tag',
+      image_url: null,
+      is_active: true,
+      created_at: null,
+    };
+    
+    addToCart(product);
+    toast({
+      title: "Adicionado ao carrinho!",
+      description: (
+        <div className="flex items-center gap-2">
+          <Check className="w-4 h-4 text-primary" />
+          <span>{plan.name}</span>
+        </div>
+      ),
+    });
+    navigate('/loja/checkout');
+  };
+
   return (
     <section id="precos" className="relative py-24 overflow-hidden">
       {/* Background */}
@@ -129,6 +164,7 @@ const Pricing = () => {
                   variant={plan.popular ? "hero" : "outline"} 
                   size="lg" 
                   className="w-full"
+                  onClick={() => handleBuyNow(plan)}
                 >
                   {plan.popular && <Sparkles className="w-4 h-4" />}
                   Comprar Agora
