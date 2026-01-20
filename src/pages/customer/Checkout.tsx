@@ -246,6 +246,34 @@ export default function Checkout() {
         .update({ asaas_payment_link: paymentLink })
         .eq('id', order.id);
 
+      // Send confirmation email
+      try {
+        await supabase.functions.invoke('send-order-confirmation', {
+          body: {
+            customerEmail: profile?.email || user?.email,
+            customerName: shippingData.name,
+            orderId: order.id,
+            orderItems: cart.map(item => ({
+              name: item.product.name,
+              quantity: item.quantity,
+              price: item.product.price * item.quantity,
+            })),
+            subtotal: getCartTotal(),
+            discount: discountAmount,
+            shipping: selectedShipping?.price || 0,
+            total: getTotalWithShipping(),
+            shippingAddress: `${shippingData.address}, ${shippingData.number}${shippingData.complement ? ` - ${shippingData.complement}` : ''} - ${shippingData.neighborhood}`,
+            shippingCity: shippingData.city,
+            shippingState: shippingData.state,
+            shippingZip: shippingData.zip,
+            paymentLink,
+          },
+        });
+      } catch (emailError) {
+        console.error('Error sending confirmation email:', emailError);
+        // Don't fail the order if email fails
+      }
+
       // Clear cart
       clearCart();
 
@@ -498,9 +526,34 @@ export default function Checkout() {
                   </CardContent>
                 </Card>
 
-                <Button variant="outline" onClick={() => navigate('/dashboard')}>
-                  Ir para Meus Pedidos
-                </Button>
+                {/* Info about tracking */}
+                <Card className="glass-card mb-6 text-left">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                        <Package className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold mb-1">Acompanhe seu pedido</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Todos os detalhes do seu pedido, incluindo status de pagamento, 
+                          produção e código de rastreio, estão disponíveis no menu{' '}
+                          <strong className="text-primary">Meus Pedidos</strong> do seu painel.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button variant="outline" onClick={() => navigate('/meus-pedidos')}>
+                    <Package className="w-4 h-4 mr-2" />
+                    Ver Meus Pedidos
+                  </Button>
+                  <Button variant="ghost" onClick={() => navigate('/')}>
+                    Voltar à Loja
+                  </Button>
+                </div>
               </motion.div>
             )}
           </div>
