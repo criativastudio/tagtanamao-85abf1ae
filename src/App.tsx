@@ -11,6 +11,8 @@ import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import ActivateProduct from "./pages/ActivateProduct";
 import PublicPetPage from "./pages/PublicPetPage";
+import PublicBioPage from "./pages/PublicBioPage";
+import BioEditor from "./pages/BioEditor";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +44,22 @@ const App = () => (
               }
             />
             <Route
+              path="/dashboard/bio"
+              element={
+                <ProtectedRoute>
+                  <BioEditor />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/bio/:id"
+              element={
+                <ProtectedRoute>
+                  <BioEditor />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/admin"
               element={
                 <ProtectedRoute>
@@ -50,6 +68,7 @@ const App = () => (
               }
             />
             <Route path="/pet/:qrCode" element={<PublicPetPage />} />
+            <Route path="/bio/:slug" element={<PublicBioPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

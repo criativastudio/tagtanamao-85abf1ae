@@ -14,6 +14,119 @@ export type Database = {
   }
   public: {
     Tables: {
+      bio_page_analytics: {
+        Row: {
+          bio_page_id: string
+          button_id: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          event_type: string
+          id: string
+          ip_address: string | null
+          referrer: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          bio_page_id: string
+          button_id?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          referrer?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          bio_page_id?: string
+          button_id?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          referrer?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bio_page_analytics_bio_page_id_fkey"
+            columns: ["bio_page_id"]
+            isOneToOne: false
+            referencedRelation: "bio_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bio_pages: {
+        Row: {
+          buttons: Json | null
+          created_at: string
+          display_id: string | null
+          gallery_photos: Json | null
+          id: string
+          is_active: boolean | null
+          pet_tag_id: string | null
+          profile_photo_url: string | null
+          slug: string
+          subtitle: string | null
+          theme: Json | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          buttons?: Json | null
+          created_at?: string
+          display_id?: string | null
+          gallery_photos?: Json | null
+          id?: string
+          is_active?: boolean | null
+          pet_tag_id?: string | null
+          profile_photo_url?: string | null
+          slug: string
+          subtitle?: string | null
+          theme?: Json | null
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          buttons?: Json | null
+          created_at?: string
+          display_id?: string | null
+          gallery_photos?: Json | null
+          id?: string
+          is_active?: boolean | null
+          pet_tag_id?: string | null
+          profile_photo_url?: string | null
+          slug?: string
+          subtitle?: string | null
+          theme?: Json | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bio_pages_display_id_fkey"
+            columns: ["display_id"]
+            isOneToOne: false
+            referencedRelation: "business_displays"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bio_pages_pet_tag_id_fkey"
+            columns: ["pet_tag_id"]
+            isOneToOne: false
+            referencedRelation: "pet_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_displays: {
         Row: {
           business_name: string | null
