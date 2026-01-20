@@ -115,15 +115,45 @@ const createQRCodeCanvas = async (code: GeneratedQRCode): Promise<HTMLCanvasElem
   ctx.fillStyle = '#FFFFFF';
   ctx.fill();
   
-  // Thin circular border (cut marking) - reduced from 3 to 1 pixel
+  // Cut line circle (vector marking for die-cut) - magenta color standard for cut lines
   ctx.beginPath();
   ctx.arc(centerX, centerY, radius - 1, 0, Math.PI * 2);
-  ctx.strokeStyle = '#CCCCCC'; // Lighter gray for subtle cut line
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = '#FF00FF'; // Magenta - standard cut line color
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
+  
+  // Add registration marks (cross marks at cardinal points for alignment)
+  const markLength = 8;
+  const markOffset = 4;
+  ctx.strokeStyle = '#FF00FF';
+  ctx.lineWidth = 0.5;
+  
+  // Top mark
+  ctx.beginPath();
+  ctx.moveTo(centerX, markOffset);
+  ctx.lineTo(centerX, markOffset + markLength);
+  ctx.stroke();
+  
+  // Bottom mark
+  ctx.beginPath();
+  ctx.moveTo(centerX, QR_DIAMETER_PX - markOffset);
+  ctx.lineTo(centerX, QR_DIAMETER_PX - markOffset - markLength);
+  ctx.stroke();
+  
+  // Left mark
+  ctx.beginPath();
+  ctx.moveTo(markOffset, centerY);
+  ctx.lineTo(markOffset + markLength, centerY);
+  ctx.stroke();
+  
+  // Right mark
+  ctx.beginPath();
+  ctx.moveTo(QR_DIAMETER_PX - markOffset, centerY);
+  ctx.lineTo(QR_DIAMETER_PX - markOffset - markLength, centerY);
   ctx.stroke();
   
   // Generate larger QR code for better scanning
-  const qrSize = Math.round(QR_DIAMETER_PX * 0.72); // Increased from 60% to 72%
+  const qrSize = Math.round(QR_DIAMETER_PX * 0.68); // Slightly reduced to better fit
   
   const qrDataUrl = await QRCodeLib.toDataURL(code.dataUrl.includes('http') ? code.dataUrl : `${window.location.origin}/pet/${code.qr_code}`, {
     width: qrSize,
@@ -135,14 +165,14 @@ const createQRCodeCanvas = async (code: GeneratedQRCode): Promise<HTMLCanvasElem
     errorCorrectionLevel: 'H'
   });
   
-  // Load and draw QR code
+  // Load and draw QR code - positioned lower for better centering
   const img = new Image();
   img.src = qrDataUrl;
   
   await new Promise<void>((resolve) => {
     img.onload = () => {
       const qrX = (QR_DIAMETER_PX - qrSize) / 2;
-      const qrY = Math.round(QR_DIAMETER_PX * 0.06); // 6% from top
+      const qrY = Math.round(QR_DIAMETER_PX * 0.12); // Moved down from 6% to 12%
       ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
       resolve();
     };
@@ -151,10 +181,10 @@ const createQRCodeCanvas = async (code: GeneratedQRCode): Promise<HTMLCanvasElem
   // Draw activation code - smaller font, normal weight (not bold)
   const activationCode = code.qr_code;
   ctx.fillStyle = '#000000';
-  ctx.font = `${Math.round(QR_DIAMETER_PX * 0.085)}px Arial`; // Smaller font, no "bold"
+  ctx.font = `${Math.round(QR_DIAMETER_PX * 0.08)}px Arial`; // Slightly smaller
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  const textY = QR_DIAMETER_PX * 0.88; // Position text at 88% from top
+  const textY = QR_DIAMETER_PX * 0.90; // Position text at 90% from top
   ctx.fillText(activationCode, centerX, textY);
   
   return canvas;
@@ -436,7 +466,7 @@ export default function AdminDashboard() {
         qrImages.push(canvas.toDataURL('image/png'));
       }
 
-      // Generate SVG content (CorelDRAW compatible)
+      // Generate SVG content (CorelDRAW compatible) with vector cut lines
       let svgContent = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
@@ -445,10 +475,37 @@ export default function AdminDashboard() {
   <title>QR Codes - ${category.name}</title>
   <desc>Categoria: ${category.name} - ${codesToExport.length} códigos - Gerado para impressão em 1m²</desc>
   
+  <!-- Styles -->
+  <defs>
+    <style>
+      .cut-line { fill: none; stroke: #FF00FF; stroke-width: 0.1; }
+      .reg-mark { fill: none; stroke: #FF00FF; stroke-width: 0.1; }
+    </style>
+  </defs>
+  
   <!-- Background -->
   <rect width="100%" height="100%" fill="white"/>
   
-  <!-- QR Codes Grid -->
+  <!-- Cut Lines Layer (Magenta - standard for die-cut) -->
+  <g id="CutLines">
+`;
+
+      // Add vector cut circles for each QR code
+      codesToExport.forEach((code, index) => {
+        const col = index % cols;
+        const row = Math.floor(index / cols);
+        const x = col * cellSize + cellSize / 2;
+        const y = row * cellSize + cellSize / 2;
+        const r = QR_DIAMETER_MM / 2;
+
+        svgContent += `    <circle cx="${x}" cy="${y}" r="${r}" class="cut-line"/>
+`;
+      });
+
+      svgContent += `  </g>
+  
+  <!-- QR Codes Layer -->
+  <g id="QRCodes">
 `;
 
       codesToExport.forEach((code, index) => {
@@ -457,18 +514,18 @@ export default function AdminDashboard() {
         const x = col * cellSize + cellSize / 2;
         const y = row * cellSize + cellSize / 2;
 
-        svgContent += `  
-  <!-- QR Code: ${code.qr_code} -->
-  <g transform="translate(${x}, ${y})">
-    <image x="${-QR_DIAMETER_MM/2}" y="${-QR_DIAMETER_MM/2}" 
-           width="${QR_DIAMETER_MM}" height="${QR_DIAMETER_MM}"
-           xlink:href="${qrImages[index]}"
-           preserveAspectRatio="xMidYMid meet"/>
-  </g>
+        svgContent += `    <!-- QR Code: ${code.qr_code} -->
+    <g transform="translate(${x}, ${y})">
+      <image x="${-QR_DIAMETER_MM/2}" y="${-QR_DIAMETER_MM/2}" 
+             width="${QR_DIAMETER_MM}" height="${QR_DIAMETER_MM}"
+             xlink:href="${qrImages[index]}"
+             preserveAspectRatio="xMidYMid meet"/>
+    </g>
 `;
       });
 
-      svgContent += `</svg>`;
+      svgContent += `  </g>
+</svg>`;
 
       // Download SVG
       const blob = new Blob([svgContent], { type: 'image/svg+xml' });
