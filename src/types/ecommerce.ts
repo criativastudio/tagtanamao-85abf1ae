@@ -99,8 +99,8 @@ export interface ShippingQuote {
 
 export type OrderStatus = 
   | 'pending'
-  | 'payment_confirmed'
-  | 'in_production'
+  | 'paid'
+  | 'processing'
   | 'shipped'
   | 'delivered'
   | 'cancelled';

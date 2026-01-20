@@ -36,8 +36,8 @@ interface OrderWithItems extends Order {
 
 const statusConfig: Record<string, { icon: typeof Clock; color: string; label: string }> = {
   pending: { icon: Clock, color: 'bg-yellow-500/20 text-yellow-400', label: 'Aguardando Pagamento' },
-  payment_confirmed: { icon: CheckCircle, color: 'bg-blue-500/20 text-blue-400', label: 'Pago' },
-  in_production: { icon: Package, color: 'bg-purple-500/20 text-purple-400', label: 'Em Produção' },
+  paid: { icon: CheckCircle, color: 'bg-blue-500/20 text-blue-400', label: 'Pago' },
+  processing: { icon: Package, color: 'bg-purple-500/20 text-purple-400', label: 'Em Produção' },
   shipped: { icon: Truck, color: 'bg-cyan-500/20 text-cyan-400', label: 'Enviado' },
   delivered: { icon: CheckCircle, color: 'bg-green-500/20 text-green-400', label: 'Entregue' },
   cancelled: { icon: XCircle, color: 'bg-red-500/20 text-red-400', label: 'Cancelado' },
