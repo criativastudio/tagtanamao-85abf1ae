@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   ArrowLeft, 
-  Palette, 
   Ticket, 
   Layout, 
   LayoutDashboard,
   Settings,
-  FileImage
+  FileImage,
+  QrCode
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,6 +24,14 @@ interface SettingItem {
 }
 
 const settingsItems: SettingItem[] = [
+  {
+    id: 'pix',
+    title: 'Configurações PIX',
+    description: 'Configure chave PIX e notificações de pedidos para o admin.',
+    icon: QrCode,
+    path: '/admin/configuracoes/pix',
+    color: 'text-green-400'
+  },
   {
     id: 'templates',
     title: 'Templates de Arte',

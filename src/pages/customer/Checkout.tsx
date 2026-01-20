@@ -46,12 +46,12 @@ interface AppliedCoupon {
   is_active: boolean;
 }
 
-// Configuração do PIX - Em produção, mova para configurações do admin
-const PIX_CONFIG = {
-  chave: 'tagtanamao@gmail.com', // Chave PIX (email, telefone, CPF ou aleatória)
-  nome: 'Tag Tá Na Mão',
-  cidade: 'São Paulo',
-};
+interface PixConfig {
+  pix_key: string;
+  pix_key_type: string;
+  admin_whatsapp: string;
+  admin_notification_enabled: boolean;
+}
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -62,6 +62,14 @@ export default function Checkout() {
   const [step, setStep] = useState<'shipping' | 'payment' | 'confirmation'>('shipping');
   const [loading, setLoading] = useState(false);
   const [loadingShipping, setLoadingShipping] = useState(false);
+  
+  // PIX config from database
+  const [pixConfig, setPixConfig] = useState<PixConfig>({
+    pix_key: '',
+    pix_key_type: 'email',
+    admin_whatsapp: '5511999999999',
+    admin_notification_enabled: true,
+  });
   
   // Payment method
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'asaas'>('pix');
@@ -114,6 +122,36 @@ export default function Checkout() {
       }));
     }
   }, [profile]);
+
+  // Fetch PIX settings from database
+  useEffect(() => {
+    const fetchPixSettings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('admin_settings')
+          .select('key, value')
+          .in('key', ['pix_key', 'pix_key_type', 'admin_whatsapp', 'admin_notification_enabled']);
+
+        if (error) throw error;
+
+        const settingsMap: Record<string, string> = {};
+        data?.forEach(item => {
+          settingsMap[item.key] = item.value;
+        });
+
+        setPixConfig({
+          pix_key: settingsMap['pix_key'] || '',
+          pix_key_type: settingsMap['pix_key_type'] || 'email',
+          admin_whatsapp: settingsMap['admin_whatsapp'] || '5511999999999',
+          admin_notification_enabled: settingsMap['admin_notification_enabled'] === 'true',
+        });
+      } catch (error) {
+        console.error('Error fetching PIX settings:', error);
+      }
+    };
+
+    fetchPixSettings();
+  }, []);
 
   const getTotalWithShipping = () => {
     return getCartTotal() - discountAmount + (selectedShipping?.price || 0);
@@ -200,18 +238,45 @@ export default function Checkout() {
 
   const generatePixPayload = (amount: number) => {
     // Gera payload PIX simplificado (em produção, usar biblioteca pix-payload)
-    const payload = `${PIX_CONFIG.chave}`;
+    const payload = `${pixConfig.pix_key}`;
     return payload;
   };
 
   const copyPixKey = () => {
-    navigator.clipboard.writeText(PIX_CONFIG.chave);
+    navigator.clipboard.writeText(pixConfig.pix_key);
     setPixCopied(true);
     toast({
       title: 'Chave PIX copiada!',
       description: 'Cole no app do seu banco para pagar.',
     });
     setTimeout(() => setPixCopied(false), 3000);
+  };
+
+  const getPixKeyTypeLabel = () => {
+    const labels: Record<string, string> = {
+      phone: 'Telefone',
+      email: 'E-mail',
+      cpf: 'CPF',
+      cnpj: 'CNPJ',
+      random: 'Chave Aleatória',
+    };
+    return labels[pixConfig.pix_key_type] || 'Chave';
+  };
+
+  const sendAdminNotification = (orderId: string, total: number) => {
+    if (!pixConfig.admin_notification_enabled || !pixConfig.admin_whatsapp) return;
+    
+    const message = `🛒 *NOVO PEDIDO PIX!*
+
+📦 Pedido: #${orderId.slice(0, 8)}
+💰 Valor: ${formatCurrency(total)}
+👤 Cliente: ${shippingData.name}
+📱 Telefone: ${shippingData.phone}
+📍 Cidade: ${shippingData.city}/${shippingData.state}
+
+⏳ Aguardando confirmação do comprovante PIX.`;
+    
+    window.open(`https://wa.me/${pixConfig.admin_whatsapp}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const handleCreateOrder = async () => {
@@ -304,12 +369,17 @@ export default function Checkout() {
             shippingZip: shippingData.zip,
             paymentLink: paymentMethod === 'pix' ? 'PIX Manual' : paymentLink,
             paymentMethod,
-            pixKey: paymentMethod === 'pix' ? PIX_CONFIG.chave : undefined,
+            pixKey: paymentMethod === 'pix' ? pixConfig.pix_key : undefined,
           },
         });
       } catch (emailError) {
         console.error('Error sending confirmation email:', emailError);
         // Don't fail the order if email fails
+      }
+
+      // Send WhatsApp notification to admin for PIX orders
+      if (paymentMethod === 'pix') {
+        sendAdminNotification(order.id, getTotalWithShipping());
       }
 
       // Clear cart
@@ -630,10 +700,10 @@ export default function Checkout() {
                       </div>
                       
                       <div className="space-y-2">
-                        <Label>Chave PIX ({PIX_CONFIG.chave.includes('@') ? 'E-mail' : 'Chave'})</Label>
+                        <Label>Chave PIX ({getPixKeyTypeLabel()})</Label>
                         <div className="flex gap-2">
                           <Input 
-                            value={PIX_CONFIG.chave} 
+                            value={pixConfig.pix_key} 
                             readOnly 
                             className="font-mono text-sm"
                           />
@@ -662,7 +732,7 @@ export default function Checkout() {
                         variant="hero"
                         onClick={() => {
                           const message = `Olá! Acabei de fazer o pedido #${orderResult.orderId.slice(0, 8)} e paguei via PIX. Segue comprovante:`;
-                          window.open(`https://wa.me/5511999999999?text=${encodeURIComponent(message)}`, '_blank');
+                          window.open(`https://wa.me/${pixConfig.admin_whatsapp}?text=${encodeURIComponent(message)}`, '_blank');
                         }}
                       >
                         Enviar Comprovante por WhatsApp
