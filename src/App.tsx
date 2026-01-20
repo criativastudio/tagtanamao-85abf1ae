@@ -27,7 +27,6 @@ import ProductsManager from "./pages/admin/ProductsManager";
 import OrdersManager from "./pages/admin/OrdersManager";
 import TemplatesManager from "./pages/admin/TemplatesManager";
 import CouponsManager from "./pages/admin/CouponsManager";
-import SettingsPage from "./pages/admin/SettingsPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -122,7 +121,6 @@ const App = () => (
               <Route path="/admin/templates" element={<ProtectedRoute><TemplatesManager /></ProtectedRoute>} />
               <Route path="/admin/produtos" element={<ProtectedRoute><ProductsManager /></ProtectedRoute>} />
               <Route path="/admin/cupons" element={<ProtectedRoute><CouponsManager /></ProtectedRoute>} />
-              <Route path="/admin/configuracoes" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
