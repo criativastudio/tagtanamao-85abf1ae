@@ -124,7 +124,29 @@ const PublicPetPage = () => {
             <AlertTriangle className="h-16 w-16 text-yellow-500 mx-auto" />
             <h1 className="text-2xl font-bold text-foreground">Pet não encontrado</h1>
             <p className="text-muted-foreground">
-              Este QR Code não está associado a nenhum pet ou ainda não foi ativado.
+              Este QR Code não está associado a nenhum pet.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show message if product is not yet activated
+  if (!pet.is_activated) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md text-center">
+          <CardContent className="p-8 space-y-4">
+            <div className="w-20 h-20 mx-auto rounded-full bg-primary/20 flex items-center justify-center">
+              <span className="text-4xl">🐾</span>
+            </div>
+            <h1 className="text-2xl font-bold text-foreground">Aguardando Ativação</h1>
+            <p className="text-muted-foreground">
+              Este QR Code ainda não foi ativado pelo proprietário.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Se você é o dono deste produto, acesse seu dashboard para ativar usando o código que veio no manual.
             </p>
           </CardContent>
         </Card>
