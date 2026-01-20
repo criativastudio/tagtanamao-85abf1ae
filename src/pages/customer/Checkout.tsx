@@ -185,10 +185,12 @@ export default function Checkout() {
 
       if (orderError) throw orderError;
 
-      // Create order items
+      // Create order items - only include product_id if it's a valid UUID
+      const isValidUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      
       const items = cart.map(item => ({
         order_id: order.id,
-        product_id: item.product.id,
+        product_id: isValidUUID(item.product.id) ? item.product.id : null,
         quantity: item.quantity,
         unit_price: item.product.price,
       }));
