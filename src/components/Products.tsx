@@ -1,10 +1,62 @@
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Building2, QrCode, Star, Instagram, MessageCircle, CreditCard, Calendar, MapPin } from "lucide-react";
+import { Building2, QrCode, Star, Instagram, MessageCircle, CreditCard, Calendar, MapPin, ShoppingCart, Check } from "lucide-react";
 import petTagProduct from "@/assets/pet-tag-product.png";
 import displayQrProduct from "@/assets/display-qr-product.png";
+import { useCart } from "@/hooks/useCart";
+import { useToast } from "@/hooks/use-toast";
+import { Product } from "@/types/ecommerce";
+
+// Static product definitions that map to database products
+const STATIC_PRODUCTS = {
+  petTag: {
+    id: 'pet-tag-static',
+    name: 'Tag Pet QR Code',
+    description: 'Tag premium para coleira do seu pet com QR Code exclusivo.',
+    price: 59.90,
+    originalPrice: 79.90,
+    type: 'pet_tag',
+    image_url: petTagProduct,
+    is_active: true,
+    created_at: null,
+  } as Product,
+  display: {
+    id: 'display-static',
+    name: 'Display QR Code',
+    description: 'Display de acrílico elegante para balcão com landing page completa.',
+    price: 99.90,
+    originalPrice: 149.90,
+    type: 'display',
+    image_url: displayQrProduct,
+    is_active: true,
+    created_at: null,
+  } as Product,
+};
 
 const Products = () => {
+  const navigate = useNavigate();
+  const { addToCart, getCartCount } = useCart();
+  const { toast } = useToast();
+
+  const handleAddToCart = (product: Product, originalPrice: number) => {
+    addToCart(product);
+    toast({
+      title: "Adicionado ao carrinho!",
+      description: (
+        <div className="flex items-center gap-2">
+          <Check className="w-4 h-4 text-primary" />
+          <span>{product.name}</span>
+        </div>
+      ),
+    });
+  };
+
+  const handleBuyNow = (product: Product) => {
+    addToCart(product);
+    navigate('/loja/checkout');
+  };
+
   return (
     <section id="produtos" className="relative py-24 overflow-hidden">
       {/* Background */}
@@ -89,7 +141,21 @@ const Products = () => {
                     <span className="text-muted-foreground text-sm line-through">R$ 79,90</span>
                     <p className="text-3xl font-display font-bold text-gradient">R$ 59,90</p>
                   </div>
-                  <Button variant="hero">Comprar</Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={() => handleAddToCart(STATIC_PRODUCTS.petTag, 79.90)}
+                    >
+                      <ShoppingCart className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      variant="hero"
+                      onClick={() => handleBuyNow(STATIC_PRODUCTS.petTag)}
+                    >
+                      Comprar
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -161,12 +227,44 @@ const Products = () => {
                     <span className="text-muted-foreground text-sm line-through">R$ 149,90</span>
                     <p className="text-3xl font-display font-bold text-gradient">R$ 99,90</p>
                   </div>
-                  <Button variant="hero">Comprar</Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={() => handleAddToCart(STATIC_PRODUCTS.display, 149.90)}
+                    >
+                      <ShoppingCart className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      variant="hero"
+                      onClick={() => handleBuyNow(STATIC_PRODUCTS.display)}
+                    >
+                      Comprar
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
           </motion.div>
         </div>
+
+        {/* Cart indicator */}
+        {getCartCount() > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="fixed bottom-6 right-6 z-50"
+          >
+            <Button
+              size="lg"
+              className="rounded-full shadow-lg glow-primary"
+              onClick={() => navigate('/loja/checkout')}
+            >
+              <ShoppingCart className="w-5 h-5 mr-2" />
+              Carrinho ({getCartCount()})
+            </Button>
+          </motion.div>
+        )}
 
         {/* Coming soon */}
         <motion.div

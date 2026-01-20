@@ -23,19 +23,15 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { Product, ShippingQuote } from '@/types/ecommerce';
-
-interface CartItem {
-  product: Product;
-  quantity: number;
-}
+import { useCart } from '@/hooks/useCart';
+import { ShippingQuote } from '@/types/ecommerce';
 
 export default function Checkout() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, profile } = useAuth();
+  const { cart, getCartTotal, clearCart } = useCart();
   
-  const [cart, setCart] = useState<CartItem[]>([]);
   const [step, setStep] = useState<'shipping' | 'payment' | 'confirmation'>('shipping');
   const [loading, setLoading] = useState(false);
   const [loadingShipping, setLoadingShipping] = useState(false);
@@ -68,8 +64,10 @@ export default function Checkout() {
       navigate('/auth');
       return;
     }
-    loadCart();
-  }, [user]);
+    if (cart.length === 0) {
+      navigate('/');
+    }
+  }, [user, cart]);
 
   useEffect(() => {
     if (profile) {
@@ -80,28 +78,6 @@ export default function Checkout() {
       }));
     }
   }, [profile]);
-
-  const loadCart = () => {
-    const saved = localStorage.getItem('qrpet-cart');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.length === 0) {
-          navigate('/loja');
-          return;
-        }
-        setCart(parsed);
-      } catch {
-        navigate('/loja');
-      }
-    } else {
-      navigate('/loja');
-    }
-  };
-
-  const getCartTotal = () => {
-    return cart.reduce((total, item) => total + (item.product.price * item.quantity), 0);
-  };
 
   const getTotalWithShipping = () => {
     return getCartTotal() + (selectedShipping?.price || 0);
@@ -233,7 +209,7 @@ export default function Checkout() {
         .eq('id', order.id);
 
       // Clear cart
-      localStorage.removeItem('qrpet-cart');
+      clearCart();
 
       setOrderResult({
         orderId: order.id,
