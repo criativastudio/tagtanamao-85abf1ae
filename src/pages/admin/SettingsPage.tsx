@@ -598,160 +598,177 @@ export default function SettingsPage() {
             </AccordionContent>
           </AccordionItem>
 
-          {/* QR Export Settings */}
-          <AccordionItem value="qr-export" className="glass-card rounded-xl border-0 overflow-hidden">
-            <AccordionTrigger className="px-6 py-4 hover:no-underline">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-emerald-500/20">
-                  <FileDown className="w-5 h-5 text-emerald-400" />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-semibold">Exportação para Impressão</h3>
-                  <p className="text-sm text-muted-foreground">Organize e exporte QR Codes em 1m²</p>
-                </div>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-6 pb-6">
-              <div className="space-y-6">
-                {/* Categories */}
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium flex items-center gap-2">
-                    <Grid3X3 className="w-4 h-4" />
-                    Categorias ({categories.length})
-                  </h4>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setShowCategoryDialog(true)}>
-                      <FolderPlus className="w-4 h-4 mr-2" />
-                      Nova
-                    </Button>
-                    {categories.length > 0 && (
-                      <Button variant="hero" size="sm" onClick={() => setShowExportDialog(true)}>
-                        <FileDown className="w-4 h-4 mr-2" />
-                        Exportar 1m²
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                {categories.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {categories.map((category) => (
-                      <div key={category.id} className="p-3 rounded-lg border bg-card/50">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium">{category.name}</span>
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => deleteCategory(category.id)}>
-                            <X className="w-3 h-3" />
-                          </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground mb-2">{category.codes.length} códigos</p>
-                        <div className="flex gap-1">
-                          {selectedCodes.size > 0 && (
-                            <Button variant="outline" size="sm" className="flex-1 text-xs h-7" onClick={() => addSelectedToCategory(category.id)}>
-                              <Plus className="w-3 h-3 mr-1" />
-                              +{selectedCodes.size}
-                            </Button>
-                          )}
-                          {category.codes.length > 0 && (
-                            <Button variant="outline" size="sm" className="flex-1 text-xs h-7" onClick={() => exportCategoryAsSVG(category.id)}>
-                              <Download className="w-3 h-3 mr-1" />
-                              SVG
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Available QR Codes */}
-                <div>
-                  <h4 className="font-medium mb-3">QR Codes Disponíveis ({allCodes.length})</h4>
-                  {allCodes.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Nenhum QR Code encontrado.</p>
-                  ) : (
-                    <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-8 gap-2 max-h-48 overflow-y-auto p-2 bg-muted/20 rounded-lg">
-                      {allCodes.slice(0, 100).map((code) => (
-                        <div
-                          key={code.id}
-                          onClick={() => toggleSelect(code.id)}
-                          className={`p-2 rounded text-center cursor-pointer transition-all text-xs ${
-                            selectedCodes.has(code.id) ? 'bg-primary/20 border-primary border' : 'bg-card border border-border hover:border-primary/50'
-                          }`}
-                        >
-                          <span className="font-mono">{code.qr_code}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {selectedCodes.size > 0 && (
-                    <p className="text-xs text-primary mt-2">{selectedCodes.size} selecionado(s)</p>
-                  )}
-                </div>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-
-          {/* Landing Page Settings */}
-          <AccordionItem value="landing" className="glass-card rounded-xl border-0 overflow-hidden">
-            <AccordionTrigger className="px-6 py-4 hover:no-underline">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-500/20">
-                  <Layout className="w-5 h-5 text-blue-400" />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-semibold">Landing Page</h3>
-                  <p className="text-sm text-muted-foreground">Textos e seções da página inicial</p>
-                </div>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-6 pb-6">
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Título Principal</Label>
-                    <Input
-                      value={heroSettings.title}
-                      onChange={(e) => setHeroSettings(prev => ({ ...prev, title: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Subtítulo</Label>
-                    <Input
-                      value={heroSettings.subtitle}
-                      onChange={(e) => setHeroSettings(prev => ({ ...prev, subtitle: e.target.value }))}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Descrição</Label>
-                  <Textarea
-                    value={heroSettings.description}
-                    onChange={(e) => setHeroSettings(prev => ({ ...prev, description: e.target.value }))}
-                    rows={2}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Texto do Botão CTA</Label>
-                  <Input
-                    value={heroSettings.ctaText}
-                    onChange={(e) => setHeroSettings(prev => ({ ...prev, ctaText: e.target.value }))}
-                    className="max-w-xs"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={() => window.open('/', '_blank')} variant="outline">
-                    <Eye className="w-4 h-4 mr-2" />
-                    Visualizar
-                  </Button>
-                  <Button onClick={() => toast({ title: 'Em breve', description: 'Salvamento será implementado.' })}>
-                    <Save className="w-4 h-4 mr-2" />
-                    Salvar
-                  </Button>
-                </div>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
         </Accordion>
+
+        {/* QR Export Settings - Seção Direta (sem accordion) */}
+        <Card className="glass-card border-0">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-emerald-500/20">
+                <FileDown className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div>
+                <CardTitle>Exportação para Impressão</CardTitle>
+                <CardDescription>Organize e exporte QR Codes em 1m² para produção</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Categorias e Botões */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <Grid3X3 className="w-4 h-4 text-muted-foreground" />
+                <span className="font-medium">Categorias ({categories.length})</span>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setShowCategoryDialog(true)}>
+                  <FolderPlus className="w-4 h-4 mr-2" />
+                  Nova Categoria
+                </Button>
+                {categories.length > 0 && (
+                  <Button variant="hero" size="sm" onClick={() => setShowExportDialog(true)}>
+                    <FileDown className="w-4 h-4 mr-2" />
+                    Exportar 1m²
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Lista de Categorias */}
+            {categories.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {categories.map((category) => (
+                  <div key={category.id} className="p-4 rounded-lg border bg-card/50">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium">{category.name}</span>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteCategory(category.id)}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">{category.codes.length} códigos</p>
+                    <div className="flex gap-2">
+                      {selectedCodes.size > 0 && (
+                        <Button variant="outline" size="sm" className="flex-1" onClick={() => addSelectedToCategory(category.id)}>
+                          <Plus className="w-4 h-4 mr-1" />
+                          Adicionar {selectedCodes.size}
+                        </Button>
+                      )}
+                      {category.codes.length > 0 && (
+                        <Button variant="outline" size="sm" className="flex-1" onClick={() => exportCategoryAsSVG(category.id)}>
+                          <Download className="w-4 h-4 mr-1" />
+                          SVG
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Seleção de QR Codes */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium">QR Codes Disponíveis ({allCodes.length})</h4>
+                {selectedCodes.size > 0 && (
+                  <span className="text-sm text-primary font-medium">{selectedCodes.size} selecionado(s)</span>
+                )}
+              </div>
+              
+              {allCodes.length === 0 ? (
+                <div className="p-8 text-center rounded-lg bg-muted/30">
+                  <QrCode className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">Nenhum QR Code encontrado.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2 max-h-64 overflow-y-auto p-3 bg-muted/20 rounded-lg border">
+                  {allCodes.slice(0, 200).map((code) => (
+                    <div
+                      key={code.id}
+                      onClick={() => toggleSelect(code.id)}
+                      className={`p-2 rounded-md text-center cursor-pointer transition-all text-xs font-mono ${
+                        selectedCodes.has(code.id) 
+                          ? 'bg-primary text-primary-foreground border-primary border-2' 
+                          : 'bg-card border border-border hover:border-primary/50 hover:bg-muted/50'
+                      }`}
+                    >
+                      {code.qr_code}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Instruções */}
+            <div className="p-4 bg-muted/30 rounded-lg text-sm">
+              <p className="font-medium mb-2">Como usar:</p>
+              <ol className="text-muted-foreground space-y-1 list-decimal list-inside text-xs">
+                <li>Selecione os QR Codes clicando neles</li>
+                <li>Crie uma categoria para agrupar os códigos</li>
+                <li>Adicione os códigos selecionados à categoria</li>
+                <li>Exporte a categoria como SVG (1000mm × 1000mm)</li>
+              </ol>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Landing Page Settings */}
+        <Card className="glass-card border-0">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-blue-500/20">
+                <Layout className="w-5 h-5 text-blue-400" />
+              </div>
+              <div>
+                <CardTitle>Landing Page</CardTitle>
+                <CardDescription>Textos e seções da página inicial</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Título Principal</Label>
+                <Input
+                  value={heroSettings.title}
+                  onChange={(e) => setHeroSettings(prev => ({ ...prev, title: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Subtítulo</Label>
+                <Input
+                  value={heroSettings.subtitle}
+                  onChange={(e) => setHeroSettings(prev => ({ ...prev, subtitle: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Descrição</Label>
+              <Textarea
+                value={heroSettings.description}
+                onChange={(e) => setHeroSettings(prev => ({ ...prev, description: e.target.value }))}
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Texto do Botão CTA</Label>
+              <Input
+                value={heroSettings.ctaText}
+                onChange={(e) => setHeroSettings(prev => ({ ...prev, ctaText: e.target.value }))}
+                className="max-w-xs"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={() => window.open('/', '_blank')} variant="outline">
+                <Eye className="w-4 h-4 mr-2" />
+                Visualizar
+              </Button>
+              <Button onClick={() => toast({ title: 'Em breve', description: 'Salvamento será implementado.' })}>
+                <Save className="w-4 h-4 mr-2" />
+                Salvar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Dialogs */}
