@@ -5,20 +5,17 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2, GripVertical, Eye, Save, ExternalLink } from "lucide-react";
-import { motion } from "framer-motion";
+import { ArrowLeft, Eye, Save, ExternalLink } from "lucide-react";
 import { BioPage, BioButton, BioTheme, DEFAULT_THEME, BUTTON_PRESETS } from "@/types/bioPage";
 import { BioEditorPreview } from "@/components/bio/BioEditorPreview";
 import { BioButtonEditor } from "@/components/bio/BioButtonEditor";
 import { BioThemeEditor } from "@/components/bio/BioThemeEditor";
 import { BioAnalytics } from "@/components/bio/BioAnalytics";
+import { ImageUpload, GalleryUpload } from "@/components/bio/ImageUpload";
 
 const BioEditor = () => {
   const { id } = useParams<{ id?: string }>();
@@ -255,13 +252,20 @@ const BioEditor = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="photo">URL da Foto de Perfil</Label>
-                      <Input
-                        id="photo"
-                        value={bioPage.profile_photo_url || ""}
-                        onChange={(e) => setBioPage(prev => ({ ...prev, profile_photo_url: e.target.value }))}
-                        placeholder="https://exemplo.com/foto.jpg"
-                      />
+                      <Label>Foto de Perfil</Label>
+                      <div className="flex items-center gap-4">
+                        <ImageUpload
+                          userId={user?.id || ''}
+                          currentUrl={bioPage.profile_photo_url}
+                          onUpload={(url) => setBioPage(prev => ({ ...prev, profile_photo_url: url }))}
+                          onRemove={() => setBioPage(prev => ({ ...prev, profile_photo_url: '' }))}
+                          type="profile"
+                        />
+                        <div className="flex-1 text-sm text-muted-foreground">
+                          <p>Clique para fazer upload</p>
+                          <p className="text-xs">JPG, PNG ou GIF. Max 5MB.</p>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -292,40 +296,16 @@ const BioEditor = () => {
                   <CardHeader>
                     <CardTitle className="text-lg">Galeria de Fotos</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    {bioPage.gallery_photos?.map((photo, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <Input
-                          value={photo}
-                          onChange={(e) => {
-                            const newPhotos = [...(bioPage.gallery_photos || [])];
-                            newPhotos[index] = e.target.value;
-                            setBioPage(prev => ({ ...prev, gallery_photos: newPhotos }));
-                          }}
-                          placeholder="URL da foto"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            const newPhotos = bioPage.gallery_photos?.filter((_, i) => i !== index);
-                            setBioPage(prev => ({ ...prev, gallery_photos: newPhotos }));
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    ))}
-                    <Button
-                      variant="outline"
-                      onClick={() => setBioPage(prev => ({ 
-                        ...prev, 
-                        gallery_photos: [...(prev.gallery_photos || []), ""] 
-                      }))}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Adicionar Foto
-                    </Button>
+                  <CardContent>
+                    <GalleryUpload
+                      userId={user?.id || ''}
+                      photos={bioPage.gallery_photos || []}
+                      onPhotosChange={(photos) => setBioPage(prev => ({ ...prev, gallery_photos: photos }))}
+                      maxPhotos={9}
+                    />
+                    <p className="text-xs text-muted-foreground mt-3">
+                      Adicione até 9 fotos. As fotos aparecerão em um carrossel rotativo.
+                    </p>
                   </CardContent>
                 </Card>
               </TabsContent>
