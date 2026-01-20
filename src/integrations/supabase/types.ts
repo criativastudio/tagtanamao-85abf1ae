@@ -519,6 +519,7 @@ export type Database = {
           created_at: string | null
           id: string
           is_activated: boolean | null
+          lost_mode: boolean | null
           owner_name: string | null
           pet_name: string | null
           pet_photo_url: string | null
@@ -536,6 +537,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_activated?: boolean | null
+          lost_mode?: boolean | null
           owner_name?: string | null
           pet_name?: string | null
           pet_photo_url?: string | null
@@ -553,6 +555,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_activated?: boolean | null
+          lost_mode?: boolean | null
           owner_name?: string | null
           pet_name?: string | null
           pet_photo_url?: string | null
