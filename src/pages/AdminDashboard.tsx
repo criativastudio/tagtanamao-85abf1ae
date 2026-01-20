@@ -5,14 +5,12 @@ import QRCodeLib from 'qrcode';
 import { 
   QrCode, 
   Download,
-  FileDown,
   Plus,
   ArrowLeft,
   Dog,
   Building2,
   Trash2,
-  Check,
-  Settings
+  Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -566,16 +564,6 @@ export default function AdminDashboard() {
             <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
             <p className="text-muted-foreground">Geração e gerenciamento de QR Codes</p>
           </div>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="hero" onClick={() => navigate('/admin/configuracoes')}>
-            <FileDown className="w-4 h-4 mr-2" />
-            Exportar para Impressão
-          </Button>
-          <Button variant="outline" onClick={() => navigate('/admin/configuracoes')}>
-            <Settings className="w-4 h-4 mr-2" />
-            Configurações
-          </Button>
         </div>
       </div>
 
