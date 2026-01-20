@@ -12,7 +12,6 @@ import {
   Eye,
   BarChart3,
   MapPin,
-  Shield,
   Package
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -186,15 +185,6 @@ export default function Dashboard() {
             <Settings className="w-5 h-5" />
             Configurações
           </button>
-          {profile?.is_admin && (
-            <button 
-              onClick={() => navigate('/admin')}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-            >
-              <Shield className="w-5 h-5" />
-              Admin
-            </button>
-          )}
         </nav>
 
         <div className="absolute bottom-4 left-4 right-4">
