@@ -24,6 +24,7 @@ import Shop from "./pages/customer/Shop";
 import Checkout from "./pages/customer/Checkout";
 import MyOrders from "./pages/customer/MyOrders";
 import ArtCustomizer from "./pages/customer/ArtCustomizer";
+
 const queryClient = new QueryClient();
 
 const App = () => (

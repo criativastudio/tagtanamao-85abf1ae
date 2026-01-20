@@ -97,7 +97,7 @@ export default function TemplatesManager() {
     } else {
       const mappedTemplates = (data || []).map(t => ({
         ...t,
-        editable_fields: (Array.isArray(t.editable_fields) ? t.editable_fields : []) as EditableField[]
+        editable_fields: (Array.isArray(t.editable_fields) ? t.editable_fields : []) as unknown as EditableField[]
       }));
       setTemplates(mappedTemplates);
     }
