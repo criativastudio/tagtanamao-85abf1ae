@@ -313,7 +313,9 @@ export default function ProductsManager() {
                     )}
                     <div className="flex items-center justify-between mt-4">
                       <span className="text-xs bg-muted px-2 py-1 rounded">
-                        {product.type === 'pet_tag' ? 'Tag Pet' : 'Display'}
+                        {product.type === 'pet_tag' ? 'Tag Pet' : 
+                         product.type === 'business_display' ? 'Display' :
+                         product.type === 'nfc_card' ? 'NFC Card' : 'NFC Tag'}
                       </span>
                       <span className="text-lg font-bold text-primary">
                         {formatCurrency(product.price)}
@@ -403,7 +405,9 @@ export default function ProductsManager() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="pet_tag">Tag Pet</SelectItem>
-                      <SelectItem value="display">Display</SelectItem>
+                      <SelectItem value="business_display">Display</SelectItem>
+                      <SelectItem value="nfc_card">NFC Card</SelectItem>
+                      <SelectItem value="nfc_tag">NFC Tag</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
