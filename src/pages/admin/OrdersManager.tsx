@@ -13,7 +13,12 @@ import {
   Search,
   Filter,
   Download,
-  FileText
+  FileText,
+  Printer,
+  MapPin,
+  User,
+  Mail,
+  Phone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -195,15 +200,141 @@ export default function OrdersManager() {
   };
 
   const filteredOrders = orders.filter(order => {
+    const term = searchTerm.toLowerCase();
     const matchesSearch = 
-      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.shipping_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.profile?.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      order.id.toLowerCase().includes(term) ||
+      order.shipping_name?.toLowerCase().includes(term) ||
+      order.shipping_phone?.toLowerCase().includes(term) ||
+      order.profile?.email?.toLowerCase().includes(term) ||
+      order.profile?.full_name?.toLowerCase().includes(term) ||
+      order.profile?.phone?.toLowerCase().includes(term) ||
+      order.tracking_code?.toLowerCase().includes(term);
     
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     
     return matchesSearch && matchesStatus;
   });
+
+  const generateShippingLabel = (order: OrderWithItems) => {
+    const labelWindow = window.open('', '_blank');
+    if (!labelWindow) {
+      toast({
+        title: 'Erro',
+        description: 'Permita pop-ups para gerar a etiqueta.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const labelContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Etiqueta - Pedido #${order.id.slice(0, 8)}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px;
+            max-width: 400px;
+            margin: 0 auto;
+          }
+          .label { 
+            border: 2px solid #000; 
+            padding: 20px; 
+            border-radius: 8px;
+          }
+          .header { 
+            text-align: center; 
+            border-bottom: 2px dashed #000; 
+            padding-bottom: 15px; 
+            margin-bottom: 15px; 
+          }
+          .logo { font-size: 24px; font-weight: bold; }
+          .order-id { font-size: 14px; color: #666; margin-top: 5px; }
+          .section { margin-bottom: 15px; }
+          .section-title { 
+            font-size: 12px; 
+            font-weight: bold; 
+            color: #666; 
+            text-transform: uppercase;
+            margin-bottom: 5px;
+          }
+          .recipient { 
+            font-size: 18px; 
+            font-weight: bold; 
+            margin-bottom: 5px; 
+          }
+          .address { font-size: 14px; line-height: 1.5; }
+          .contact { font-size: 12px; color: #666; margin-top: 5px; }
+          .barcode { 
+            text-align: center; 
+            border-top: 2px dashed #000; 
+            padding-top: 15px; 
+            margin-top: 15px;
+            font-family: monospace;
+            font-size: 16px;
+            letter-spacing: 2px;
+          }
+          .tracking { 
+            font-size: 12px; 
+            color: #666; 
+            margin-top: 5px; 
+          }
+          @media print {
+            body { padding: 0; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="label">
+          <div class="header">
+            <div class="logo">🐾 QRPet</div>
+            <div class="order-id">Pedido #${order.id.slice(0, 8)}</div>
+          </div>
+          
+          <div class="section">
+            <div class="section-title">Destinatário</div>
+            <div class="recipient">${order.shipping_name || 'N/A'}</div>
+            <div class="address">
+              ${order.shipping_address || ''}<br/>
+              ${order.shipping_city || ''} - ${order.shipping_state || ''}<br/>
+              CEP: ${order.shipping_zip || ''}
+            </div>
+            <div class="contact">
+              Tel: ${order.shipping_phone || 'N/A'}
+            </div>
+          </div>
+          
+          <div class="section">
+            <div class="section-title">Remetente</div>
+            <div class="address">
+              QRPet - Tag na Mão<br/>
+              contato@qrpet.com.br
+            </div>
+          </div>
+          
+          ${order.tracking_code ? `
+            <div class="barcode">
+              ${order.tracking_code}
+              <div class="tracking">Código de Rastreio</div>
+            </div>
+          ` : ''}
+        </div>
+        
+        <div class="no-print" style="text-align: center; margin-top: 20px;">
+          <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">
+            🖨️ Imprimir Etiqueta
+          </button>
+        </div>
+      </body>
+      </html>
+    `;
+
+    labelWindow.document.write(labelContent);
+    labelWindow.document.close();
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -268,13 +399,16 @@ export default function OrdersManager() {
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por ID, nome ou email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+              <Input
+                placeholder="Buscar por número, nome, telefone, e-mail ou rastreio..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Button variant="outline" onClick={() => setSearchTerm('')} disabled={!searchTerm}>
+              Limpar
+            </Button>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[180px]">
               <Filter className="w-4 h-4 mr-2" />
@@ -341,19 +475,30 @@ export default function OrdersManager() {
                         {paymentStatusLabels[order.payment_status || 'pending']}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDate(order.created_at)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleViewOrder(order)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {formatDate(order.created_at)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewOrder(order)}
+                            title="Ver detalhes"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => generateShippingLabel(order)}
+                            title="Gerar etiqueta"
+                          >
+                            <Printer className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
                 ))
               )}
             </TableBody>
@@ -431,12 +576,13 @@ export default function OrdersManager() {
                     >
                       Salvar
                     </Button>
-                    {selectedOrder.tracking_code && (
-                      <Button variant="outline">
-                        <FileText className="w-4 h-4 mr-2" />
-                        Etiqueta
-                      </Button>
-                    )}
+                    <Button 
+                      variant="outline"
+                      onClick={() => generateShippingLabel(selectedOrder)}
+                    >
+                      <Printer className="w-4 h-4 mr-2" />
+                      Etiqueta
+                    </Button>
                   </div>
                 </div>
 
