@@ -12,6 +12,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import ActivateProduct from "./pages/ActivateProduct";
 import NotFound from "./pages/NotFound";
 import PublicPetPage from "./pages/PublicPetPage";
+import PublicDisplayPage from "./pages/PublicDisplayPage";
 import PublicBioPage from "./pages/PublicBioPage";
 import BioEditor from "./pages/BioEditor";
 import PetTagsManager from "./pages/PetTagsManager";
@@ -100,6 +101,7 @@ const App = () => (
                 }
               />
               <Route path="/pet/:qrCode" element={<PublicPetPage />} />
+              <Route path="/display/:qrCode" element={<PublicDisplayPage />} />
               <Route path="/bio/:slug" element={<PublicBioPage />} />
               {/* E-commerce routes */}
               <Route path="/loja" element={<Shop />} />
