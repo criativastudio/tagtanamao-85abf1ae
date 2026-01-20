@@ -8,7 +8,8 @@ import {
   LayoutDashboard,
   Settings,
   FileImage,
-  QrCode
+  QrCode,
+  ShieldCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -31,6 +32,14 @@ const settingsItems: SettingItem[] = [
     icon: QrCode,
     path: '/admin/configuracoes/pix',
     color: 'text-green-400'
+  },
+  {
+    id: 'security',
+    title: 'Segurança',
+    description: 'Altere a senha de exclusão em massa de tags e displays.',
+    icon: ShieldCheck,
+    path: '/admin/configuracoes/seguranca',
+    color: 'text-red-400'
   },
   {
     id: 'templates',

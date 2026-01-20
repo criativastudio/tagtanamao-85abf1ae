@@ -77,7 +77,7 @@ const ICON_OPTIONS = [
   { id: 'youtube', label: 'YouTube' },
 ];
 
-const ADMIN_PASSWORD = 'admin123'; // Em produção, use verificação via backend
+// Password validation is now done via backend edge function
 
 export default function DisplaysManager() {
   const { user, profile } = useAuth();
@@ -299,41 +299,70 @@ export default function DisplaysManager() {
     }
   };
 
-  // Bulk delete with password confirmation
+  // Bulk delete with password confirmation via backend
   const handleBulkDelete = async () => {
-    if (passwordInput !== ADMIN_PASSWORD) {
+    if (!passwordInput) {
       toast({
-        title: 'Senha incorreta',
-        description: 'A senha de confirmação está incorreta.',
+        title: 'Senha obrigatória',
+        description: 'Digite a senha de confirmação.',
         variant: 'destructive'
       });
       return;
     }
 
     setDeletingBulk(true);
-    const idsToDelete = Array.from(selectedIds);
     
-    const { error } = await supabase
-      .from('business_displays')
-      .delete()
-      .in('id', idsToDelete);
+    try {
+      // Validate password via backend
+      const { data: validationResult, error: validationError } = await supabase.functions.invoke('validate-admin-password', {
+        body: { password: passwordInput }
+      });
 
-    if (error) {
+      if (validationError) {
+        throw new Error('Erro ao validar senha');
+      }
+
+      if (!validationResult?.valid) {
+        toast({
+          title: 'Senha incorreta',
+          description: validationResult?.error || 'A senha de confirmação está incorreta.',
+          variant: 'destructive'
+        });
+        setDeletingBulk(false);
+        return;
+      }
+
+      // Password is valid, proceed with deletion
+      const idsToDelete = Array.from(selectedIds);
+      
+      const { error } = await supabase
+        .from('business_displays')
+        .delete()
+        .in('id', idsToDelete);
+
+      if (error) {
+        toast({
+          title: 'Erro ao excluir',
+          description: error.message,
+          variant: 'destructive'
+        });
+      } else {
+        toast({
+          title: 'Displays excluídos',
+          description: `${idsToDelete.length} displays foram removidos com sucesso.`
+        });
+        if (selectedDisplay && selectedIds.has(selectedDisplay.id)) {
+          setSelectedDisplay(null);
+        }
+        setSelectedIds(new Set());
+        fetchDisplays();
+      }
+    } catch (error: any) {
       toast({
-        title: 'Erro ao excluir',
-        description: error.message,
+        title: 'Erro',
+        description: error.message || 'Erro ao processar exclusão.',
         variant: 'destructive'
       });
-    } else {
-      toast({
-        title: 'Displays excluídos',
-        description: `${idsToDelete.length} displays foram removidos com sucesso.`
-      });
-      if (selectedDisplay && selectedIds.has(selectedDisplay.id)) {
-        setSelectedDisplay(null);
-      }
-      setSelectedIds(new Set());
-      fetchDisplays();
     }
     
     setDeletingBulk(false);

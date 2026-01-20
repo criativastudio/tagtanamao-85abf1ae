@@ -31,6 +31,7 @@ import SettingsPage from "./pages/admin/SettingsPage";
 import LandingPageSettings from "./pages/admin/LandingPageSettings";
 import DashboardSettings from "./pages/admin/DashboardSettings";
 import PixSettings from "./pages/admin/PixSettings";
+import SecuritySettings from "./pages/admin/SecuritySettings";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -128,6 +129,7 @@ const App = () => (
               <Route path="/admin/configuracoes" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
               <Route path="/admin/configuracoes/landing" element={<ProtectedRoute><LandingPageSettings /></ProtectedRoute>} />
               <Route path="/admin/configuracoes/pix" element={<ProtectedRoute><PixSettings /></ProtectedRoute>} />
+              <Route path="/admin/configuracoes/seguranca" element={<ProtectedRoute><SecuritySettings /></ProtectedRoute>} />
               <Route path="/admin/configuracoes/:type" element={<ProtectedRoute><DashboardSettings /></ProtectedRoute>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
