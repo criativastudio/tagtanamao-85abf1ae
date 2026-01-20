@@ -234,14 +234,14 @@ export default function AdminDashboard() {
           qr_code: data.qr_code,
           type,
           dataUrl,
-          category: selectedCategory || undefined
+          category: selectedCategory && selectedCategory !== 'none' ? selectedCategory : undefined
         });
       }
       
       setGeneratedCodes(prev => [...prev, ...newCodes]);
       
       // Add to category if selected
-      if (selectedCategory) {
+      if (selectedCategory && selectedCategory !== 'none') {
         setCategories(prev => prev.map(cat => {
           if (cat.id === selectedCategory) {
             return { ...cat, codes: [...cat.codes, ...newCodes] };
@@ -643,7 +643,7 @@ export default function AdminDashboard() {
                     <SelectValue placeholder="Selecione uma categoria" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhuma</SelectItem>
+                    <SelectItem value="none">Nenhuma</SelectItem>
                     {categories.map(cat => (
                       <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                     ))}
@@ -698,7 +698,7 @@ export default function AdminDashboard() {
                     <SelectValue placeholder="Selecione uma categoria" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhuma</SelectItem>
+                    <SelectItem value="none">Nenhuma</SelectItem>
                     {categories.map(cat => (
                       <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                     ))}
