@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.get-pet-tag]
 verify_jwt = false
+
+[functions.validate-activation-code]
+verify_jwt = false
+
+[functions.activate-on-signup]
+verify_jwt = false
