@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
@@ -34,7 +35,61 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Validate authentication
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      console.error("Missing or invalid authorization header");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Create Supabase client and verify user
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claims, error: claimsError } = await supabase.auth.getClaims(token);
+
+    if (claimsError || !claims?.claims?.sub) {
+      console.error("Invalid token:", claimsError);
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const userId = claims.claims.sub;
+    console.log("Authenticated user:", userId);
+
     const data: OrderConfirmationRequest = await req.json();
+
+    // Validate order belongs to user
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .select("user_id, id")
+      .eq("id", data.orderId)
+      .single();
+
+    if (orderError || !order) {
+      console.error("Order not found:", orderError);
+      return new Response(
+        JSON.stringify({ error: "Order not found" }),
+        { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (order.user_id !== userId) {
+      console.error("User not authorized for this order:", userId, "vs", order.user_id);
+      return new Response(
+        JSON.stringify({ error: "Not authorized for this order" }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    console.log("Sending order confirmation email for order:", data.orderId);
 
     const itemsHtml = data.orderItems.map(item => `
       <tr>
