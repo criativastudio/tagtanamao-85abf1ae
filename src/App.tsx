@@ -17,6 +17,7 @@ import PublicBioPage from "./pages/PublicBioPage";
 import BioEditor from "./pages/BioEditor";
 import PetTagsManager from "./pages/PetTagsManager";
 import DisplaysManager from "./pages/DisplaysManager";
+import MyProducts from "./pages/customer/MyProducts";
 import Shop from "./pages/customer/Shop";
 import Checkout from "./pages/customer/Checkout";
 import ArtCustomizer from "./pages/customer/ArtCustomizer";
@@ -57,6 +58,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <ActivateProduct />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard/produtos"
+                element={
+                  <ProtectedRoute>
+                    <MyProducts />
                   </ProtectedRoute>
                 }
               />

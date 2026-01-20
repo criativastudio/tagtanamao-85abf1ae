@@ -12,7 +12,8 @@ import {
   Eye,
   BarChart3,
   MapPin,
-  Shield
+  Shield,
+  Package
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -165,18 +166,11 @@ export default function Dashboard() {
             Dashboard
           </button>
           <button 
-            onClick={() => navigate('/dashboard/tags')}
+            onClick={() => navigate('/dashboard/produtos')}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-muted/50 transition-colors"
           >
-            <Dog className="w-5 h-5" />
-            Tags Pet
-          </button>
-          <button 
-            onClick={() => navigate('/dashboard/displays')}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-muted/50 transition-colors"
-          >
-            <Building2 className="w-5 h-5" />
-            Displays
+            <QrCode className="w-5 h-5" />
+            Meus Produtos
           </button>
           <button 
             onClick={() => navigate('/meus-pedidos')}
@@ -254,7 +248,7 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Recent Activity */}
+        {/* Recent Products */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Pet Tags */}
           <motion.div
@@ -264,7 +258,7 @@ export default function Dashboard() {
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-foreground">Tags Pet</h2>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard/tags')}>
+              <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard/produtos')}>
                 Ver todas
               </Button>
             </div>
@@ -276,9 +270,9 @@ export default function Dashboard() {
               <div className="text-center py-8">
                 <Dog className="w-12 h-12 mx-auto text-muted-foreground/50 mb-2" />
                 <p className="text-muted-foreground">Nenhuma tag cadastrada</p>
-                <Button variant="outline" size="sm" className="mt-4">
+                <Button variant="outline" size="sm" className="mt-4" onClick={() => navigate('/loja')}>
                   <Plus className="w-4 h-4 mr-2" />
-                  Adicionar Tag
+                  Comprar Tag
                 </Button>
               </div>
             ) : (
@@ -286,6 +280,7 @@ export default function Dashboard() {
                 {petTags.slice(0, 3).map((tag) => (
                   <div 
                     key={tag.id}
+                    onClick={() => navigate('/dashboard/produtos')}
                     className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
@@ -297,11 +292,11 @@ export default function Dashboard() {
                           {tag.pet_name || 'Pet sem nome'}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {tag.is_activated ? 'Ativado' : 'Não ativado'}
+                          {tag.is_activated ? 'Ativado' : 'Aguardando ativação'}
                         </p>
                       </div>
                     </div>
-                    <div className={`w-2 h-2 rounded-full ${tag.is_activated ? 'bg-primary' : 'bg-muted'}`} />
+                    <div className={`w-2 h-2 rounded-full ${tag.is_activated ? 'bg-primary' : 'bg-yellow-500'}`} />
                   </div>
                 ))}
               </div>
@@ -316,7 +311,7 @@ export default function Dashboard() {
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-foreground">Displays Empresariais</h2>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard/displays')}>
+              <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard/produtos')}>
                 Ver todos
               </Button>
             </div>
@@ -328,9 +323,9 @@ export default function Dashboard() {
               <div className="text-center py-8">
                 <Building2 className="w-12 h-12 mx-auto text-muted-foreground/50 mb-2" />
                 <p className="text-muted-foreground">Nenhum display cadastrado</p>
-                <Button variant="outline" size="sm" className="mt-4">
+                <Button variant="outline" size="sm" className="mt-4" onClick={() => navigate('/loja')}>
                   <Plus className="w-4 h-4 mr-2" />
-                  Adicionar Display
+                  Comprar Display
                 </Button>
               </div>
             ) : (
@@ -338,6 +333,7 @@ export default function Dashboard() {
                 {displays.slice(0, 3).map((display) => (
                   <div 
                     key={display.id}
+                    onClick={() => navigate('/dashboard/produtos')}
                     className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
@@ -349,11 +345,11 @@ export default function Dashboard() {
                           {display.business_name || 'Empresa sem nome'}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {display.is_activated ? 'Ativado' : 'Não ativado'}
+                          {display.is_activated ? 'Ativado' : 'Aguardando ativação'}
                         </p>
                       </div>
                     </div>
-                    <div className={`w-2 h-2 rounded-full ${display.is_activated ? 'bg-blue-400' : 'bg-muted'}`} />
+                    <div className={`w-2 h-2 rounded-full ${display.is_activated ? 'bg-blue-400' : 'bg-yellow-500'}`} />
                   </div>
                 ))}
               </div>
