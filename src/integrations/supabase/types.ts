@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      art_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          editable_fields: Json | null
+          id: string
+          is_active: boolean | null
+          name: string
+          preview_url: string | null
+          product_type: string
+          svg_content: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          editable_fields?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          preview_url?: string | null
+          product_type?: string
+          svg_content: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          editable_fields?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          preview_url?: string | null
+          product_type?: string
+          svg_content?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bio_page_analytics: {
         Row: {
           bio_page_id: string
@@ -180,6 +219,67 @@ export type Database = {
           },
         ]
       }
+      customer_arts: {
+        Row: {
+          created_at: string
+          custom_data: Json | null
+          final_svg: string | null
+          id: string
+          logo_url: string | null
+          order_item_id: string | null
+          status: string | null
+          template_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          custom_data?: Json | null
+          final_svg?: string | null
+          id?: string
+          logo_url?: string | null
+          order_item_id?: string | null
+          status?: string | null
+          template_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          custom_data?: Json | null
+          final_svg?: string | null
+          id?: string
+          logo_url?: string | null
+          order_item_id?: string | null
+          status?: string | null
+          template_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_arts_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_arts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "art_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_arts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string | null
@@ -244,12 +344,18 @@ export type Database = {
       }
       orders: {
         Row: {
+          asaas_payment_id: string | null
+          asaas_payment_link: string | null
           created_at: string | null
           id: string
           notes: string | null
           payment_method: string | null
+          payment_status: string | null
           shipping_address: string | null
           shipping_city: string | null
+          shipping_cost: number | null
+          shipping_label_url: string | null
+          shipping_method: string | null
           shipping_name: string | null
           shipping_phone: string | null
           shipping_state: string | null
@@ -261,12 +367,18 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          asaas_payment_id?: string | null
+          asaas_payment_link?: string | null
           created_at?: string | null
           id?: string
           notes?: string | null
           payment_method?: string | null
+          payment_status?: string | null
           shipping_address?: string | null
           shipping_city?: string | null
+          shipping_cost?: number | null
+          shipping_label_url?: string | null
+          shipping_method?: string | null
           shipping_name?: string | null
           shipping_phone?: string | null
           shipping_state?: string | null
@@ -278,12 +390,18 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          asaas_payment_id?: string | null
+          asaas_payment_link?: string | null
           created_at?: string | null
           id?: string
           notes?: string | null
           payment_method?: string | null
+          payment_status?: string | null
           shipping_address?: string | null
           shipping_city?: string | null
+          shipping_cost?: number | null
+          shipping_label_url?: string | null
+          shipping_method?: string | null
           shipping_name?: string | null
           shipping_phone?: string | null
           shipping_state?: string | null

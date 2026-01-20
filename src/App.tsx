@@ -16,7 +16,14 @@ import BioEditor from "./pages/BioEditor";
 import PetTagsManager from "./pages/PetTagsManager";
 import DisplaysManager from "./pages/DisplaysManager";
 import NotFound from "./pages/NotFound";
-
+// E-commerce pages
+import OrdersManager from "./pages/admin/OrdersManager";
+import TemplatesManager from "./pages/admin/TemplatesManager";
+import ProductsManager from "./pages/admin/ProductsManager";
+import Shop from "./pages/customer/Shop";
+import Checkout from "./pages/customer/Checkout";
+import MyOrders from "./pages/customer/MyOrders";
+import ArtCustomizer from "./pages/customer/ArtCustomizer";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -87,6 +94,16 @@ const App = () => (
             />
             <Route path="/pet/:qrCode" element={<PublicPetPage />} />
             <Route path="/bio/:slug" element={<PublicBioPage />} />
+            {/* E-commerce routes */}
+            <Route path="/loja" element={<Shop />} />
+            <Route path="/loja/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+            <Route path="/meus-pedidos" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
+            <Route path="/arte/:templateId" element={<ProtectedRoute><ArtCustomizer /></ProtectedRoute>} />
+            <Route path="/arte/:templateId/:artId" element={<ProtectedRoute><ArtCustomizer /></ProtectedRoute>} />
+            {/* Admin e-commerce routes */}
+            <Route path="/admin/pedidos" element={<ProtectedRoute><OrdersManager /></ProtectedRoute>} />
+            <Route path="/admin/templates" element={<ProtectedRoute><TemplatesManager /></ProtectedRoute>} />
+            <Route path="/admin/produtos" element={<ProtectedRoute><ProductsManager /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
