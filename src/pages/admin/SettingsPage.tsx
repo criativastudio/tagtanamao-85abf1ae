@@ -9,7 +9,11 @@ import {
   Settings,
   FileImage,
   QrCode,
-  ShieldCheck
+  ShieldCheck,
+  Dog,
+  Building2,
+  Package,
+  ShoppingCart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -23,6 +27,41 @@ interface SettingItem {
   path: string;
   color: string;
 }
+
+const adminMenuItems: SettingItem[] = [
+  {
+    id: 'pet-tags',
+    title: 'Tags Pet',
+    description: 'Gerencie todas as tags de pets cadastradas.',
+    icon: Dog,
+    path: '/dashboard/tags',
+    color: 'text-yellow-400'
+  },
+  {
+    id: 'displays',
+    title: 'Displays',
+    description: 'Gerencie todos os displays de negócios.',
+    icon: Building2,
+    path: '/dashboard/displays',
+    color: 'text-blue-400'
+  },
+  {
+    id: 'orders',
+    title: 'Pedidos',
+    description: 'Visualize e gerencie os pedidos da loja.',
+    icon: ShoppingCart,
+    path: '/admin/pedidos',
+    color: 'text-purple-400'
+  },
+  {
+    id: 'products',
+    title: 'Produtos',
+    description: 'Gerencie os produtos disponíveis na loja.',
+    icon: Package,
+    path: '/admin/produtos',
+    color: 'text-orange-400'
+  },
+];
 
 const settingsItems: SettingItem[] = [
   {
@@ -124,14 +163,48 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* Admin Menu Section */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold text-foreground mb-4">Menu Admin</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {adminMenuItems.map((item, index) => (
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+              className="glass-card p-4 rounded-xl cursor-pointer hover:border-primary/50 transition-all group"
+              onClick={() => navigate(item.path)}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg bg-card/80 ${item.color} group-hover:scale-110 transition-transform`}>
+                  <item.icon className="w-5 h-5" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    {item.title}
+                  </h3>
+                  <p className="text-xs text-muted-foreground line-clamp-1">
+                    {item.description}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
       {/* Settings Grid */}
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold text-foreground mb-4">Configurações do Sistema</h2>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {settingsItems.map((item, index) => (
           <motion.div
             key={item.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
+            transition={{ delay: (index + adminMenuItems.length) * 0.05 }}
             className="glass-card p-6 rounded-xl cursor-pointer hover:border-primary/50 transition-all group"
             onClick={() => navigate(item.path)}
           >
