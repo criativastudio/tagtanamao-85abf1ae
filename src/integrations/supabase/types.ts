@@ -191,6 +191,13 @@ export type Database = {
             referencedRelation: "pet_tags"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "bio_pages_pet_tag_id_fkey"
+            columns: ["pet_tag_id"]
+            isOneToOne: false
+            referencedRelation: "pet_tags_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       business_displays: {
@@ -409,6 +416,13 @@ export type Database = {
             columns: ["pet_tag_id"]
             isOneToOne: false
             referencedRelation: "pet_tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_pet_tag_id_fkey"
+            columns: ["pet_tag_id"]
+            isOneToOne: false
+            referencedRelation: "pet_tags_public"
             referencedColumns: ["id"]
           },
           {
@@ -699,11 +713,56 @@ export type Database = {
             referencedRelation: "pet_tags"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "qr_scans_pet_tag_id_fkey"
+            columns: ["pet_tag_id"]
+            isOneToOne: false
+            referencedRelation: "pet_tags_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
     Views: {
-      [_ in never]: never
+      pet_tags_public: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          is_activated: boolean | null
+          lost_mode: boolean | null
+          pet_name: string | null
+          pet_photo_url: string | null
+          qr_code: string | null
+          reward_enabled: boolean | null
+          reward_text: string | null
+          slug: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          is_activated?: boolean | null
+          lost_mode?: boolean | null
+          pet_name?: string | null
+          pet_photo_url?: string | null
+          qr_code?: string | null
+          reward_enabled?: boolean | null
+          reward_text?: string | null
+          slug?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          is_activated?: boolean | null
+          lost_mode?: boolean | null
+          pet_name?: string | null
+          pet_photo_url?: string | null
+          qr_code?: string | null
+          reward_enabled?: boolean | null
+          reward_text?: string | null
+          slug?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       is_admin: { Args: never; Returns: boolean }
