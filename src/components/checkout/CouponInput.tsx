@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Ticket, Loader2, Check, X } from 'lucide-react';
+import { Ticket, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,11 +13,6 @@ interface Coupon {
   discount_value: number;
   min_order_value: number | null;
   max_discount: number | null;
-  max_uses: number | null;
-  current_uses: number;
-  valid_from: string | null;
-  valid_until: string | null;
-  is_active: boolean;
 }
 
 interface CouponInputProps {
@@ -44,81 +39,42 @@ export default function CouponInput({ orderTotal, appliedCoupon, onApplyCoupon }
     setLoading(true);
 
     try {
-      const { data: coupon, error } = await supabase
-        .from('coupons')
-        .select('*')
-        .eq('code', code.toUpperCase().trim())
-        .eq('is_active', true)
-        .single();
+      // Use secure edge function for coupon validation
+      const { data, error } = await supabase.functions.invoke('validate-coupon', {
+        body: {
+          code: code.toUpperCase().trim(),
+          orderTotal,
+        },
+      });
 
-      if (error || !coupon) {
+      if (error) {
+        throw new Error(error.message || 'Erro ao validar cupom');
+      }
+
+      if (!data?.success || !data?.coupon) {
         toast({
           title: 'Cupom inválido',
-          description: 'Este código de cupom não existe ou está inativo.',
+          description: data?.error || 'Este código de cupom não existe ou está inativo.',
           variant: 'destructive',
         });
         return;
       }
 
-      // Check validity dates
-      const now = new Date();
-      if (coupon.valid_from && new Date(coupon.valid_from) > now) {
-        toast({
-          title: 'Cupom ainda não válido',
-          description: 'Este cupom ainda não está disponível para uso.',
-          variant: 'destructive',
-        });
-        return;
-      }
+      const coupon = data.coupon;
+      const discountAmount = coupon.discountAmount;
 
-      if (coupon.valid_until && new Date(coupon.valid_until) < now) {
-        toast({
-          title: 'Cupom expirado',
-          description: 'Este cupom já não é mais válido.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Check usage limit
-      if (coupon.max_uses && coupon.current_uses >= coupon.max_uses) {
-        toast({
-          title: 'Cupom esgotado',
-          description: 'Este cupom atingiu o limite máximo de usos.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Check minimum order value
-      if (coupon.min_order_value && orderTotal < coupon.min_order_value) {
-        toast({
-          title: 'Valor mínimo não atingido',
-          description: `Pedido mínimo de R$ ${coupon.min_order_value.toFixed(2)} para usar este cupom.`,
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Calculate discount
-      let discountAmount = 0;
-      if (coupon.discount_type === 'percentage') {
-        discountAmount = orderTotal * (coupon.discount_value / 100);
-      } else {
-        discountAmount = coupon.discount_value;
-      }
-
-      // Apply max discount cap
-      if (coupon.max_discount && discountAmount > coupon.max_discount) {
-        discountAmount = coupon.max_discount;
-      }
-
-      // Can't discount more than order total
-      if (discountAmount > orderTotal) {
-        discountAmount = orderTotal;
-      }
-
-      onApplyCoupon(coupon as Coupon, discountAmount);
+      onApplyCoupon(
+        {
+          id: coupon.id,
+          code: coupon.code,
+          description: coupon.description,
+          discount_type: coupon.discount_type,
+          discount_value: coupon.discount_value,
+          min_order_value: coupon.min_order_value,
+          max_discount: coupon.max_discount,
+        },
+        discountAmount
+      );
       
       toast({
         title: 'Cupom aplicado!',
@@ -126,9 +82,10 @@ export default function CouponInput({ orderTotal, appliedCoupon, onApplyCoupon }
       });
 
     } catch (error: any) {
+      console.error('Coupon validation error:', error);
       toast({
         title: 'Erro ao validar cupom',
-        description: error.message,
+        description: error.message || 'Tente novamente.',
         variant: 'destructive',
       });
     } finally {
