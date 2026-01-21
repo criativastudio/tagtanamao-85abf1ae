@@ -12,9 +12,12 @@ import {
   Eye,
   BarChart3,
   MapPin,
-  Package
+  Package,
+  Menu,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -46,6 +49,7 @@ export default function Dashboard() {
   const [displays, setDisplays] = useState<BusinessDisplay[]>([]);
   const [scanStats, setScanStats] = useState<ScanStats>({ total: 0, lastScan: null });
   const [loadingData, setLoadingData] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Auth protection is now handled by ProtectedRoute wrapper in App.tsx
 
@@ -148,60 +152,88 @@ export default function Dashboard() {
     },
   ];
 
+  const navItems = [
+    { icon: BarChart3, label: 'Dashboard', path: '/dashboard', active: true },
+    { icon: QrCode, label: 'Meus Produtos', path: '/dashboard/produtos', active: false },
+    { icon: ShoppingBag, label: 'Pedidos', path: '/meus-pedidos', active: false },
+    { icon: Settings, label: 'Configurações', path: '/dashboard/configuracoes', active: false },
+  ];
+
+  const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => (
+    <>
+      <div className="flex items-center gap-2 mb-8">
+        <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
+          <QrCode className="w-6 h-6 text-primary-foreground" />
+        </div>
+        <span className="text-xl font-bold gradient-text">QRPet</span>
+      </div>
+
+      <nav className="space-y-2">
+        {navItems.map((item) => (
+          <button
+            key={item.path}
+            onClick={() => {
+              navigate(item.path);
+              onNavigate?.();
+            }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              item.active 
+                ? 'bg-primary/10 text-primary' 
+                : 'text-muted-foreground hover:bg-muted/50'
+            }`}
+          >
+            <item.icon className="w-5 h-5" />
+            {item.label}
+          </button>
+        ))}
+      </nav>
+
+      <div className="absolute bottom-4 left-4 right-4">
+        <button 
+          onClick={() => {
+            handleSignOut();
+            onNavigate?.();
+          }}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+        >
+          <LogOut className="w-5 h-5" />
+          Sair
+        </button>
+      </div>
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Sidebar */}
-      <aside className="fixed left-0 top-0 h-full w-64 bg-card border-r border-border p-4 hidden lg:block">
-        <div className="flex items-center gap-2 mb-8">
-          <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-            <QrCode className="w-6 h-6 text-primary-foreground" />
+      {/* Mobile Header */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+            <QrCode className="w-5 h-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-bold gradient-text">QRPet</span>
+          <span className="text-lg font-bold gradient-text">QRPet</span>
         </div>
+        <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <Menu className="w-6 h-6" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-64 p-4">
+            <SidebarContent onNavigate={() => setMobileMenuOpen(false)} />
+          </SheetContent>
+        </Sheet>
+      </header>
 
-        <nav className="space-y-2">
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 text-primary">
-            <BarChart3 className="w-5 h-5" />
-            Dashboard
-          </button>
-          <button 
-            onClick={() => navigate('/dashboard/produtos')}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-muted/50 transition-colors"
-          >
-            <QrCode className="w-5 h-5" />
-            Meus Produtos
-          </button>
-          <button 
-            onClick={() => navigate('/meus-pedidos')}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-muted/50 transition-colors"
-          >
-            <ShoppingBag className="w-5 h-5" />
-            Pedidos
-          </button>
-          <button 
-            onClick={() => navigate('/dashboard/configuracoes')}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-muted/50 transition-colors"
-          >
-            <Settings className="w-5 h-5" />
-            Configurações
-          </button>
-        </nav>
-
-        <div className="absolute bottom-4 left-4 right-4">
-          <button 
-            onClick={handleSignOut}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-            Sair
-          </button>
-        </div>
+      {/* Desktop Sidebar */}
+      <aside className="fixed left-0 top-0 h-full w-64 bg-card border-r border-border p-4 hidden lg:block">
+        <SidebarContent />
       </aside>
 
       {/* Main Content */}
-      <main className="lg:ml-64 p-6">
+      <main className="lg:ml-64 p-6 pt-20 lg:pt-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-bold text-foreground">
               Olá, {profile?.full_name || profile?.email?.split('@')[0] || 'Usuário'}!
