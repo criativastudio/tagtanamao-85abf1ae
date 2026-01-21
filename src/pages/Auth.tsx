@@ -42,8 +42,8 @@ export default function Auth() {
   const [validatedProduct, setValidatedProduct] = useState<ValidatedProduct | null>(null);
   const [isValidatingCode, setIsValidatingCode] = useState(false);
   
-  // Shop flow - skip activation code
-  const [skipActivation, setSkipActivation] = useState(fromShop);
+  // Activation is now always optional - users can create accounts freely
+  const [skipActivation] = useState(true);
   
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
@@ -161,16 +161,7 @@ export default function Auth() {
           navigate(redirectTo);
         }
       } else {
-        // Signup flow - check if we need activation code (only when not from shop)
-        if (!skipActivation && !validatedProduct) {
-          toast({
-            title: 'Erro',
-            description: 'Valide o código de ativação primeiro.',
-            variant: 'destructive'
-          });
-          setSignupStep(1);
-          return;
-        }
+        // Signup flow - activation code is now optional
 
         const { error } = await signUp(email, password);
         if (error) {
@@ -529,27 +520,13 @@ export default function Auth() {
               <p className="text-muted-foreground mt-2">
                 {isLogin 
                   ? 'Acesse suas tags e displays' 
-                  : skipActivation 
-                    ? 'Crie sua conta para continuar a compra'
-                    : 'Digite o código do seu produto para criar sua conta'}
+                  : 'Crie sua conta para gerenciar seus produtos'}
               </p>
             </div>
 
-            {/* Content based on mode and step */}
+            {/* Content - always show account form directly */}
             <AnimatePresence mode="wait">
-              {isLogin ? (
-                renderAccountForm()
-              ) : skipActivation ? (
-                // Shop flow - go directly to account form
-                renderAccountForm()
-              ) : (
-                // Normal flow - require activation code
-                <>
-                  {signupStep === 1 && renderProductTypeSelection()}
-                  {signupStep === 2 && renderActivationCodeInput()}
-                  {signupStep === 3 && renderAccountForm()}
-                </>
-              )}
+              {renderAccountForm()}
             </AnimatePresence>
 
             {/* Toggle login/signup */}
