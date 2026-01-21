@@ -278,7 +278,7 @@ export default function OrdersManager() {
       <body>
         <div class="label">
           <div class="header">
-            <div class="logo">🐾 Tag Tá Na Mão</div>
+            <div class="logo">🐾 TagTáNaMão</div>
             <div class="order-id">Pedido #${order.id.slice(0, 8)}</div>
           </div>
           
@@ -298,7 +298,7 @@ export default function OrdersManager() {
           <div class="section">
             <div class="section-title">Remetente</div>
             <div class="address">
-              QRPet - Tag na Mão<br/>
+              QRPet - Tag Tá Na Mão<br/>
               contato@qrpet.com.br
             </div>
           </div>
