@@ -29,6 +29,7 @@ import { useCart } from '@/hooks/useCart';
 import { ShippingQuote } from '@/types/ecommerce';
 import CouponInput from '@/components/checkout/CouponInput';
 import PixAwaitingPayment from '@/components/checkout/PixAwaitingPayment';
+import AsaasAwaitingPayment from '@/components/checkout/AsaasAwaitingPayment';
 
 interface AppliedCoupon {
   id: string;
@@ -60,13 +61,25 @@ interface PixPaymentData {
   expiresAt: string;
 }
 
+interface AsaasPaymentData {
+  id: string;
+  invoiceUrl: string;
+  bankSlipUrl?: string;
+  pixQrCode?: {
+    encodedImage: string;
+    payload: string;
+    expirationDate: string;
+  };
+  status: string;
+}
+
 export default function Checkout() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, profile } = useAuth();
   const { cart, getCartTotal, clearCart } = useCart();
   
-  const [step, setStep] = useState<'shipping' | 'awaiting_pix' | 'confirmation'>('shipping');
+  const [step, setStep] = useState<'shipping' | 'awaiting_pix' | 'awaiting_asaas' | 'confirmation'>('shipping');
   const [loading, setLoading] = useState(false);
   const [loadingShipping, setLoadingShipping] = useState(false);
   
@@ -81,6 +94,11 @@ export default function Checkout() {
   // PIX payment data (after generation)
   const [pixPaymentData, setPixPaymentData] = useState<PixPaymentData | null>(null);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
+  
+  // Asaas payment data
+  const [asaasPaymentData, setAsaasPaymentData] = useState<AsaasPaymentData | null>(null);
+  const [asaasBillingType, setAsaasBillingType] = useState<'PIX' | 'BOLETO' | 'CREDIT_CARD'>('PIX');
+  const [customerCpfCnpj, setCustomerCpfCnpj] = useState('');
   
   // Payment method
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'asaas'>('pix');
@@ -242,6 +260,18 @@ export default function Checkout() {
       });
       return false;
     }
+    // Validate CPF/CNPJ for Asaas payments
+    if (paymentMethod === 'asaas') {
+      const cpfCnpj = customerCpfCnpj.replace(/\D/g, '');
+      if (cpfCnpj.length !== 11 && cpfCnpj.length !== 14) {
+        toast({
+          title: 'CPF/CNPJ inválido',
+          description: 'Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.',
+          variant: 'destructive',
+        });
+        return false;
+      }
+    }
     return true;
   };
 
@@ -347,49 +377,46 @@ export default function Checkout() {
           throw new Error('Erro ao gerar PIX');
         }
       } else {
-        // For Asaas payment
-        const paymentLink = `https://sandbox.asaas.com/c/${order.id.slice(0, 8)}`;
+        // For Asaas payment - create real payment via API
+        const { data: session } = await supabase.auth.getSession();
         
-        await supabase
-          .from('orders')
-          .update({ asaas_payment_link: paymentLink })
-          .eq('id', order.id);
-
-        // Send confirmation email
-        try {
-          await supabase.functions.invoke('send-order-confirmation', {
-            body: {
-              customerEmail: profile?.email || user?.email,
-              customerName: shippingData.name,
-              orderId: order.id,
-              orderItems: cart.map(item => ({
-                name: item.product.name,
-                quantity: item.quantity,
-                price: item.product.price * item.quantity,
-              })),
-              subtotal: getCartTotal(),
-              discount: discountAmount,
-              shipping: selectedShipping?.price || 0,
-              total: getTotalWithShipping(),
-              shippingAddress: `${shippingData.address}, ${shippingData.number}${shippingData.complement ? ` - ${shippingData.complement}` : ''} - ${shippingData.neighborhood}`,
-              shippingCity: shippingData.city,
-              shippingState: shippingData.state,
-              shippingZip: shippingData.zip,
-              paymentLink,
-              paymentMethod,
-            },
-          });
-        } catch (emailError) {
-          console.error('Error sending confirmation email:', emailError);
-        }
-
-        clearCart();
-        setOrderResult({
-          orderId: order.id,
-          paymentLink,
-          paymentMethod,
+        const { data: asaasResult, error: asaasError } = await supabase.functions.invoke('asaas-payment', {
+          body: {
+            orderId: order.id,
+            amount: getTotalWithShipping(),
+            customerName: shippingData.name,
+            customerEmail: profile?.email || user?.email,
+            customerPhone: shippingData.phone,
+            customerCpfCnpj: customerCpfCnpj.replace(/\D/g, ''),
+            billingType: asaasBillingType,
+          },
+          headers: {
+            Authorization: `Bearer ${session?.session?.access_token}`,
+          },
         });
-        setStep('confirmation');
+
+        if (asaasError) throw asaasError;
+        
+        if (asaasResult?.success && asaasResult?.payment) {
+          setAsaasPaymentData(asaasResult.payment);
+          setCurrentOrderId(order.id);
+          clearCart();
+          
+          // If PIX via Asaas, show waiting screen with QR code
+          if (asaasBillingType === 'PIX' && asaasResult.payment.pixQrCode) {
+            setStep('awaiting_asaas');
+          } else {
+            // For boleto/card, redirect to payment link
+            setOrderResult({
+              orderId: order.id,
+              paymentLink: asaasResult.payment.invoiceUrl,
+              paymentMethod: 'asaas',
+            });
+            setStep('confirmation');
+          }
+        } else {
+          throw new Error('Erro ao criar cobrança');
+        }
       }
       
     } catch (error: any) {
@@ -650,15 +677,80 @@ export default function Checkout() {
                             <div>
                               <p className="font-medium flex items-center gap-2">
                                 <CreditCard className="w-4 h-4" />
-                                Cartão / Boleto
+                                Cartão / Boleto / PIX Asaas
                               </p>
                               <p className="text-sm text-muted-foreground">
-                                Via plataforma de pagamento
+                                Via plataforma de pagamento segura
                               </p>
                             </div>
                           </div>
                         </div>
                       </RadioGroup>
+
+                      {/* Asaas Options */}
+                      {paymentMethod === 'asaas' && (
+                        <div className="mt-4 space-y-4 pt-4 border-t border-border">
+                          <div className="space-y-2">
+                            <Label htmlFor="cpf">CPF/CNPJ *</Label>
+                            <Input
+                              id="cpf"
+                              value={customerCpfCnpj}
+                              onChange={(e) => setCustomerCpfCnpj(e.target.value)}
+                              placeholder="000.000.000-00"
+                              maxLength={18}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Obrigatório para emissão da cobrança
+                            </p>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label>Forma de pagamento</Label>
+                            <RadioGroup
+                              value={asaasBillingType}
+                              onValueChange={(value) => setAsaasBillingType(value as 'PIX' | 'BOLETO' | 'CREDIT_CARD')}
+                              className="grid grid-cols-3 gap-2"
+                            >
+                              <div
+                                className={`flex flex-col items-center p-3 rounded-lg border cursor-pointer transition-colors ${
+                                  asaasBillingType === 'PIX'
+                                    ? 'border-primary bg-primary/5'
+                                    : 'border-border hover:border-primary/50'
+                                }`}
+                                onClick={() => setAsaasBillingType('PIX')}
+                              >
+                                <RadioGroupItem value="PIX" id="asaas-pix" className="sr-only" />
+                                <QrCode className="w-5 h-5 mb-1" />
+                                <span className="text-xs">PIX</span>
+                              </div>
+                              <div
+                                className={`flex flex-col items-center p-3 rounded-lg border cursor-pointer transition-colors ${
+                                  asaasBillingType === 'BOLETO'
+                                    ? 'border-primary bg-primary/5'
+                                    : 'border-border hover:border-primary/50'
+                                }`}
+                                onClick={() => setAsaasBillingType('BOLETO')}
+                              >
+                                <RadioGroupItem value="BOLETO" id="asaas-boleto" className="sr-only" />
+                                <Ticket className="w-5 h-5 mb-1" />
+                                <span className="text-xs">Boleto</span>
+                              </div>
+                              <div
+                                className={`flex flex-col items-center p-3 rounded-lg border cursor-pointer transition-colors ${
+                                  asaasBillingType === 'CREDIT_CARD'
+                                    ? 'border-primary bg-primary/5'
+                                    : 'border-border hover:border-primary/50'
+                                }`}
+                                onClick={() => setAsaasBillingType('CREDIT_CARD')}
+                              >
+                                <RadioGroupItem value="CREDIT_CARD" id="asaas-card" className="sr-only" />
+                                <CreditCard className="w-5 h-5 mb-1" />
+                                <span className="text-xs">Cartão</span>
+                              </div>
+                            </RadioGroup>
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 )}
@@ -686,6 +778,14 @@ export default function Checkout() {
                 pixPayment={pixPaymentData}
                 orderId={currentOrderId}
                 adminWhatsapp={pixConfig.admin_whatsapp}
+                onPaymentConfirmed={handlePaymentConfirmed}
+              />
+            )}
+
+            {step === 'awaiting_asaas' && asaasPaymentData && currentOrderId && (
+              <AsaasAwaitingPayment
+                asaasPayment={asaasPaymentData}
+                orderId={currentOrderId}
                 onPaymentConfirmed={handlePaymentConfirmed}
               />
             )}
