@@ -10,6 +10,7 @@ const corsHeaders = {
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const asaasApiKey = Deno.env.get("ASAAS_API_KEY")!;
+const asaasWebhookToken = Deno.env.get("ASAAS_WEBHOOK_TOKEN");
 
 // Use sandbox for testing, production for live
 const ASAAS_BASE_URL = asaasApiKey?.startsWith("$aact_")
@@ -161,10 +162,29 @@ const handler = async (req: Request): Promise<Response> => {
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
 
-    // WEBHOOK - No auth required (Asaas calls this)
+    // WEBHOOK - Validate token before processing
     if (action === "webhook") {
+      // Security: Verify webhook token from Asaas
+      const webhookToken = req.headers.get("asaas-access-token");
+      
+      if (!asaasWebhookToken) {
+        console.error("ASAAS_WEBHOOK_TOKEN not configured");
+        return new Response(
+          JSON.stringify({ error: "Webhook not configured" }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+      
+      if (!webhookToken || webhookToken !== asaasWebhookToken) {
+        console.error("Invalid webhook token received");
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
       const webhookData = await req.json();
-      console.log("Asaas webhook received:", webhookData);
+      console.log("Asaas webhook received (authenticated):", webhookData);
 
       const { event, payment } = webhookData;
 
@@ -177,6 +197,39 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       const orderId = payment.externalReference;
+
+      // Verify order exists and validate amount before processing
+      const { data: order, error: orderFetchError } = await supabase
+        .from("orders")
+        .select("id, total_amount, status, payment_status")
+        .eq("id", orderId)
+        .single();
+
+      if (orderFetchError || !order) {
+        console.error("Order not found for webhook:", orderId);
+        return new Response(JSON.stringify({ error: "Order not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      // Prevent duplicate processing
+      if (order.status === "paid" || order.payment_status === "confirmed") {
+        console.log("Order already paid, skipping:", orderId);
+        return new Response(JSON.stringify({ received: true, message: "Already processed" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      // Validate amount matches (with small tolerance for floating point)
+      if (payment.value && Math.abs(order.total_amount - payment.value) > 0.01) {
+        console.error("Amount mismatch:", { expected: order.total_amount, received: payment.value });
+        return new Response(JSON.stringify({ error: "Amount mismatch" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
 
       // Handle payment events
       if (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED") {
@@ -197,7 +250,7 @@ const handler = async (req: Request): Promise<Response> => {
         }
 
         // Get order details for notifications
-        const { data: order } = await supabase
+        const { data: orderDetails } = await supabase
           .from("orders")
           .select(`
             *,
@@ -206,7 +259,7 @@ const handler = async (req: Request): Promise<Response> => {
           .eq("id", orderId)
           .single();
 
-        if (order) {
+        if (orderDetails) {
           // Get order items
           const { data: orderItems } = await supabase
             .from("order_items")
@@ -219,7 +272,7 @@ const handler = async (req: Request): Promise<Response> => {
 
           // Send confirmation email via Resend
           const resendApiKey = Deno.env.get("RESEND_API_KEY");
-          if (resendApiKey && order.profiles?.email) {
+          if (resendApiKey && orderDetails.profiles?.email) {
             try {
               const itemsHtml = orderItems?.map((item: any) => `
                 <tr>
@@ -239,7 +292,7 @@ const handler = async (req: Request): Promise<Response> => {
                   </div>
                   
                   <div style="background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%); border: 1px solid #333; border-radius: 16px; padding: 24px; margin-bottom: 24px;">
-                    <p style="color: #ffffff; font-size: 18px; margin: 0 0 8px;">Olá, <strong>${order.profiles?.full_name || order.shipping_name || 'Cliente'}</strong>!</p>
+                    <p style="color: #ffffff; font-size: 18px; margin: 0 0 8px;">Olá, <strong>${orderDetails.profiles?.full_name || orderDetails.shipping_name || 'Cliente'}</strong>!</p>
                     <p style="color: #a1a1aa; margin: 0;">Seu pagamento foi confirmado com sucesso! 🎉</p>
                     <p style="color: #a1a1aa; margin: 12px 0 0;">Pedido: <strong style="color: #22c55e;">#${orderId.slice(0, 8)}</strong></p>
                   </div>
@@ -255,15 +308,15 @@ const handler = async (req: Request): Promise<Response> => {
                     </table>
                     <div style="padding: 16px; background: #262626;">
                       <p style="color: #ffffff; font-size: 18px; font-weight: bold; margin: 0; text-align: right;">
-                        Total: <span style="color: #22c55e;">R$ ${order.total_amount.toFixed(2)}</span>
+                        Total: <span style="color: #22c55e;">R$ ${orderDetails.total_amount.toFixed(2)}</span>
                       </p>
                     </div>
                   </div>
                   
                   <div style="background: #1a1a1a; border: 1px solid #333; border-radius: 16px; padding: 20px; margin-bottom: 24px;">
                     <h3 style="color: #22c55e; font-size: 14px; margin: 0 0 12px; font-weight: 600;">🚚 Endereço de Entrega</h3>
-                    <p style="color: #ffffff; margin: 0 0 4px;">${order.shipping_address}</p>
-                    <p style="color: #a1a1aa; margin: 0;">${order.shipping_city} - ${order.shipping_state}, ${order.shipping_zip}</p>
+                    <p style="color: #ffffff; margin: 0 0 4px;">${orderDetails.shipping_address}</p>
+                    <p style="color: #a1a1aa; margin: 0;">${orderDetails.shipping_city} - ${orderDetails.shipping_state}, ${orderDetails.shipping_zip}</p>
                   </div>
                   
                   <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 24px;">
@@ -289,7 +342,7 @@ const handler = async (req: Request): Promise<Response> => {
                 },
                 body: JSON.stringify({
                   from: "Tag na Mão <onboarding@resend.dev>",
-                  to: [order.profiles.email],
+                  to: [orderDetails.profiles.email],
                   subject: `✅ Pagamento Confirmado - Pedido #${orderId.slice(0, 8)}`,
                   html: emailHtml,
                 }),

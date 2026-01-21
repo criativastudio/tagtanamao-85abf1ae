@@ -1,5 +1,8 @@
 project_id = "fgjgofbstljjuiwbnmba"
 
+[functions.validate-coupon]
+verify_jwt = false
+
 [functions.send-order-confirmation]
 verify_jwt = false
 
