@@ -40,10 +40,16 @@ interface Category {
   codes: GeneratedQRCode[];
 }
 
-// Constants for QR code sizing (23mm diameter at 300 DPI)
+// Constants for QR code sizing at 300 DPI
 const MM_TO_PIXELS = 11.811; // 300 DPI conversion
+
+// Pet Tag: 23mm diameter circle
 const QR_DIAMETER_MM = 23;
 const QR_DIAMETER_PX = Math.round(QR_DIAMETER_MM * MM_TO_PIXELS); // ~272 pixels
+
+// Business Display: 41.5mm x 41.5mm square (4.15cm)
+const DISPLAY_SIZE_MM = 41.5;
+const DISPLAY_SIZE_PX = Math.round(DISPLAY_SIZE_MM * MM_TO_PIXELS); // ~490 pixels
 
 // 1 meter = 1000mm, at 300 DPI = ~11811 pixels
 const SHEET_SIZE_MM = 1000;
@@ -85,96 +91,186 @@ const generateUniqueCode = async (): Promise<string> => {
   throw new Error('Não foi possível gerar um código único. Tente novamente.');
 };
 
-// Create a single QR code canvas with updated design
+// Create a single QR code canvas with updated design - handles both pet tags (circular) and displays (square)
 const createQRCodeCanvas = async (code: GeneratedQRCode): Promise<HTMLCanvasElement> => {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas context not available');
   
-  canvas.width = QR_DIAMETER_PX;
-  canvas.height = QR_DIAMETER_PX;
+  const isDisplay = code.type === 'business_display';
+  const size = isDisplay ? DISPLAY_SIZE_PX : QR_DIAMETER_PX;
   
-  const centerX = QR_DIAMETER_PX / 2;
-  const centerY = QR_DIAMETER_PX / 2;
-  const radius = QR_DIAMETER_PX / 2;
+  canvas.width = size;
+  canvas.height = size;
   
-  // White circular background
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fill();
+  const centerX = size / 2;
+  const centerY = size / 2;
   
-  // Cut line circle (vector marking for die-cut) - magenta color standard for cut lines
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, radius - 1, 0, Math.PI * 2);
-  ctx.strokeStyle = '#FF00FF'; // Magenta - standard cut line color
-  ctx.lineWidth = 0.5;
-  ctx.stroke();
-  
-  // Add registration marks (cross marks at cardinal points for alignment)
-  const markLength = 8;
-  const markOffset = 4;
-  ctx.strokeStyle = '#FF00FF';
-  ctx.lineWidth = 0.5;
-  
-  // Top mark
-  ctx.beginPath();
-  ctx.moveTo(centerX, markOffset);
-  ctx.lineTo(centerX, markOffset + markLength);
-  ctx.stroke();
-  
-  // Bottom mark
-  ctx.beginPath();
-  ctx.moveTo(centerX, QR_DIAMETER_PX - markOffset);
-  ctx.lineTo(centerX, QR_DIAMETER_PX - markOffset - markLength);
-  ctx.stroke();
-  
-  // Left mark
-  ctx.beginPath();
-  ctx.moveTo(markOffset, centerY);
-  ctx.lineTo(markOffset + markLength, centerY);
-  ctx.stroke();
-  
-  // Right mark
-  ctx.beginPath();
-  ctx.moveTo(QR_DIAMETER_PX - markOffset, centerY);
-  ctx.lineTo(QR_DIAMETER_PX - markOffset - markLength, centerY);
-  ctx.stroke();
-  
-  // Generate larger QR code for better scanning
-  const qrSize = Math.round(QR_DIAMETER_PX * 0.68); // Slightly reduced to better fit
-  
-  const qrDataUrl = await QRCodeLib.toDataURL(code.dataUrl.includes('http') ? code.dataUrl : `${window.location.origin}/pet/${code.qr_code}`, {
-    width: qrSize,
-    margin: 0,
-    color: {
-      dark: '#000000',
-      light: '#FFFFFF'
-    },
-    errorCorrectionLevel: 'H'
-  });
-  
-  // Load and draw QR code - positioned lower for better centering
-  const img = new Image();
-  img.src = qrDataUrl;
-  
-  await new Promise<void>((resolve) => {
-    img.onload = () => {
-      const qrX = (QR_DIAMETER_PX - qrSize) / 2;
-      const qrY = Math.round(QR_DIAMETER_PX * 0.12); // Moved down from 6% to 12%
-      ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
-      resolve();
-    };
-  });
-  
-  // Draw activation code - smaller font, normal weight (not bold)
-  const activationCode = code.qr_code;
-  ctx.fillStyle = '#000000';
-  ctx.font = `${Math.round(QR_DIAMETER_PX * 0.08)}px Arial`; // Slightly smaller
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  const textY = QR_DIAMETER_PX * 0.90; // Position text at 90% from top
-  ctx.fillText(activationCode, centerX, textY);
+  if (isDisplay) {
+    // Business Display: Square format 4.15cm x 4.15cm
+    
+    // White square background
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, size, size);
+    
+    // Cut line rectangle - magenta color standard for cut lines
+    ctx.strokeStyle = '#FF00FF';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(1, 1, size - 2, size - 2);
+    
+    // Add corner registration marks
+    const markLength = 12;
+    const markOffset = 6;
+    ctx.strokeStyle = '#FF00FF';
+    ctx.lineWidth = 0.5;
+    
+    // Top-left corner
+    ctx.beginPath();
+    ctx.moveTo(markOffset, markOffset);
+    ctx.lineTo(markOffset + markLength, markOffset);
+    ctx.moveTo(markOffset, markOffset);
+    ctx.lineTo(markOffset, markOffset + markLength);
+    ctx.stroke();
+    
+    // Top-right corner
+    ctx.beginPath();
+    ctx.moveTo(size - markOffset, markOffset);
+    ctx.lineTo(size - markOffset - markLength, markOffset);
+    ctx.moveTo(size - markOffset, markOffset);
+    ctx.lineTo(size - markOffset, markOffset + markLength);
+    ctx.stroke();
+    
+    // Bottom-left corner
+    ctx.beginPath();
+    ctx.moveTo(markOffset, size - markOffset);
+    ctx.lineTo(markOffset + markLength, size - markOffset);
+    ctx.moveTo(markOffset, size - markOffset);
+    ctx.lineTo(markOffset, size - markOffset - markLength);
+    ctx.stroke();
+    
+    // Bottom-right corner
+    ctx.beginPath();
+    ctx.moveTo(size - markOffset, size - markOffset);
+    ctx.lineTo(size - markOffset - markLength, size - markOffset);
+    ctx.moveTo(size - markOffset, size - markOffset);
+    ctx.lineTo(size - markOffset, size - markOffset - markLength);
+    ctx.stroke();
+    
+    // QR code size - larger for square format (80% of width)
+    const qrSize = Math.round(size * 0.75);
+    
+    const qrDataUrl = await QRCodeLib.toDataURL(`${window.location.origin}/display/${code.qr_code}`, {
+      width: qrSize,
+      margin: 0,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      },
+      errorCorrectionLevel: 'H'
+    });
+    
+    const img = new Image();
+    img.src = qrDataUrl;
+    
+    await new Promise<void>((resolve) => {
+      img.onload = () => {
+        const qrX = (size - qrSize) / 2;
+        const qrY = Math.round(size * 0.08); // Position from top
+        ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
+        resolve();
+      };
+    });
+    
+    // Draw activation code at the bottom - small font
+    const activationCode = code.qr_code;
+    ctx.fillStyle = '#000000';
+    ctx.font = `${Math.round(size * 0.06)}px Arial`; // Smaller font for display
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const textY = size * 0.93; // Position text at 93% from top (bottom area)
+    ctx.fillText(activationCode, centerX, textY);
+    
+  } else {
+    // Pet Tag: Circular format 23mm diameter
+    const radius = size / 2;
+    
+    // White circular background
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fill();
+    
+    // Cut line circle - magenta color standard for cut lines
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius - 1, 0, Math.PI * 2);
+    ctx.strokeStyle = '#FF00FF';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+    
+    // Add registration marks (cross marks at cardinal points)
+    const markLength = 8;
+    const markOffset = 4;
+    ctx.strokeStyle = '#FF00FF';
+    ctx.lineWidth = 0.5;
+    
+    // Top mark
+    ctx.beginPath();
+    ctx.moveTo(centerX, markOffset);
+    ctx.lineTo(centerX, markOffset + markLength);
+    ctx.stroke();
+    
+    // Bottom mark
+    ctx.beginPath();
+    ctx.moveTo(centerX, size - markOffset);
+    ctx.lineTo(centerX, size - markOffset - markLength);
+    ctx.stroke();
+    
+    // Left mark
+    ctx.beginPath();
+    ctx.moveTo(markOffset, centerY);
+    ctx.lineTo(markOffset + markLength, centerY);
+    ctx.stroke();
+    
+    // Right mark
+    ctx.beginPath();
+    ctx.moveTo(size - markOffset, centerY);
+    ctx.lineTo(size - markOffset - markLength, centerY);
+    ctx.stroke();
+    
+    // QR code size for pet tag
+    const qrSize = Math.round(size * 0.68);
+    
+    const qrDataUrl = await QRCodeLib.toDataURL(`${window.location.origin}/pet/${code.qr_code}`, {
+      width: qrSize,
+      margin: 0,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      },
+      errorCorrectionLevel: 'H'
+    });
+    
+    const img = new Image();
+    img.src = qrDataUrl;
+    
+    await new Promise<void>((resolve) => {
+      img.onload = () => {
+        const qrX = (size - qrSize) / 2;
+        const qrY = Math.round(size * 0.12);
+        ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
+        resolve();
+      };
+    });
+    
+    // Draw activation code
+    const activationCode = code.qr_code;
+    ctx.fillStyle = '#000000';
+    ctx.font = `${Math.round(size * 0.08)}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const textY = size * 0.90;
+    ctx.fillText(activationCode, centerX, textY);
+  }
   
   return canvas;
 };
@@ -439,12 +535,17 @@ export default function AdminDashboard() {
     });
 
     try {
-      // Calculate grid layout
-      const padding = 2; // 2mm padding between circles
-      const cellSize = QR_DIAMETER_MM + padding; // 25mm per cell
-      const cols = Math.floor(SHEET_SIZE_MM / cellSize); // ~40 columns
-      const rows = Math.floor(SHEET_SIZE_MM / cellSize); // ~40 rows
-      const maxCodes = cols * rows; // ~1600 codes per sheet
+      // Determine type from first code in category (categories should contain same type)
+      const codeType = category.codes[0]?.type || 'pet_tag';
+      const isDisplay = codeType === 'business_display';
+      
+      // Use appropriate size based on type
+      const itemSize = isDisplay ? DISPLAY_SIZE_MM : QR_DIAMETER_MM;
+      const padding = 2; // 2mm padding between items
+      const cellSize = itemSize + padding;
+      const cols = Math.floor(SHEET_SIZE_MM / cellSize);
+      const rows = Math.floor(SHEET_SIZE_MM / cellSize);
+      const maxCodes = cols * rows;
 
       const codesToExport = category.codes.slice(0, maxCodes);
       
@@ -462,7 +563,7 @@ export default function AdminDashboard() {
      width="${SHEET_SIZE_MM}mm" height="${SHEET_SIZE_MM}mm" 
      viewBox="0 0 ${SHEET_SIZE_MM} ${SHEET_SIZE_MM}">
   <title>QR Codes - ${category.name}</title>
-  <desc>Categoria: ${category.name} - ${codesToExport.length} códigos - Gerado para impressão em 1m²</desc>
+  <desc>Categoria: ${category.name} - ${codesToExport.length} códigos - Tipo: ${isDisplay ? 'Display (4.15x4.15cm)' : 'Pet Tag (23mm)'} - Gerado para impressão em 1m²</desc>
   
   <!-- Styles -->
   <defs>
@@ -479,16 +580,24 @@ export default function AdminDashboard() {
   <g id="CutLines">
 `;
 
-      // Add vector cut circles for each QR code
+      // Add vector cut shapes for each QR code
       codesToExport.forEach((code, index) => {
         const col = index % cols;
         const row = Math.floor(index / cols);
         const x = col * cellSize + cellSize / 2;
         const y = row * cellSize + cellSize / 2;
-        const r = QR_DIAMETER_MM / 2;
 
-        svgContent += `    <circle cx="${x}" cy="${y}" r="${r}" class="cut-line"/>
+        if (isDisplay) {
+          // Square cut line for displays
+          const halfSize = itemSize / 2;
+          svgContent += `    <rect x="${x - halfSize}" y="${y - halfSize}" width="${itemSize}" height="${itemSize}" class="cut-line"/>
 `;
+        } else {
+          // Circular cut line for pet tags
+          const r = itemSize / 2;
+          svgContent += `    <circle cx="${x}" cy="${y}" r="${r}" class="cut-line"/>
+`;
+        }
       });
 
       svgContent += `  </g>
@@ -505,8 +614,8 @@ export default function AdminDashboard() {
 
         svgContent += `    <!-- QR Code: ${code.qr_code} -->
     <g transform="translate(${x}, ${y})">
-      <image x="${-QR_DIAMETER_MM/2}" y="${-QR_DIAMETER_MM/2}" 
-             width="${QR_DIAMETER_MM}" height="${QR_DIAMETER_MM}"
+      <image x="${-itemSize/2}" y="${-itemSize/2}" 
+             width="${itemSize}" height="${itemSize}"
              xlink:href="${qrImages[index]}"
              preserveAspectRatio="xMidYMid meet"/>
     </g>
@@ -520,7 +629,7 @@ export default function AdminDashboard() {
       const blob = new Blob([svgContent], { type: 'image/svg+xml' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.download = `qrcodes-${category.name}-${codesToExport.length}unidades.svg`;
+      link.download = `qrcodes-${category.name}-${isDisplay ? 'displays' : 'pet-tags'}-${codesToExport.length}unidades.svg`;
       link.href = url;
       link.click();
       URL.revokeObjectURL(url);
@@ -529,7 +638,7 @@ export default function AdminDashboard() {
 
       toast({
         title: "Arquivo exportado!",
-        description: `${codesToExport.length} QR Codes exportados em grade para impressão. Abra o arquivo SVG no CorelDRAW.`
+        description: `${codesToExport.length} QR Codes ${isDisplay ? '(4.15x4.15cm)' : '(23mm)'} exportados em grade para impressão. Abra o arquivo SVG no CorelDRAW.`
       });
     } catch (error: any) {
       toast({
