@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, User, ArrowRight, Loader2, QrCode, Dog, Building2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, User, ArrowRight, Loader2, QrCode, Dog, Building2, ShoppingBag } from 'lucide-react';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,10 @@ interface ValidatedProduct {
 }
 
 export default function Auth() {
+  const [searchParams] = useSearchParams();
+  const fromShop = searchParams.get('from') === 'shop';
+  const redirectTo = searchParams.get('redirect') || '/dashboard';
+  
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -38,15 +42,18 @@ export default function Auth() {
   const [validatedProduct, setValidatedProduct] = useState<ValidatedProduct | null>(null);
   const [isValidatingCode, setIsValidatingCode] = useState(false);
   
+  // Shop flow - skip activation code
+  const [skipActivation, setSkipActivation] = useState(fromShop);
+  
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     if (user) {
-      navigate('/dashboard');
+      navigate(redirectTo);
     }
-  }, [user, navigate]);
+  }, [user, navigate, redirectTo]);
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
@@ -151,11 +158,11 @@ export default function Auth() {
             title: 'Bem-vindo!',
             description: 'Login realizado com sucesso.'
           });
-          navigate('/dashboard');
+          navigate(redirectTo);
         }
       } else {
-        // Signup flow - must have validated product
-        if (!validatedProduct) {
+        // Signup flow - check if we need activation code (only when not from shop)
+        if (!skipActivation && !validatedProduct) {
           toast({
             title: 'Erro',
             description: 'Valide o código de ativação primeiro.',
@@ -188,8 +195,8 @@ export default function Auth() {
         // Wait for session to be established
         const { data: { session } } = await supabase.auth.getSession();
         
-        if (session?.user) {
-          // Activate product for the new user
+        if (session?.user && validatedProduct) {
+          // Activate product for the new user (only if we have a validated product)
           const { error: activateError } = await supabase.functions.invoke('activate-on-signup', {
             body: {
               userId: session.user.id,
@@ -211,9 +218,15 @@ export default function Auth() {
               description: 'Sua conta foi criada e seu produto já está ativado.'
             });
           }
+        } else if (session?.user && skipActivation) {
+          // Shop flow - just account creation, no product activation
+          toast({
+            title: 'Conta criada!',
+            description: 'Sua conta foi criada com sucesso. Continue sua compra.'
+          });
         }
         
-        navigate('/dashboard');
+        navigate(redirectTo);
       }
     } finally {
       setIsLoading(false);
@@ -469,7 +482,11 @@ export default function Auth() {
             <Loader2 className="w-5 h-5 animate-spin" />
           ) : (
             <>
-              {isLogin ? 'Entrar' : 'Criar Conta e Ativar'}
+              {isLogin 
+                ? 'Entrar' 
+                : skipActivation 
+                  ? 'Criar Conta' 
+                  : 'Criar Conta e Ativar'}
               <ArrowRight className="w-5 h-5 ml-2" />
             </>
           )}
@@ -496,9 +513,15 @@ export default function Auth() {
                 initial={{ scale: 0.5 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2, type: 'spring' }}
-                className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center"
+                className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
+                  skipActivation ? 'bg-blue-500/20' : 'bg-primary/20'
+                }`}
               >
-                <User className="w-8 h-8 text-primary" />
+                {skipActivation ? (
+                  <ShoppingBag className="w-8 h-8 text-blue-400" />
+                ) : (
+                  <User className="w-8 h-8 text-primary" />
+                )}
               </motion.div>
               <h1 className="text-2xl font-bold text-foreground">
                 {isLogin ? 'Entrar na sua conta' : 'Criar nova conta'}
@@ -506,7 +529,9 @@ export default function Auth() {
               <p className="text-muted-foreground mt-2">
                 {isLogin 
                   ? 'Acesse suas tags e displays' 
-                  : 'Digite o código do seu produto para criar sua conta'}
+                  : skipActivation 
+                    ? 'Crie sua conta para continuar a compra'
+                    : 'Digite o código do seu produto para criar sua conta'}
               </p>
             </div>
 
@@ -514,7 +539,11 @@ export default function Auth() {
             <AnimatePresence mode="wait">
               {isLogin ? (
                 renderAccountForm()
+              ) : skipActivation ? (
+                // Shop flow - go directly to account form
+                renderAccountForm()
               ) : (
+                // Normal flow - require activation code
                 <>
                   {signupStep === 1 && renderProductTypeSelection()}
                   {signupStep === 2 && renderActivationCodeInput()}

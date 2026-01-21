@@ -105,7 +105,7 @@ export default function Checkout() {
 
   useEffect(() => {
     if (!user) {
-      navigate('/auth');
+      navigate('/auth?from=shop&redirect=/loja/checkout');
       return;
     }
     if (cart.length === 0) {
