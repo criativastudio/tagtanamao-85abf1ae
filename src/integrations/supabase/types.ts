@@ -592,6 +592,56 @@ export type Database = {
           },
         ]
       }
+      pix_payments: {
+        Row: {
+          amount: number
+          confirmed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          order_id: string
+          pix_key: string
+          pix_key_type: string
+          status: string
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          confirmed_at?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          order_id: string
+          pix_key: string
+          pix_key_type?: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          confirmed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          order_id?: string
+          pix_key?: string
+          pix_key_type?: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pix_payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           created_at: string | null

@@ -11,8 +11,6 @@ import {
   Loader2,
   Ticket,
   QrCode,
-  Copy,
-  CheckCircle2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +28,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/hooks/useCart';
 import { ShippingQuote } from '@/types/ecommerce';
 import CouponInput from '@/components/checkout/CouponInput';
+import PixAwaitingPayment from '@/components/checkout/PixAwaitingPayment';
 
 interface AppliedCoupon {
   id: string;
@@ -53,13 +52,21 @@ interface PixConfig {
   admin_notification_enabled: boolean;
 }
 
+interface PixPaymentData {
+  id: string;
+  pixKey: string;
+  transactionId: string;
+  amount: number;
+  expiresAt: string;
+}
+
 export default function Checkout() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, profile } = useAuth();
   const { cart, getCartTotal, clearCart } = useCart();
   
-  const [step, setStep] = useState<'shipping' | 'payment' | 'confirmation'>('shipping');
+  const [step, setStep] = useState<'shipping' | 'awaiting_pix' | 'confirmation'>('shipping');
   const [loading, setLoading] = useState(false);
   const [loadingShipping, setLoadingShipping] = useState(false);
   
@@ -71,9 +78,12 @@ export default function Checkout() {
     admin_notification_enabled: true,
   });
   
+  // PIX payment data (after generation)
+  const [pixPaymentData, setPixPaymentData] = useState<PixPaymentData | null>(null);
+  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
+  
   // Payment method
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'asaas'>('pix');
-  const [pixCopied, setPixCopied] = useState(false);
   
   // Shipping form
   const [shippingData, setShippingData] = useState({
@@ -96,7 +106,7 @@ export default function Checkout() {
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [discountAmount, setDiscountAmount] = useState(0);
   
-  // Order result
+  // Order result for non-PIX payments
   const [orderResult, setOrderResult] = useState<{
     orderId: string;
     paymentLink: string;
@@ -108,10 +118,10 @@ export default function Checkout() {
       navigate('/auth?from=shop&redirect=/loja/checkout');
       return;
     }
-    if (cart.length === 0) {
+    if (cart.length === 0 && step === 'shipping') {
       navigate('/');
     }
-  }, [user, cart]);
+  }, [user, cart, step]);
 
   useEffect(() => {
     if (profile) {
@@ -200,7 +210,6 @@ export default function Checkout() {
     setLoadingShipping(true);
     
     // Simulated shipping quotes (would integrate with Correios API)
-    // For now, using static quotes
     setTimeout(() => {
       const quotes: ShippingQuote[] = [
         { service: 'PAC', carrier: 'Correios', price: 0, delivery_time: 8 },
@@ -236,33 +245,6 @@ export default function Checkout() {
     return true;
   };
 
-  const generatePixPayload = (amount: number) => {
-    // Gera payload PIX simplificado (em produção, usar biblioteca pix-payload)
-    const payload = `${pixConfig.pix_key}`;
-    return payload;
-  };
-
-  const copyPixKey = () => {
-    navigator.clipboard.writeText(pixConfig.pix_key);
-    setPixCopied(true);
-    toast({
-      title: 'Chave PIX copiada!',
-      description: 'Cole no app do seu banco para pagar.',
-    });
-    setTimeout(() => setPixCopied(false), 3000);
-  };
-
-  const getPixKeyTypeLabel = () => {
-    const labels: Record<string, string> = {
-      phone: 'Telefone',
-      email: 'E-mail',
-      cpf: 'CPF',
-      cnpj: 'CNPJ',
-      random: 'Chave Aleatória',
-    };
-    return labels[pixConfig.pix_key_type] || 'Chave';
-  };
-
   const sendAdminNotification = (orderId: string, total: number) => {
     if (!pixConfig.admin_notification_enabled || !pixConfig.admin_whatsapp) return;
     
@@ -274,7 +256,7 @@ export default function Checkout() {
 📱 Telefone: ${shippingData.phone}
 📍 Cidade: ${shippingData.city}/${shippingData.state}
 
-⏳ Aguardando confirmação do comprovante PIX.`;
+⏳ Aguardando pagamento PIX.`;
     
     window.open(`https://wa.me/${pixConfig.admin_whatsapp}?text=${encodeURIComponent(message)}`, '_blank');
   };
@@ -304,12 +286,14 @@ export default function Checkout() {
           shipping_method: selectedShipping?.service,
           coupon_id: appliedCoupon?.id || null,
           discount_amount: discountAmount,
-          notes: paymentMethod === 'pix' ? `Pagamento PIX - Aguardando confirmação manual` : null,
+          notes: paymentMethod === 'pix' ? `Pagamento PIX - Aguardando confirmação` : null,
         })
         .select()
         .single();
 
       if (orderError) throw orderError;
+
+      setCurrentOrderId(order.id);
 
       // Increment coupon usage if applied
       if (appliedCoupon) {
@@ -319,7 +303,7 @@ export default function Checkout() {
           .eq('id', appliedCoupon.id);
       }
 
-      // Create order items - only include product_id if it's a valid UUID
+      // Create order items
       const isValidUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
       
       const items = cart.map(item => ({
@@ -335,65 +319,81 @@ export default function Checkout() {
 
       if (itemsError) throw itemsError;
 
-      // Generate payment link based on method
-      let paymentLink = '';
-      if (paymentMethod === 'asaas') {
-        paymentLink = `https://sandbox.asaas.com/c/${order.id.slice(0, 8)}`;
+      // For PIX payment, generate dynamic PIX key
+      if (paymentMethod === 'pix') {
+        const { data: session } = await supabase.auth.getSession();
         
-        // Update order with payment link
+        const { data: pixResult, error: pixError } = await supabase.functions.invoke('pix-payment', {
+          body: {
+            orderId: order.id,
+            amount: getTotalWithShipping(),
+            customerEmail: profile?.email || user?.email,
+            customerName: shippingData.name,
+            customerPhone: shippingData.phone,
+          },
+          headers: {
+            Authorization: `Bearer ${session?.session?.access_token}`,
+          },
+        });
+
+        if (pixError) throw pixError;
+        
+        if (pixResult?.success && pixResult?.pixPayment) {
+          setPixPaymentData(pixResult.pixPayment);
+          sendAdminNotification(order.id, getTotalWithShipping());
+          clearCart();
+          setStep('awaiting_pix');
+        } else {
+          throw new Error('Erro ao gerar PIX');
+        }
+      } else {
+        // For Asaas payment
+        const paymentLink = `https://sandbox.asaas.com/c/${order.id.slice(0, 8)}`;
+        
         await supabase
           .from('orders')
           .update({ asaas_payment_link: paymentLink })
           .eq('id', order.id);
-      }
 
-      // Send confirmation email
-      try {
-        await supabase.functions.invoke('send-order-confirmation', {
-          body: {
-            customerEmail: profile?.email || user?.email,
-            customerName: shippingData.name,
-            orderId: order.id,
-            orderItems: cart.map(item => ({
-              name: item.product.name,
-              quantity: item.quantity,
-              price: item.product.price * item.quantity,
-            })),
-            subtotal: getCartTotal(),
-            discount: discountAmount,
-            shipping: selectedShipping?.price || 0,
-            total: getTotalWithShipping(),
-            shippingAddress: `${shippingData.address}, ${shippingData.number}${shippingData.complement ? ` - ${shippingData.complement}` : ''} - ${shippingData.neighborhood}`,
-            shippingCity: shippingData.city,
-            shippingState: shippingData.state,
-            shippingZip: shippingData.zip,
-            paymentLink: paymentMethod === 'pix' ? 'PIX Manual' : paymentLink,
-            paymentMethod,
-            pixKey: paymentMethod === 'pix' ? pixConfig.pix_key : undefined,
-          },
+        // Send confirmation email
+        try {
+          await supabase.functions.invoke('send-order-confirmation', {
+            body: {
+              customerEmail: profile?.email || user?.email,
+              customerName: shippingData.name,
+              orderId: order.id,
+              orderItems: cart.map(item => ({
+                name: item.product.name,
+                quantity: item.quantity,
+                price: item.product.price * item.quantity,
+              })),
+              subtotal: getCartTotal(),
+              discount: discountAmount,
+              shipping: selectedShipping?.price || 0,
+              total: getTotalWithShipping(),
+              shippingAddress: `${shippingData.address}, ${shippingData.number}${shippingData.complement ? ` - ${shippingData.complement}` : ''} - ${shippingData.neighborhood}`,
+              shippingCity: shippingData.city,
+              shippingState: shippingData.state,
+              shippingZip: shippingData.zip,
+              paymentLink,
+              paymentMethod,
+            },
+          });
+        } catch (emailError) {
+          console.error('Error sending confirmation email:', emailError);
+        }
+
+        clearCart();
+        setOrderResult({
+          orderId: order.id,
+          paymentLink,
+          paymentMethod,
         });
-      } catch (emailError) {
-        console.error('Error sending confirmation email:', emailError);
-        // Don't fail the order if email fails
+        setStep('confirmation');
       }
-
-      // Send WhatsApp notification to admin for PIX orders
-      if (paymentMethod === 'pix') {
-        sendAdminNotification(order.id, getTotalWithShipping());
-      }
-
-      // Clear cart
-      clearCart();
-
-      setOrderResult({
-        orderId: order.id,
-        paymentLink,
-        paymentMethod,
-      });
-      
-      setStep('confirmation');
       
     } catch (error: any) {
+      console.error('Error creating order:', error);
       toast({
         title: 'Erro ao criar pedido',
         description: error.message,
@@ -401,6 +401,17 @@ export default function Checkout() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePaymentConfirmed = () => {
+    if (currentOrderId) {
+      setOrderResult({
+        orderId: currentOrderId,
+        paymentLink: '',
+        paymentMethod: 'pix',
+      });
+      setStep('confirmation');
     }
   };
 
@@ -416,7 +427,7 @@ export default function Checkout() {
             <h1 className="text-xl font-bold">Checkout</h1>
             <p className="text-sm text-muted-foreground">
               {step === 'shipping' && 'Endereço de entrega'}
-              {step === 'payment' && 'Pagamento'}
+              {step === 'awaiting_pix' && 'Aguardando pagamento'}
               {step === 'confirmation' && 'Pedido confirmado'}
             </p>
           </div>
@@ -620,7 +631,7 @@ export default function Checkout() {
                                 <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded">Recomendado</span>
                               </p>
                               <p className="text-sm text-muted-foreground">
-                                Pagamento instantâneo • Liberação imediata
+                                Pagamento instantâneo • Confirmação automática
                               </p>
                             </div>
                           </div>
@@ -665,9 +676,18 @@ export default function Checkout() {
                   ) : (
                     <CreditCard className="w-4 h-4 mr-2" />
                   )}
-                  {paymentMethod === 'pix' ? 'Finalizar e Ver PIX' : 'Ir para Pagamento'}
+                  {paymentMethod === 'pix' ? 'Gerar PIX e Pagar' : 'Ir para Pagamento'}
                 </Button>
               </motion.div>
+            )}
+
+            {step === 'awaiting_pix' && pixPaymentData && currentOrderId && (
+              <PixAwaitingPayment
+                pixPayment={pixPaymentData}
+                orderId={currentOrderId}
+                adminWhatsapp={pixConfig.admin_whatsapp}
+                onPaymentConfirmed={handlePaymentConfirmed}
+              />
             )}
 
             {step === 'confirmation' && orderResult && (
@@ -679,67 +699,12 @@ export default function Checkout() {
                 <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-6">
                   <Check className="w-10 h-10 text-primary" />
                 </div>
-                <h2 className="text-2xl font-bold mb-2">Pedido Criado!</h2>
+                <h2 className="text-2xl font-bold mb-2">
+                  {orderResult.paymentMethod === 'pix' ? 'Pagamento Confirmado!' : 'Pedido Criado!'}
+                </h2>
                 <p className="text-muted-foreground mb-6">
                   Pedido #{orderResult.orderId.slice(0, 8)}
                 </p>
-                
-                {/* PIX Payment Instructions */}
-                {orderResult.paymentMethod === 'pix' && (
-                  <Card className="glass-card mb-6 text-left">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-primary">
-                        <QrCode className="w-5 h-5" />
-                        Pagamento via PIX
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="p-4 rounded-lg bg-muted/30 border border-primary/20">
-                        <p className="text-sm text-muted-foreground mb-2">Valor a pagar:</p>
-                        <p className="text-3xl font-bold text-primary">{formatCurrency(getTotalWithShipping())}</p>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label>Chave PIX ({getPixKeyTypeLabel()})</Label>
-                        <div className="flex gap-2">
-                          <Input 
-                            value={pixConfig.pix_key} 
-                            readOnly 
-                            className="font-mono text-sm"
-                          />
-                          <Button
-                            variant={pixCopied ? 'default' : 'outline'}
-                            onClick={copyPixKey}
-                            className="shrink-0"
-                          >
-                            {pixCopied ? (
-                              <CheckCircle2 className="w-4 h-4" />
-                            ) : (
-                              <Copy className="w-4 h-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
-                        <p className="text-sm text-yellow-600 dark:text-yellow-400">
-                          <strong>Importante:</strong> Após o pagamento, envie o comprovante por WhatsApp para agilizar a liberação do seu pedido.
-                        </p>
-                      </div>
-                      
-                      <Button
-                        className="w-full"
-                        variant="hero"
-                        onClick={() => {
-                          const message = `Olá! Acabei de fazer o pedido #${orderResult.orderId.slice(0, 8)} e paguei via PIX. Segue comprovante:`;
-                          window.open(`https://wa.me/${pixConfig.admin_whatsapp}?text=${encodeURIComponent(message)}`, '_blank');
-                        }}
-                      >
-                        Enviar Comprovante por WhatsApp
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
                 
                 {/* Asaas Payment */}
                 {orderResult.paymentMethod === 'asaas' && (
@@ -756,6 +721,26 @@ export default function Checkout() {
                         <CreditCard className="w-4 h-4 mr-2" />
                         Pagar Agora
                       </Button>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Success message for PIX */}
+                {orderResult.paymentMethod === 'pix' && (
+                  <Card className="glass-card mb-6 text-left border-primary/30">
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                          <Check className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold mb-1 text-primary">Pagamento recebido!</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Seu pagamento PIX foi confirmado e seu pedido está sendo processado.
+                            Você receberá atualizações por e-mail e WhatsApp.
+                          </p>
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
                 )}
@@ -793,84 +778,86 @@ export default function Checkout() {
           </div>
 
           {/* Order Summary */}
-          <div className="lg:col-span-1">
-            <Card className="glass-card sticky top-24">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="w-5 h-5" />
-                  Resumo
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {cart.map(item => (
-                  <div key={item.product.id} className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded bg-muted flex items-center justify-center">
-                      {item.product.image_url ? (
-                        <img
-                          src={item.product.image_url}
-                          alt={item.product.name}
-                          className="w-full h-full object-cover rounded"
-                        />
-                      ) : (
-                        <Package className="w-6 h-6 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium line-clamp-1">{item.product.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Qtd: {item.quantity}
-                      </p>
-                    </div>
-                    <span className="text-sm font-medium">
-                      {formatCurrency(item.product.price * item.quantity)}
-                    </span>
-                  </div>
-                ))}
-
-                <div className="border-t border-border pt-4 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span>{formatCurrency(getCartTotal())}</span>
-                  </div>
-                  
-                  {/* Coupon Input */}
-                  <div className="py-2">
-                    <CouponInput
-                      orderTotal={getCartTotal()}
-                      appliedCoupon={appliedCoupon}
-                      onApplyCoupon={handleApplyCoupon}
-                    />
-                  </div>
-                  
-                  {discountAmount > 0 && (
-                    <div className="flex justify-between text-sm text-primary">
-                      <span className="flex items-center gap-1">
-                        <Ticket className="w-3 h-3" />
-                        Desconto
+          {step === 'shipping' && (
+            <div className="lg:col-span-1">
+              <Card className="glass-card sticky top-24">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="w-5 h-5" />
+                    Resumo
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {cart.map(item => (
+                    <div key={item.product.id} className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded bg-muted flex items-center justify-center">
+                        {item.product.image_url ? (
+                          <img
+                            src={item.product.image_url}
+                            alt={item.product.name}
+                            className="w-full h-full object-cover rounded"
+                          />
+                        ) : (
+                          <Package className="w-6 h-6 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium line-clamp-1">{item.product.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Qtd: {item.quantity}
+                        </p>
+                      </div>
+                      <span className="text-sm font-medium">
+                        {formatCurrency(item.product.price * item.quantity)}
                       </span>
-                      <span>-{formatCurrency(discountAmount)}</span>
                     </div>
-                  )}
-                  
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Frete</span>
-                    <span className={selectedShipping?.price === 0 ? 'text-primary' : ''}>
-                      {selectedShipping
-                        ? selectedShipping.price === 0
-                          ? 'Grátis'
-                          : formatCurrency(selectedShipping.price)
-                        : '-'
-                      }
-                    </span>
+                  ))}
+
+                  <div className="border-t border-border pt-4 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Subtotal</span>
+                      <span>{formatCurrency(getCartTotal())}</span>
+                    </div>
+                    
+                    {/* Coupon Input */}
+                    <div className="py-2">
+                      <CouponInput
+                        orderTotal={getCartTotal()}
+                        appliedCoupon={appliedCoupon}
+                        onApplyCoupon={handleApplyCoupon}
+                      />
+                    </div>
+                    
+                    {discountAmount > 0 && (
+                      <div className="flex justify-between text-sm text-primary">
+                        <span className="flex items-center gap-1">
+                          <Ticket className="w-3 h-3" />
+                          Desconto
+                        </span>
+                        <span>-{formatCurrency(discountAmount)}</span>
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Frete</span>
+                      <span className={selectedShipping?.price === 0 ? 'text-primary' : ''}>
+                        {selectedShipping
+                          ? selectedShipping.price === 0
+                            ? 'Grátis'
+                            : formatCurrency(selectedShipping.price)
+                          : '-'
+                        }
+                      </span>
+                    </div>
+                    <div className="flex justify-between font-bold text-lg pt-2 border-t border-border">
+                      <span>Total</span>
+                      <span className="text-primary">{formatCurrency(getTotalWithShipping())}</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between font-bold text-lg pt-2 border-t border-border">
-                    <span>Total</span>
-                    <span className="text-primary">{formatCurrency(getTotalWithShipping())}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       </div>
     </div>
