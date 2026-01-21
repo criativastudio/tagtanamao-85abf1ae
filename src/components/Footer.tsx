@@ -5,7 +5,7 @@ const Footer = () => {
   return (
     <footer className="relative py-16 border-t border-border/50">
       <div className="absolute inset-0 bg-secondary/20" />
-      
+
       <div className="container relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
           {/* Brand */}
@@ -25,13 +25,22 @@ const Footer = () => {
               Tecnologia que protege quem você ama. Tags inteligentes com QR Code para pets e empresas.
             </p>
             <div className="flex gap-3">
-              <a href="#" className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center hover:bg-primary/20 transition-colors">
+              <a
+                href="#"
+                className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center hover:bg-primary/20 transition-colors"
+              >
                 <Instagram className="w-4 h-4" />
               </a>
-              <a href="#" className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center hover:bg-primary/20 transition-colors">
+              <a
+                href="#"
+                className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center hover:bg-primary/20 transition-colors"
+              >
                 <Facebook className="w-4 h-4" />
               </a>
-              <a href="#" className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center hover:bg-primary/20 transition-colors">
+              <a
+                href="#"
+                className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center hover:bg-primary/20 transition-colors"
+              >
                 <Twitter className="w-4 h-4" />
               </a>
             </div>
@@ -46,10 +55,26 @@ const Footer = () => {
           >
             <h4 className="font-display font-semibold mb-4">Produtos</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><a href="#" className="hover:text-primary transition-colors">Tag Pet QR Code</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Display QR Empresas</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">NFC Cards (Em breve)</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">NFC Tags (Em breve)</a></li>
+              <li>
+                <a href="#" className="hover:text-primary transition-colors">
+                  Tag Pet QR Code
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:text-primary transition-colors">
+                  Display QR Empresas
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:text-primary transition-colors">
+                  NFC Cards (Em breve)
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:text-primary transition-colors">
+                  NFC Tags (Em breve)
+                </a>
+              </li>
             </ul>
           </motion.div>
 
@@ -62,11 +87,31 @@ const Footer = () => {
           >
             <h4 className="font-display font-semibold mb-4">Empresa</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><a href="#" className="hover:text-primary transition-colors">Sobre Nós</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Como Funciona</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">FAQ</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Termos de Uso</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Política de Privacidade</a></li>
+              <li>
+                <a href="#" className="hover:text-primary transition-colors">
+                  Sobre Nós
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:text-primary transition-colors">
+                  Como Funciona
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:text-primary transition-colors">
+                  FAQ
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:text-primary transition-colors">
+                  Termos de Uso
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:text-primary transition-colors">
+                  Política de Privacidade
+                </a>
+              </li>
             </ul>
           </motion.div>
 
@@ -81,8 +126,8 @@ const Footer = () => {
             <ul className="space-y-3 text-sm text-muted-foreground">
               <li className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-primary" />
-                <a href="mailto:contato@qrpet.com.br" className="hover:text-primary transition-colors">
-                  contato@qrpet.com.br
+                <a href="mailto:contato@tagtanamao.com.br" className="hover:text-primary transition-colors">
+                  contato@tagtanamao.com.br
                 </a>
               </li>
               <li className="flex items-center gap-2">
@@ -101,13 +146,17 @@ const Footer = () => {
 
         {/* Bottom */}
         <div className="pt-8 border-t border-border/50 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground">
-            © 2024 QRPet. Todos os direitos reservados.
-          </p>
+          <p className="text-sm text-muted-foreground">© 2026 Tag Tá Na Mão. Todos os direitos reservados.</p>
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <a href="#" className="hover:text-primary transition-colors">Termos</a>
-            <a href="#" className="hover:text-primary transition-colors">Privacidade</a>
-            <a href="#" className="hover:text-primary transition-colors">Cookies</a>
+            <a href="#" className="hover:text-primary transition-colors">
+              Termos
+            </a>
+            <a href="#" className="hover:text-primary transition-colors">
+              Privacidade
+            </a>
+            <a href="#" className="hover:text-primary transition-colors">
+              Cookies
+            </a>
           </div>
         </div>
       </div>
