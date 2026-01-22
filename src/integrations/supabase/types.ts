@@ -599,7 +599,9 @@ export type Database = {
       pet_tags: {
         Row: {
           address: string | null
+          buttons: Json | null
           created_at: string | null
+          gallery_photos: Json | null
           id: string
           is_activated: boolean | null
           lost_mode: boolean | null
@@ -611,13 +613,16 @@ export type Database = {
           reward_enabled: boolean | null
           reward_text: string | null
           slug: string | null
+          theme_color: string | null
           updated_at: string | null
           user_id: string | null
           whatsapp: string | null
         }
         Insert: {
           address?: string | null
+          buttons?: Json | null
           created_at?: string | null
+          gallery_photos?: Json | null
           id?: string
           is_activated?: boolean | null
           lost_mode?: boolean | null
@@ -629,13 +634,16 @@ export type Database = {
           reward_enabled?: boolean | null
           reward_text?: string | null
           slug?: string | null
+          theme_color?: string | null
           updated_at?: string | null
           user_id?: string | null
           whatsapp?: string | null
         }
         Update: {
           address?: string | null
+          buttons?: Json | null
           created_at?: string | null
+          gallery_photos?: Json | null
           id?: string
           is_activated?: boolean | null
           lost_mode?: boolean | null
@@ -647,6 +655,7 @@ export type Database = {
           reward_enabled?: boolean | null
           reward_text?: string | null
           slug?: string | null
+          theme_color?: string | null
           updated_at?: string | null
           user_id?: string | null
           whatsapp?: string | null

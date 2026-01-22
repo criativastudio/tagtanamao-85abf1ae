@@ -16,6 +16,7 @@ import PublicDisplayPage from "./pages/PublicDisplayPage";
 import PublicBioPage from "./pages/PublicBioPage";
 import BioEditor from "./pages/BioEditor";
 import PetTagsManager from "./pages/PetTagsManager";
+import PetTagEditor from "./pages/PetTagEditor";
 import DisplaysManager from "./pages/DisplaysManager";
 import MyProducts from "./pages/customer/MyProducts";
 import Shop from "./pages/customer/Shop";
@@ -72,6 +73,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <PetTagsManager />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard/tags/:id"
+                element={
+                  <ProtectedRoute>
+                    <PetTagEditor />
                   </ProtectedRoute>
                 }
               />

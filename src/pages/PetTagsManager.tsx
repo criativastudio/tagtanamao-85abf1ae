@@ -21,7 +21,8 @@ import {
   Square,
   Lock,
   ShieldAlert,
-  ShieldCheck
+  ShieldCheck,
+  Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -559,6 +560,14 @@ export default function PetTagsManager() {
                     
                     {/* Actions */}
                     <div className="absolute top-4 right-4 flex gap-2">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => navigate(`/dashboard/tags/${selectedTag.id}`)}
+                      >
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Personalizar
+                      </Button>
                       <Button
                         variant="secondary"
                         size="sm"
