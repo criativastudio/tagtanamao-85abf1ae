@@ -36,86 +36,41 @@ export default function ActivateProduct() {
       return;
     }
 
+    if (!user?.id) {
+      toast({
+        title: 'Erro',
+        description: 'Você precisa estar logado para ativar um produto.',
+        variant: 'destructive'
+      });
+      navigate('/auth');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      if (productType === 'pet_tag') {
-        // Check if tag exists and is not activated
-        const { data: existingTag, error: checkError } = await supabase
-          .from('pet_tags')
-          .select('*')
-          .eq('qr_code', qrCode)
-          .single();
-
-        if (checkError || !existingTag) {
-          toast({
-            title: 'Código inválido',
-            description: 'Este código de produto não foi encontrado.',
-            variant: 'destructive'
-          });
-          setIsLoading(false);
-          return;
+      // Use the edge function to activate the product (bypasses RLS)
+      const { data, error } = await supabase.functions.invoke('activate-product', {
+        body: {
+          qrCode: qrCode.trim(),
+          productType,
+          userId: user.id
         }
+      });
 
-        if (existingTag.is_activated) {
-          toast({
-            title: 'Produto já ativado',
-            description: 'Este produto já foi ativado anteriormente.',
-            variant: 'destructive'
-          });
-          setIsLoading(false);
-          return;
-        }
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || 'Erro ao ativar produto');
+      }
 
-        // Activate the tag
-        const { error } = await supabase
-          .from('pet_tags')
-          .update({ 
-            is_activated: true, 
-            user_id: user?.id 
-          })
-          .eq('qr_code', qrCode);
-
-        if (error) throw error;
-
-      } else if (productType === 'business_display') {
-        // Check if display exists
-        const { data: existingDisplay, error: checkError } = await supabase
-          .from('business_displays')
-          .select('*')
-          .eq('qr_code', qrCode)
-          .single();
-
-        if (checkError || !existingDisplay) {
-          toast({
-            title: 'Código inválido',
-            description: 'Este código de produto não foi encontrado.',
-            variant: 'destructive'
-          });
-          setIsLoading(false);
-          return;
-        }
-
-        if (existingDisplay.is_activated) {
-          toast({
-            title: 'Produto já ativado',
-            description: 'Este produto já foi ativado anteriormente.',
-            variant: 'destructive'
-          });
-          setIsLoading(false);
-          return;
-        }
-
-        // Activate the display
-        const { error } = await supabase
-          .from('business_displays')
-          .update({ 
-            is_activated: true, 
-            user_id: user?.id 
-          })
-          .eq('qr_code', qrCode);
-
-        if (error) throw error;
+      if (!data?.success) {
+        toast({
+          title: 'Erro',
+          description: data?.error || 'Não foi possível ativar o produto.',
+          variant: 'destructive'
+        });
+        setIsLoading(false);
+        return;
       }
 
       setIsActivated(true);
@@ -124,14 +79,11 @@ export default function ActivateProduct() {
         description: 'Seu produto foi ativado com sucesso.'
       });
 
-    } catch (error) {
-      // Only log error details in development mode to prevent info leakage
-      if (import.meta.env.DEV) {
-        console.error('Activation error:', error);
-      }
+    } catch (error: any) {
+      console.error('Activation error:', error);
       toast({
         title: 'Erro ao ativar',
-        description: 'Ocorreu um erro ao ativar o produto. Tente novamente.',
+        description: error?.message || 'Ocorreu um erro ao ativar o produto. Tente novamente.',
         variant: 'destructive'
       });
     } finally {
@@ -268,13 +220,13 @@ export default function ActivateProduct() {
                     Código do Produto
                   </label>
                   <Input
-                    placeholder="Ex: a1b2c3d4-e5f6-..."
+                    placeholder="Ex: 123456"
                     value={qrCode}
                     onChange={(e) => setQrCode(e.target.value)}
                     className="bg-background/50"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    O código está impresso no seu produto ou no cartão que acompanha
+                    O código de 6 dígitos está impresso no seu produto
                   </p>
                 </div>
               </div>

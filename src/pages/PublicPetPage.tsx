@@ -49,22 +49,37 @@ const PublicPetPage = () => {
 
         setPet(data);
 
-        // Log the scan (fire and forget)
+        // Log the scan and send notification (fire and forget)
+        const logScanAndNotify = async (latitude?: number, longitude?: number) => {
+          // Log the scan
+          await supabase.from("qr_scans").insert({
+            pet_tag_id: data.id,
+            latitude: latitude,
+            longitude: longitude,
+            user_agent: navigator.userAgent,
+          });
+
+          // Send WhatsApp notification with location (fire and forget)
+          // This notifies the owner if they have WhatsApp registered
+          supabase.functions.invoke("notify-scan-location", {
+            body: {
+              petTagId: data.id,
+              latitude,
+              longitude,
+            },
+          }).catch(err => {
+            // Silently ignore notification errors
+            console.log("Notification skipped:", err?.message);
+          });
+        };
+
         navigator.geolocation?.getCurrentPosition(
           async (position) => {
-            await supabase.from("qr_scans").insert({
-              pet_tag_id: data.id,
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-              user_agent: navigator.userAgent,
-            });
+            await logScanAndNotify(position.coords.latitude, position.coords.longitude);
           },
           async () => {
             // If geolocation denied, log without location
-            await supabase.from("qr_scans").insert({
-              pet_tag_id: data.id,
-              user_agent: navigator.userAgent,
-            });
+            await logScanAndNotify();
           }
         );
       } catch {
