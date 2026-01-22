@@ -182,19 +182,17 @@ const PublicPetPage = () => {
       // Remove leading zeros
       phone = phone.replace(/^0+/, '');
       
-      // Add country code if not present (assume Brazil +55)
-      // Brazilian numbers: 2 digit area code + 8-9 digit number = 10-11 digits
-      if (phone.length <= 11) {
-        phone = `55${phone}`;
+      // Remove country code if already present to avoid duplication
+      if (phone.startsWith('55') && phone.length > 11) {
+        phone = phone.substring(2);
       }
       
-      // Validate minimum length (country code + area code + number)
-      if (phone.length >= 12) {
-        url = `https://wa.me/${phone}`;
-      } else {
-        console.error('Invalid WhatsApp number:', url);
-        return;
-      }
+      // Create message with pet name
+      const petName = pet?.pet_name || 'seu pet';
+      const message = encodeURIComponent(`Olá! Encontrei ${petName}! 🐾`);
+      
+      // Format: https://wa.me/55[DDD][NUMBER]?text=[MESSAGE]
+      url = `https://wa.me/55${phone}?text=${message}`;
     } else if (button.icon === 'Phone') {
       // Phone call - ensure tel: prefix
       const phone = url.replace(/\D/g, '');
