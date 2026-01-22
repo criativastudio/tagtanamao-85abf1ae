@@ -57,7 +57,22 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const url = new URL(req.url);
-    const action = url.searchParams.get("action");
+    let action = url.searchParams.get("action");
+
+    // Parse body to determine action if not in query string
+    let bodyData: any = null;
+    if (req.method === "POST") {
+      try {
+        bodyData = await req.json();
+      } catch {
+        bodyData = {};
+      }
+    }
+
+    // Default to "create" action if no action specified and body contains orderId
+    if (!action && bodyData?.orderId && bodyData?.amount) {
+      action = "create";
+    }
 
     // Validate auth for all actions
     const authHeader = req.headers.get("Authorization");
@@ -80,7 +95,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // CREATE PIX PAYMENT
     if (action === "create") {
-      const data: CreatePixRequest = await req.json();
+      const data: CreatePixRequest = bodyData;
       console.log("Creating PIX payment for order:", data.orderId);
 
       // Validate order belongs to user
@@ -148,7 +163,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // CONFIRM PIX PAYMENT (Admin only)
     if (action === "confirm") {
-      const data: ConfirmPixRequest = await req.json();
+      const data: ConfirmPixRequest = bodyData || await req.json();
       console.log("Confirming PIX payment:", data.pixPaymentId);
 
       // Check if user is admin
