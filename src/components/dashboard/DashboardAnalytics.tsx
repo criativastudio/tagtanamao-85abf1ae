@@ -8,8 +8,9 @@ import { ptBR } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface DashboardAnalyticsProps {
-  petTagIds: string[];
-  displayIds: string[];
+  petTagIds?: string[];
+  displayIds?: string[];
+  showAll?: boolean; // Admin mode - fetch all scans
 }
 
 interface ScanData {
@@ -31,17 +32,17 @@ interface AnalyticsData {
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
-export default function DashboardAnalytics({ petTagIds, displayIds }: DashboardAnalyticsProps) {
+export default function DashboardAnalytics({ petTagIds = [], displayIds = [], showAll = false }: DashboardAnalyticsProps) {
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
 
   useEffect(() => {
-    if (petTagIds.length > 0 || displayIds.length > 0) {
+    if (showAll || petTagIds.length > 0 || displayIds.length > 0) {
       fetchAnalytics();
     } else {
       setLoading(false);
     }
-  }, [petTagIds, displayIds]);
+  }, [petTagIds, displayIds, showAll]);
 
   const fetchAnalytics = async () => {
     try {
@@ -53,12 +54,15 @@ export default function DashboardAnalytics({ petTagIds, displayIds }: DashboardA
         .select('*')
         .gte('scanned_at', thirtyDaysAgo);
 
-      if (petTagIds.length > 0 && displayIds.length > 0) {
-        query = query.or(`pet_tag_id.in.(${petTagIds.join(',')}),display_id.in.(${displayIds.join(',')})`);
-      } else if (petTagIds.length > 0) {
-        query = query.in('pet_tag_id', petTagIds);
-      } else {
-        query = query.in('display_id', displayIds);
+      // If not showAll, filter by specific IDs
+      if (!showAll) {
+        if (petTagIds.length > 0 && displayIds.length > 0) {
+          query = query.or(`pet_tag_id.in.(${petTagIds.join(',')}),display_id.in.(${displayIds.join(',')})`);
+        } else if (petTagIds.length > 0) {
+          query = query.in('pet_tag_id', petTagIds);
+        } else if (displayIds.length > 0) {
+          query = query.in('display_id', displayIds);
+        }
       }
 
       const { data, error } = await query;
@@ -124,7 +128,7 @@ export default function DashboardAnalytics({ petTagIds, displayIds }: DashboardA
     );
   }
 
-  if (!analytics || (petTagIds.length === 0 && displayIds.length === 0)) {
+  if (!analytics || (!showAll && petTagIds.length === 0 && displayIds.length === 0)) {
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
