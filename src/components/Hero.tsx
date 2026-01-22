@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, MapPin, Smartphone } from "lucide-react";
-import petTagProduct from "@/assets/pet-tag-product.png";
 
 const Hero = () => {
   return (
@@ -104,33 +103,6 @@ const Hero = () => {
             </div>
           </motion.div>
         </div>
-
-        {/* Floating product mockup */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.5, type: "spring" }}
-          className="mt-16 relative"
-        >
-          <div className="relative max-w-lg mx-auto">
-            {/* Glow effect behind product */}
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/30 via-glow-secondary/30 to-primary/30 blur-[60px] rounded-full" />
-            
-            {/* Product card */}
-            <div className="relative glass rounded-3xl p-8 text-center float">
-              <div className="w-48 h-48 mx-auto mb-4 flex items-center justify-center">
-                <img 
-                  src={petTagProduct} 
-                  alt="Tag Pet Premium com QR Code" 
-                  className="w-full h-full object-contain drop-shadow-[0_0_30px_hsl(var(--primary)/0.5)]"
-                />
-              </div>
-              <h3 className="font-display font-bold text-lg mb-1">Tag Pet Premium</h3>
-              <p className="text-muted-foreground text-sm mb-3">QR Code + Geolocalização</p>
-              <div className="text-gradient text-2xl font-bold">R$ 59,90</div>
-            </div>
-          </div>
-        </motion.div>
       </div>
     </section>
   );
