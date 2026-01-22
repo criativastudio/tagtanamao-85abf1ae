@@ -58,11 +58,19 @@ const Hero = () => {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12"
           >
-            <Button variant="hero" size="xl">
+            <Button 
+              variant="hero" 
+              size="xl"
+              onClick={() => document.getElementById('precos')?.scrollIntoView({ behavior: 'smooth' })}
+            >
               Proteger Meu Pet
               <ArrowRight className="w-5 h-5" />
             </Button>
-            <Button variant="heroOutline" size="xl">
+            <Button 
+              variant="heroOutline" 
+              size="xl"
+              onClick={() => document.getElementById('como-funciona')?.scrollIntoView({ behavior: 'smooth' })}
+            >
               Ver Como Funciona
             </Button>
           </motion.div>
