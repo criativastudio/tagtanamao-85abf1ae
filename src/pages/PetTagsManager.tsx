@@ -22,7 +22,8 @@ import {
   Lock,
   ShieldAlert,
   ShieldCheck,
-  Sparkles
+  Sparkles,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -111,37 +112,71 @@ export default function PetTagsManager() {
   const fetchPetTags = async () => {
     setLoading(true);
     
-    const { data, error } = await supabase
-      .from('pet_tags')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (error) {
+    try {
+      const { data, error } = await supabase
+        .from('pet_tags')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching pet tags:', error);
+        toast({
+          title: 'Erro ao carregar tags',
+          description: error.message,
+          variant: 'destructive'
+        });
+        setLoading(false);
+        return;
+      }
+      
+      if (data) {
+        setPetTags(data);
+        
+        // Fetch all scan stats in one query for better performance
+        const tagIds = data.map(tag => tag.id);
+        if (tagIds.length > 0) {
+          const { data: scans, error: scansError } = await supabase
+            .from('qr_scans')
+            .select('pet_tag_id, scanned_at, city, country')
+            .in('pet_tag_id', tagIds)
+            .order('scanned_at', { ascending: false });
+          
+          if (scansError) {
+            console.error('Error fetching scans:', scansError);
+          }
+          
+          // Process scans into stats
+          const stats: Record<string, ScanInfo> = {};
+          const countMap: Record<string, number> = {};
+          const lastScanMap: Record<string, { scanned_at: string; city: string | null; country: string | null }> = {};
+          
+          (scans || []).forEach(scan => {
+            if (!scan.pet_tag_id) return;
+            countMap[scan.pet_tag_id] = (countMap[scan.pet_tag_id] || 0) + 1;
+            if (!lastScanMap[scan.pet_tag_id]) {
+              lastScanMap[scan.pet_tag_id] = scan;
+            }
+          });
+          
+          data.forEach(tag => {
+            const lastScan = lastScanMap[tag.id];
+            stats[tag.id] = {
+              count: countMap[tag.id] || 0,
+              lastScan: lastScan?.scanned_at || null,
+              lastLocation: lastScan?.city ? `${lastScan.city}, ${lastScan.country}` : null
+            };
+          });
+          
+          setScanStats(stats);
+        }
+      }
+    } catch (err) {
+      console.error('Error in fetchPetTags:', err);
       toast({
-        title: 'Erro ao carregar tags',
-        description: error.message,
+        title: 'Erro ao carregar',
+        description: 'Não foi possível carregar as tags.',
         variant: 'destructive'
       });
-    } else if (data) {
-      setPetTags(data);
-      
-      // Fetch scan stats for each tag
-      const stats: Record<string, ScanInfo> = {};
-      for (const tag of data) {
-        const { data: scans, count } = await supabase
-          .from('qr_scans')
-          .select('*', { count: 'exact' })
-          .eq('pet_tag_id', tag.id)
-          .order('scanned_at', { ascending: false })
-          .limit(1);
-        
-        stats[tag.id] = {
-          count: count || 0,
-          lastScan: scans?.[0]?.scanned_at || null,
-          lastLocation: scans?.[0]?.city ? `${scans[0].city}, ${scans[0].country}` : null
-        };
-      }
-      setScanStats(stats);
     }
     
     setLoading(false);
@@ -365,10 +400,23 @@ export default function PetTagsManager() {
               </div>
               <div>
                 <h1 className="text-lg font-bold text-foreground">Tags Pet</h1>
-                <p className="text-xs text-muted-foreground">{petTags.length} tags cadastradas</p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>{petTags.length} tags</span>
+                  <span className="text-primary">• {petTags.filter(t => t.is_activated).length} ativas</span>
+                  <span className="text-muted-foreground">• {petTags.filter(t => !t.is_activated).length} inativas</span>
+                </div>
               </div>
             </div>
           </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => fetchPetTags()}
+            disabled={loading}
+            title="Atualizar lista"
+          >
+            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
         </div>
       </header>
 

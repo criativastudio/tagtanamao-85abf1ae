@@ -18,7 +18,8 @@ import {
   Search,
   User,
   AlertTriangle,
-  Lock
+  Lock,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -117,56 +118,90 @@ export default function DisplaysManager() {
   const fetchDisplays = async () => {
     setLoading(true);
     
-    const { data, error } = await supabase
-      .from('business_displays')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      toast({
-        title: 'Erro ao carregar displays',
-        description: error.message,
-        variant: 'destructive'
-      });
-    } else if (data) {
-      // Parse buttons JSONB field safely
-      const parsedDisplays = data.map(d => {
-        let parsedButtons: DisplayButton[] = [];
-        if (Array.isArray(d.buttons)) {
-          parsedButtons = (d.buttons as unknown[]).map((btn: unknown) => {
-            const b = btn as Record<string, unknown>;
-            return {
-              id: String(b.id || crypto.randomUUID()),
-              label: String(b.label || ''),
-              url: String(b.url || ''),
-              icon: String(b.icon || 'link')
+    try {
+      const { data, error } = await supabase
+        .from('business_displays')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching displays:', error);
+        toast({
+          title: 'Erro ao carregar displays',
+          description: error.message,
+          variant: 'destructive'
+        });
+        setLoading(false);
+        return;
+      }
+      
+      if (data) {
+        // Parse buttons JSONB field safely
+        const parsedDisplays = data.map(d => {
+          let parsedButtons: DisplayButton[] = [];
+          if (Array.isArray(d.buttons)) {
+            parsedButtons = (d.buttons as unknown[]).map((btn: unknown) => {
+              const b = btn as Record<string, unknown>;
+              return {
+                id: String(b.id || crypto.randomUUID()),
+                label: String(b.label || ''),
+                url: String(b.url || ''),
+                icon: String(b.icon || 'link')
+              };
+            });
+          }
+          return {
+            ...d,
+            buttons: parsedButtons
+          };
+        });
+        setDisplays(parsedDisplays);
+        
+        // Fetch all scan stats in one query for better performance
+        const displayIds = parsedDisplays.map(d => d.id);
+        if (displayIds.length > 0) {
+          const { data: scans, error: scansError } = await supabase
+            .from('qr_scans')
+            .select('display_id, scanned_at, city, country')
+            .in('display_id', displayIds)
+            .order('scanned_at', { ascending: false });
+          
+          if (scansError) {
+            console.error('Error fetching scans:', scansError);
+          }
+          
+          // Process scans into stats
+          const stats: Record<string, ScanInfo> = {};
+          const countMap: Record<string, number> = {};
+          const lastScanMap: Record<string, { scanned_at: string; city: string | null; country: string | null }> = {};
+          
+          (scans || []).forEach(scan => {
+            if (!scan.display_id) return;
+            countMap[scan.display_id] = (countMap[scan.display_id] || 0) + 1;
+            if (!lastScanMap[scan.display_id]) {
+              lastScanMap[scan.display_id] = scan;
+            }
+          });
+          
+          parsedDisplays.forEach(display => {
+            const lastScan = lastScanMap[display.id];
+            stats[display.id] = {
+              count: countMap[display.id] || 0,
+              lastScan: lastScan?.scanned_at || null,
+              lastLocation: lastScan?.city ? `${lastScan.city}, ${lastScan.country}` : null
             };
           });
+          
+          setScanStats(stats);
         }
-        return {
-          ...d,
-          buttons: parsedButtons
-        };
-      });
-      setDisplays(parsedDisplays);
-      
-      // Fetch scan stats for each display
-      const stats: Record<string, ScanInfo> = {};
-      for (const display of parsedDisplays) {
-        const { data: scans, count } = await supabase
-          .from('qr_scans')
-          .select('*', { count: 'exact' })
-          .eq('display_id', display.id)
-          .order('scanned_at', { ascending: false })
-          .limit(1);
-        
-        stats[display.id] = {
-          count: count || 0,
-          lastScan: scans?.[0]?.scanned_at || null,
-          lastLocation: scans?.[0]?.city ? `${scans[0].city}, ${scans[0].country}` : null
-        };
       }
-      setScanStats(stats);
+    } catch (err) {
+      console.error('Error in fetchDisplays:', err);
+      toast({
+        title: 'Erro ao carregar',
+        description: 'Não foi possível carregar os displays.',
+        variant: 'destructive'
+      });
     }
     
     setLoading(false);
@@ -409,10 +444,23 @@ export default function DisplaysManager() {
               </div>
               <div>
                 <h1 className="text-lg font-bold text-foreground">Displays Empresariais</h1>
-                <p className="text-xs text-muted-foreground">{displays.length} displays cadastrados</p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>{displays.length} displays</span>
+                  <span className="text-blue-400">• {displays.filter(d => d.is_activated).length} ativos</span>
+                  <span className="text-muted-foreground">• {displays.filter(d => !d.is_activated).length} inativos</span>
+                </div>
               </div>
             </div>
           </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => fetchDisplays()}
+            disabled={loading}
+            title="Atualizar lista"
+          >
+            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
         </div>
       </header>
 
