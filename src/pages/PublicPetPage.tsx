@@ -176,10 +176,25 @@ const PublicPetPage = () => {
     // Handle special URLs based on icon type
     if (button.icon === 'MessageCircle') {
       // WhatsApp - clean the number and create wa.me link
-      const phone = url.replace(/\D/g, '');
+      // Remove all non-digit characters
+      let phone = url.replace(/\D/g, '');
+      
+      // Remove leading zeros
+      phone = phone.replace(/^0+/, '');
+      
       // Add country code if not present (assume Brazil +55)
-      const fullPhone = phone.startsWith('55') ? phone : `55${phone}`;
-      url = `https://wa.me/${fullPhone}`;
+      // Brazilian numbers: 2 digit area code + 8-9 digit number = 10-11 digits
+      if (phone.length <= 11) {
+        phone = `55${phone}`;
+      }
+      
+      // Validate minimum length (country code + area code + number)
+      if (phone.length >= 12) {
+        url = `https://wa.me/${phone}`;
+      } else {
+        console.error('Invalid WhatsApp number:', url);
+        return;
+      }
     } else if (button.icon === 'Phone') {
       // Phone call - ensure tel: prefix
       const phone = url.replace(/\D/g, '');
