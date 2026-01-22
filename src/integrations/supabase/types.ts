@@ -527,6 +527,75 @@ export type Database = {
           },
         ]
       }
+      payments: {
+        Row: {
+          amount: number
+          asaas_customer_id: string | null
+          asaas_payment_id: string | null
+          card_brand: string | null
+          card_last_digits: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          installments: number | null
+          order_id: string | null
+          paid_at: string | null
+          payment_method: string
+          status: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          asaas_customer_id?: string | null
+          asaas_payment_id?: string | null
+          card_brand?: string | null
+          card_last_digits?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          installments?: number | null
+          order_id?: string | null
+          paid_at?: string | null
+          payment_method: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          asaas_customer_id?: string | null
+          asaas_payment_id?: string | null
+          card_brand?: string | null
+          card_last_digits?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          installments?: number | null
+          order_id?: string | null
+          paid_at?: string | null
+          payment_method?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pet_tags: {
         Row: {
           address: string | null
@@ -678,33 +747,60 @@ export type Database = {
       profiles: {
         Row: {
           address: string | null
+          asaas_customer_id: string | null
+          bairro: string | null
+          cep: string | null
+          cidade: string | null
+          complemento: string | null
+          cpf: string | null
           created_at: string | null
           email: string | null
+          endereco: string | null
+          estado: string | null
           full_name: string | null
           id: string
           is_admin: boolean | null
+          numero: string | null
           phone: string | null
           updated_at: string | null
           whatsapp: string | null
         }
         Insert: {
           address?: string | null
+          asaas_customer_id?: string | null
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
+          cpf?: string | null
           created_at?: string | null
           email?: string | null
+          endereco?: string | null
+          estado?: string | null
           full_name?: string | null
           id: string
           is_admin?: boolean | null
+          numero?: string | null
           phone?: string | null
           updated_at?: string | null
           whatsapp?: string | null
         }
         Update: {
           address?: string | null
+          asaas_customer_id?: string | null
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
+          cpf?: string | null
           created_at?: string | null
           email?: string | null
+          endereco?: string | null
+          estado?: string | null
           full_name?: string | null
           id?: string
           is_admin?: boolean | null
+          numero?: string | null
           phone?: string | null
           updated_at?: string | null
           whatsapp?: string | null
