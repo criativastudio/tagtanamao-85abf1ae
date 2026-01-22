@@ -10,10 +10,11 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const asaasApiKey = Deno.env.get("ASAAS_API_KEY")!;
 
-// Use sandbox for testing, production for live
-const ASAAS_BASE_URL = asaasApiKey?.startsWith("$aact_")
-  ? "https://api.asaas.com/v3"
-  : "https://sandbox.asaas.com/api/v3";
+// Use sandbox for testing (hmlg = homologação), production for live
+// Keys starting with $aact_hmlg_ are sandbox keys
+const ASAAS_BASE_URL = asaasApiKey?.includes("_hmlg_")
+  ? "https://sandbox.asaas.com/api/v3"
+  : "https://api.asaas.com/v3";
 
 interface ProcessPaymentRequest {
   orderId: string;
