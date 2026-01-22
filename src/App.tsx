@@ -27,6 +27,7 @@ import ProductsManager from "./pages/admin/ProductsManager";
 import OrdersManager from "./pages/admin/OrdersManager";
 import TemplatesManager from "./pages/admin/TemplatesManager";
 import CouponsManager from "./pages/admin/CouponsManager";
+import ThankYou from "./pages/ThankYou";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -112,6 +113,7 @@ const App = () => (
               {/* E-commerce routes */}
               <Route path="/loja" element={<Shop />} />
               <Route path="/loja/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+              <Route path="/obrigado" element={<ThankYou />} />
               <Route path="/meus-pedidos" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
               <Route path="/dashboard/configuracoes" element={<ProtectedRoute><UserSettings /></ProtectedRoute>} />
               <Route path="/arte/:templateId" element={<ProtectedRoute><ArtCustomizer /></ProtectedRoute>} />
