@@ -10,7 +10,8 @@ import {
   Dog,
   Building2,
   Trash2,
-  Check
+  Check,
+  BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import DashboardAnalytics from '@/components/dashboard/DashboardAnalytics';
 import {
   Select,
   SelectContent,
@@ -676,6 +678,19 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      {/* Analytics Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="mb-8"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <BarChart3 className="w-6 h-6 text-primary" />
+          <h2 className="text-xl font-semibold text-foreground">Analytics - Todos os Scans</h2>
+        </div>
+        <DashboardAnalytics showAll />
+      </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Pet Tags Generator */}
