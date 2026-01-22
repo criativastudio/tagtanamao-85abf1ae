@@ -64,6 +64,31 @@ const PublicPetPage = () => {
   const [notFound, setNotFound] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
 
+  const sanitizeBrazilPhone = (value: string) => {
+    // Keep digits only
+    let digits = (value || "").replace(/\D/g, "");
+    // Remove leading zeros
+    digits = digits.replace(/^0+/, "");
+    // Remove Brazil country code if provided to avoid duplication
+    if (digits.startsWith("55") && digits.length > 11) {
+      digits = digits.slice(2);
+    }
+    return digits;
+  };
+
+  const buildWhatsAppUrl = (rawPhone: string, message: string) => {
+    const phone = sanitizeBrazilPhone(rawPhone);
+    if (!phone) return null;
+    // Required format: https://wa.me/55[DDD][NUMBER]?text=[MESSAGE]
+    return `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`;
+  };
+
+  const openExternal = (url: string) => {
+    // Important: WhatsApp blocks being loaded inside iframes.
+    // Always open in a new tab/window with noopener.
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   useEffect(() => {
     const fetchPetAndLogScan = async () => {
       if (!qrCode) {
@@ -151,11 +176,10 @@ const PublicPetPage = () => {
 
   const handleWhatsApp = () => {
     if (!pet?.whatsapp) return;
-    const phone = pet.whatsapp.replace(/\D/g, "");
-    const message = encodeURIComponent(
-      `Olá! Encontrei seu pet ${pet.pet_name || ""} e gostaria de ajudar a devolvê-lo.`
-    );
-    window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
+
+    const url = buildWhatsAppUrl(pet.whatsapp, "Encontrei seu pet");
+    if (!url) return;
+    openExternal(url);
   };
 
   const handleCall = () => {
@@ -175,24 +199,9 @@ const PublicPetPage = () => {
     
     // Handle special URLs based on icon type
     if (button.icon === 'MessageCircle') {
-      // WhatsApp - clean the number and create wa.me link
-      // Remove all non-digit characters
-      let phone = url.replace(/\D/g, '');
-      
-      // Remove leading zeros
-      phone = phone.replace(/^0+/, '');
-      
-      // Remove country code if already present to avoid duplication
-      if (phone.startsWith('55') && phone.length > 11) {
-        phone = phone.substring(2);
-      }
-      
-      // Create message with pet name
-      const petName = pet?.pet_name || 'seu pet';
-      const message = encodeURIComponent(`Olá! Encontrei ${petName}! 🐾`);
-      
-      // Format: https://wa.me/55[DDD][NUMBER]?text=[MESSAGE]
-      url = `https://wa.me/55${phone}?text=${message}`;
+      const waUrl = buildWhatsAppUrl(url, "Encontrei seu pet");
+      if (!waUrl) return;
+      url = waUrl;
     } else if (button.icon === 'Phone') {
       // Phone call - ensure tel: prefix
       const phone = url.replace(/\D/g, '');
@@ -241,7 +250,7 @@ const PublicPetPage = () => {
       url = `https://${url}`;
     }
     
-    window.open(url, '_blank');
+    openExternal(url);
   };
 
   const handlePrevSlide = () => {
