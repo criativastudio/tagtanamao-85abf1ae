@@ -761,11 +761,28 @@ export default function UserSettings() {
 
                   {/* Seleção de QR Codes */}
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
                       <h4 className="font-medium">QR Codes Disponíveis ({allCodes.length})</h4>
-                      {selectedCodes.size > 0 && (
-                        <span className="text-sm text-primary font-medium">{selectedCodes.size} selecionado(s)</span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {allCodes.length > 0 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              if (selectedCodes.size === allCodes.length) {
+                                setSelectedCodes(new Set());
+                              } else {
+                                setSelectedCodes(new Set(allCodes.map(c => c.id)));
+                              }
+                            }}
+                          >
+                            {selectedCodes.size === allCodes.length ? 'Desmarcar todos' : 'Selecionar todos'}
+                          </Button>
+                        )}
+                        {selectedCodes.size > 0 && (
+                          <span className="text-sm text-primary font-medium">{selectedCodes.size} selecionado(s)</span>
+                        )}
+                      </div>
                     </div>
                     
                     {loadingQR ? (
