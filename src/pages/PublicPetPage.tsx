@@ -76,9 +76,11 @@ const PublicPetPage = () => {
     return digits;
   };
 
-  const buildWhatsAppUrl = (rawPhone: string, message: string) => {
+  const buildWhatsAppUrl = (rawPhone: string, petName?: string) => {
     const phone = sanitizeBrazilPhone(rawPhone);
     if (!phone) return null;
+    const name = petName || 'seu pet';
+    const message = `Olá! Encontrei o seu pet ${name}, gostaria de devolver.`;
     // Required format: https://wa.me/55[DDD][NUMBER]?text=[MESSAGE]
     return `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`;
   };
@@ -177,7 +179,7 @@ const PublicPetPage = () => {
   const handleWhatsApp = () => {
     if (!pet?.whatsapp) return;
 
-    const url = buildWhatsAppUrl(pet.whatsapp, "Encontrei seu pet");
+    const url = buildWhatsAppUrl(pet.whatsapp, pet.pet_name || undefined);
     if (!url) return;
     openExternal(url);
   };
@@ -199,7 +201,7 @@ const PublicPetPage = () => {
     
     // Handle special URLs based on icon type
     if (button.icon === 'MessageCircle') {
-      const waUrl = buildWhatsAppUrl(url, "Encontrei seu pet");
+      const waUrl = buildWhatsAppUrl(url, pet?.pet_name || undefined);
       if (!waUrl) return;
       url = waUrl;
     } else if (button.icon === 'Phone') {
