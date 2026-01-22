@@ -33,10 +33,10 @@ serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch pet tag data
+    // Fetch pet tag data including gallery and buttons
     const { data: petTag, error } = await supabase
       .from("pet_tags")
-      .select("id, pet_name, pet_photo_url, owner_name, phone, whatsapp, address, reward_enabled, reward_text, is_activated, lost_mode, qr_code")
+      .select("id, pet_name, pet_photo_url, owner_name, phone, whatsapp, address, reward_enabled, reward_text, is_activated, lost_mode, qr_code, gallery_photos, buttons, theme_color")
       .eq("qr_code", qrCode)
       .single();
 
@@ -64,6 +64,9 @@ serve(async (req: Request) => {
       is_activated: petTag.is_activated,
       lost_mode: petTag.lost_mode,
       qr_code: petTag.qr_code,
+      gallery_photos: petTag.gallery_photos || [],
+      buttons: petTag.buttons || [],
+      theme_color: petTag.theme_color || '#10b981',
     };
 
     // If lost_mode is enabled, include contact details
