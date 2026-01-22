@@ -2,16 +2,11 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Check, Loader2, ExternalLink } from "lucide-react";
+import { ShoppingCart, Check, Loader2 } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Product } from "@/types/ecommerce";
-
-// Links de pagamento externos por tipo de produto
-const EXTERNAL_PAYMENT_LINKS: Record<string, string> = {
-  'business_display': 'https://sandbox.asaas.com/c/7iur4xpmz1xgc60r',
-};
 
 const Products = () => {
   const navigate = useNavigate();
@@ -133,31 +128,19 @@ const Products = () => {
                         </p>
                       </div>
                       <div className="flex gap-2">
-                        {EXTERNAL_PAYMENT_LINKS[product.type] ? (
-                          <Button 
-                            variant="hero"
-                            onClick={() => window.open(EXTERNAL_PAYMENT_LINKS[product.type], '_blank')}
-                          >
-                            <ExternalLink className="w-4 h-4 mr-2" />
-                            Comprar
-                          </Button>
-                        ) : (
-                          <>
-                            <Button 
-                              variant="outline" 
-                              size="icon"
-                              onClick={() => handleAddToCart(product)}
-                            >
-                              <ShoppingCart className="w-4 h-4" />
-                            </Button>
-                            <Button 
-                              variant="hero"
-                              onClick={() => handleBuyNow(product)}
-                            >
-                              Comprar
-                            </Button>
-                          </>
-                        )}
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          onClick={() => handleAddToCart(product)}
+                        >
+                          <ShoppingCart className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="hero"
+                          onClick={() => handleBuyNow(product)}
+                        >
+                          Comprar
+                        </Button>
                       </div>
                     </div>
                   </div>
