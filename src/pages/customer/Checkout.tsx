@@ -444,17 +444,12 @@ export default function Checkout() {
           clearCart();
           
           if (cardResult.status === 'APPROVED') {
-            // Payment approved - show success
-            setOrderResult({
-              orderId: order.id,
-              paymentLink: cardResult.payment?.invoiceUrl || '',
-              paymentMethod: 'asaas',
-            });
-            setStep('confirmation');
+            // Payment approved - redirect to thank you page
             toast({
               title: 'Pagamento aprovado!',
               description: 'Seu pedido foi confirmado com sucesso.',
             });
+            navigate(`/obrigado?pedido=${order.id}`);
           } else if (cardResult.status === 'PENDING') {
             // Payment pending - start polling
             pollPaymentStatus(cardResult.payment?.id, order.id);
@@ -553,16 +548,11 @@ export default function Checkout() {
       const result = await response.json();
 
       if (result.status === 'CONFIRMED' || result.status === 'RECEIVED') {
-        setOrderResult({
-          orderId,
-          paymentLink: '',
-          paymentMethod: 'asaas',
-        });
-        setStep('confirmation');
         toast({
           title: 'Pagamento confirmado!',
           description: 'Seu pedido foi processado com sucesso.',
         });
+        navigate(`/obrigado?pedido=${orderId}`);
       } else if (result.status === 'PENDING') {
         setPollingCount(prev => prev + 1);
         setTimeout(() => pollPaymentStatus(paymentId, orderId), 2000);
@@ -584,12 +574,7 @@ export default function Checkout() {
 
   const handlePaymentConfirmed = () => {
     if (currentOrderId) {
-      setOrderResult({
-        orderId: currentOrderId,
-        paymentLink: '',
-        paymentMethod: 'pix',
-      });
-      setStep('confirmation');
+      navigate(`/obrigado?pedido=${currentOrderId}`);
     }
   };
 
