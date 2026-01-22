@@ -173,17 +173,58 @@ const PublicPetPage = () => {
     let url = button.url;
     if (!url) return;
     
-    // Handle special URLs
-    if (button.icon === 'MessageCircle' && !url.startsWith('http')) {
+    // Handle special URLs based on icon type
+    if (button.icon === 'MessageCircle') {
+      // WhatsApp - clean the number and create wa.me link
       const phone = url.replace(/\D/g, '');
-      url = `https://wa.me/${phone}`;
-    } else if (button.icon === 'Phone' && !url.startsWith('tel:')) {
-      url = `tel:${url}`;
-    } else if (button.icon === 'Mail' && !url.startsWith('mailto:')) {
-      url = `mailto:${url}`;
-    } else if (button.icon === 'Instagram' && !url.startsWith('http')) {
-      url = `https://instagram.com/${url.replace('@', '')}`;
+      // Add country code if not present (assume Brazil +55)
+      const fullPhone = phone.startsWith('55') ? phone : `55${phone}`;
+      url = `https://wa.me/${fullPhone}`;
+    } else if (button.icon === 'Phone') {
+      // Phone call - ensure tel: prefix
+      const phone = url.replace(/\D/g, '');
+      url = `tel:+55${phone.startsWith('55') ? phone.slice(2) : phone}`;
+    } else if (button.icon === 'Mail') {
+      // Email - ensure mailto: prefix
+      if (!url.startsWith('mailto:')) {
+        url = `mailto:${url}`;
+      }
+    } else if (button.icon === 'Instagram') {
+      // Instagram - handle username or full URL
+      if (!url.startsWith('http')) {
+        url = `https://instagram.com/${url.replace('@', '')}`;
+      }
+    } else if (button.icon === 'MapPin') {
+      // Maps - open Google Maps with the address
+      const encodedAddress = encodeURIComponent(url);
+      url = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+    } else if (button.icon === 'Youtube') {
+      // YouTube - handle channel/video URL
+      if (!url.startsWith('http')) {
+        url = `https://youtube.com/${url.replace('@', '')}`;
+      }
+    } else if (button.icon === 'Facebook') {
+      // Facebook - handle profile URL
+      if (!url.startsWith('http')) {
+        url = `https://facebook.com/${url}`;
+      }
+    } else if (button.icon === 'Twitter') {
+      // Twitter/X - handle profile URL
+      if (!url.startsWith('http')) {
+        url = `https://twitter.com/${url.replace('@', '')}`;
+      }
+    } else if (button.icon === 'Linkedin') {
+      // LinkedIn - handle profile URL
+      if (!url.startsWith('http')) {
+        url = `https://linkedin.com/in/${url}`;
+      }
+    } else if (button.icon === 'Music2') {
+      // TikTok - handle profile URL
+      if (!url.startsWith('http')) {
+        url = `https://tiktok.com/@${url.replace('@', '')}`;
+      }
     } else if (!url.startsWith('http') && !url.startsWith('tel:') && !url.startsWith('mailto:')) {
+      // Default - add https if no protocol
       url = `https://${url}`;
     }
     
