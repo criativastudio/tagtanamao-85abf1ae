@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -7,7 +7,6 @@ import {
   MapPin,
   CreditCard,
   Truck,
-  Check,
   Loader2,
   Ticket,
   QrCode,
@@ -28,6 +27,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/hooks/useCart';
 import { ShippingQuote } from '@/types/ecommerce';
 import CouponInput from '@/components/checkout/CouponInput';
+import CPFInput from '@/components/checkout/CPFInput';
+import CreditCardForm, { CardData } from '@/components/checkout/CreditCardForm';
 import PixAwaitingPayment from '@/components/checkout/PixAwaitingPayment';
 import AsaasAwaitingPayment from '@/components/checkout/AsaasAwaitingPayment';
 import PaymentSuccessOverlay from '@/components/checkout/PaymentSuccessOverlay';
@@ -80,7 +81,7 @@ export default function Checkout() {
   const { user, profile } = useAuth();
   const { cart, getCartTotal, clearCart } = useCart();
   
-  const [step, setStep] = useState<'shipping' | 'awaiting_pix' | 'awaiting_asaas' | 'confirmation'>('shipping');
+  const [step, setStep] = useState<'shipping' | 'processing' | 'awaiting_pix' | 'awaiting_asaas' | 'confirmation'>('shipping');
   const [loading, setLoading] = useState(false);
   const [loadingShipping, setLoadingShipping] = useState(false);
   
@@ -100,6 +101,11 @@ export default function Checkout() {
   const [asaasPaymentData, setAsaasPaymentData] = useState<AsaasPaymentData | null>(null);
   const [asaasBillingType, setAsaasBillingType] = useState<'PIX' | 'BOLETO' | 'CREDIT_CARD'>('PIX');
   const [customerCpfCnpj, setCustomerCpfCnpj] = useState('');
+  const [isCpfValid, setIsCpfValid] = useState(false);
+  
+  // Credit card data
+  const [cardData, setCardData] = useState<CardData | null>(null);
+  const [isCardValid, setIsCardValid] = useState(false);
   
   // Payment method
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'asaas'>('pix');
@@ -131,6 +137,10 @@ export default function Checkout() {
     paymentLink: string;
     paymentMethod: 'pix' | 'asaas';
   } | null>(null);
+
+  // Polling state
+  const [pollingCount, setPollingCount] = useState(0);
+  const MAX_POLLING = 30;
 
   useEffect(() => {
     if (!user) {
@@ -263,11 +273,19 @@ export default function Checkout() {
     }
     // Validate CPF/CNPJ for Asaas payments
     if (paymentMethod === 'asaas') {
-      const cpfCnpj = customerCpfCnpj.replace(/\D/g, '');
-      if (cpfCnpj.length !== 11 && cpfCnpj.length !== 14) {
+      if (!isCpfValid) {
         toast({
           title: 'CPF/CNPJ inválido',
-          description: 'Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.',
+          description: 'Informe um CPF ou CNPJ válido para continuar.',
+          variant: 'destructive',
+        });
+        return false;
+      }
+      // Validate card for credit card payment
+      if (asaasBillingType === 'CREDIT_CARD' && !isCardValid) {
+        toast({
+          title: 'Dados do cartão inválidos',
+          description: 'Preencha corretamente os dados do cartão de crédito.',
           variant: 'destructive',
         });
         return false;
@@ -292,6 +310,14 @@ export default function Checkout() {
     window.open(`https://wa.me/${pixConfig.admin_whatsapp}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
+  const handleCardDataChange = useCallback((data: CardData) => {
+    setCardData(data);
+  }, []);
+
+  const handleCardValidChange = useCallback((valid: boolean) => {
+    setIsCardValid(valid);
+  }, []);
+
   const handleCreateOrder = async () => {
     if (!validateShipping()) return;
     
@@ -306,7 +332,7 @@ export default function Checkout() {
           total_amount: getTotalWithShipping(),
           status: 'pending',
           payment_status: 'pending',
-          payment_method: paymentMethod,
+          payment_method: paymentMethod === 'pix' ? 'pix' : asaasBillingType.toLowerCase(),
           shipping_name: shippingData.name,
           shipping_phone: shippingData.phone,
           shipping_address: `${shippingData.address}, ${shippingData.number}${shippingData.complement ? ` - ${shippingData.complement}` : ''} - ${shippingData.neighborhood}`,
@@ -377,8 +403,70 @@ export default function Checkout() {
         } else {
           throw new Error('Erro ao gerar PIX');
         }
+      } else if (paymentMethod === 'asaas' && asaasBillingType === 'CREDIT_CARD' && cardData) {
+        // Credit card transparent checkout
+        setStep('processing');
+        
+        const { data: session } = await supabase.auth.getSession();
+        
+        const { data: cardResult, error: cardError } = await supabase.functions.invoke('process-credit-card-payment', {
+          body: {
+            orderId: order.id,
+            amount: getTotalWithShipping(),
+            customerName: shippingData.name,
+            customerEmail: profile?.email || user?.email,
+            customerPhone: shippingData.phone,
+            customerCpfCnpj: customerCpfCnpj,
+            postalCode: shippingData.zip,
+            address: shippingData.address,
+            addressNumber: shippingData.number,
+            complement: shippingData.complement || '',
+            province: shippingData.neighborhood,
+            city: shippingData.city,
+            state: shippingData.state,
+            cardHolderName: cardData.holderName,
+            cardNumber: cardData.number,
+            expiryMonth: cardData.expiryMonth,
+            expiryYear: cardData.expiryYear,
+            ccv: cardData.cvv,
+            installments: 1,
+          },
+          headers: {
+            Authorization: `Bearer ${session?.session?.access_token}`,
+          },
+        });
+
+        if (cardError) {
+          throw new Error(cardError.message || 'Erro ao processar pagamento');
+        }
+        
+        if (cardResult?.success) {
+          clearCart();
+          
+          if (cardResult.status === 'APPROVED') {
+            // Payment approved - show success
+            setOrderResult({
+              orderId: order.id,
+              paymentLink: cardResult.payment?.invoiceUrl || '',
+              paymentMethod: 'asaas',
+            });
+            setStep('confirmation');
+            toast({
+              title: 'Pagamento aprovado!',
+              description: 'Seu pedido foi confirmado com sucesso.',
+            });
+          } else if (cardResult.status === 'PENDING') {
+            // Payment pending - start polling
+            pollPaymentStatus(cardResult.payment?.id, order.id);
+          } else {
+            // Payment rejected
+            throw new Error('Pagamento recusado. Tente outro cartão.');
+          }
+        } else {
+          throw new Error(cardResult?.error || 'Erro ao processar pagamento');
+        }
       } else {
-        // For Asaas payment - create real payment via API
+        // For Asaas PIX/Boleto - create payment via API
         const { data: session } = await supabase.auth.getSession();
         
         const { data: asaasResult, error: asaasError } = await supabase.functions.invoke('asaas-payment', {
@@ -407,7 +495,7 @@ export default function Checkout() {
           if (asaasBillingType === 'PIX' && asaasResult.payment.pixQrCode) {
             setStep('awaiting_asaas');
           } else {
-            // For boleto/card, redirect to payment link
+            // For boleto, redirect to payment link
             setOrderResult({
               orderId: order.id,
               paymentLink: asaasResult.payment.invoiceUrl,
@@ -422,13 +510,75 @@ export default function Checkout() {
       
     } catch (error: any) {
       console.error('Error creating order:', error);
+      setStep('shipping');
       toast({
-        title: 'Erro ao criar pedido',
-        description: error.message,
+        title: 'Erro ao processar pedido',
+        description: error.message || 'Tente novamente.',
         variant: 'destructive',
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const pollPaymentStatus = async (paymentId: string, orderId: string) => {
+    if (pollingCount >= MAX_POLLING) {
+      toast({
+        title: 'Tempo esgotado',
+        description: 'Não foi possível confirmar o pagamento. Verifique seu pedido no dashboard.',
+        variant: 'destructive',
+      });
+      setStep('confirmation');
+      setOrderResult({
+        orderId,
+        paymentLink: '',
+        paymentMethod: 'asaas',
+      });
+      return;
+    }
+
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/asaas-payment?action=status&paymentId=${paymentId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${session?.session?.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.status === 'CONFIRMED' || result.status === 'RECEIVED') {
+        setOrderResult({
+          orderId,
+          paymentLink: '',
+          paymentMethod: 'asaas',
+        });
+        setStep('confirmation');
+        toast({
+          title: 'Pagamento confirmado!',
+          description: 'Seu pedido foi processado com sucesso.',
+        });
+      } else if (result.status === 'PENDING') {
+        setPollingCount(prev => prev + 1);
+        setTimeout(() => pollPaymentStatus(paymentId, orderId), 2000);
+      } else {
+        // Payment failed
+        toast({
+          title: 'Pagamento não aprovado',
+          description: 'Verifique os dados do cartão e tente novamente.',
+          variant: 'destructive',
+        });
+        setStep('shipping');
+      }
+    } catch (error) {
+      console.error('Error polling payment status:', error);
+      setPollingCount(prev => prev + 1);
+      setTimeout(() => pollPaymentStatus(paymentId, orderId), 2000);
     }
   };
 
@@ -454,8 +604,10 @@ export default function Checkout() {
           <div>
             <h1 className="text-xl font-bold">Checkout</h1>
             <p className="text-sm text-muted-foreground">
-              {step === 'shipping' && 'Endereço de entrega'}
+              {step === 'shipping' && 'Endereço e pagamento'}
+              {step === 'processing' && 'Processando pagamento...'}
               {step === 'awaiting_pix' && 'Aguardando pagamento'}
+              {step === 'awaiting_asaas' && 'Aguardando pagamento'}
               {step === 'confirmation' && 'Pedido confirmado'}
             </p>
           </div>
@@ -466,6 +618,26 @@ export default function Checkout() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Processing state */}
+            {step === 'processing' && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center justify-center py-20"
+              >
+                <div className="relative">
+                  <div className="w-20 h-20 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                  <CreditCard className="absolute inset-0 m-auto w-8 h-8 text-primary" />
+                </div>
+                <h2 className="mt-6 text-xl font-semibold">Processando pagamento...</h2>
+                <p className="text-muted-foreground mt-2 text-center">
+                  Aguarde enquanto validamos os dados do seu cartão.
+                  <br />
+                  Não feche esta página.
+                </p>
+              </motion.div>
+            )}
+
             {step === 'shipping' && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -691,19 +863,13 @@ export default function Checkout() {
                       {/* Asaas Options */}
                       {paymentMethod === 'asaas' && (
                         <div className="mt-4 space-y-4 pt-4 border-t border-border">
-                          <div className="space-y-2">
-                            <Label htmlFor="cpf">CPF/CNPJ *</Label>
-                            <Input
-                              id="cpf"
-                              value={customerCpfCnpj}
-                              onChange={(e) => setCustomerCpfCnpj(e.target.value)}
-                              placeholder="000.000.000-00"
-                              maxLength={18}
-                            />
-                            <p className="text-xs text-muted-foreground">
-                              Obrigatório para emissão da cobrança
-                            </p>
-                          </div>
+                          {/* CPF Input with validation */}
+                          <CPFInput
+                            value={customerCpfCnpj}
+                            onChange={setCustomerCpfCnpj}
+                            onValidChange={setIsCpfValid}
+                            required
+                          />
                           
                           <div className="space-y-2">
                             <Label>Forma de pagamento</Label>
@@ -750,6 +916,17 @@ export default function Checkout() {
                               </div>
                             </RadioGroup>
                           </div>
+
+                          {/* Credit Card Form - Transparent Checkout */}
+                          {asaasBillingType === 'CREDIT_CARD' && (
+                            <div className="mt-4">
+                              <CreditCardForm
+                                onCardDataChange={handleCardDataChange}
+                                onValidChange={handleCardValidChange}
+                                disabled={loading}
+                              />
+                            </div>
+                          )}
                         </div>
                       )}
                     </CardContent>
@@ -760,16 +937,23 @@ export default function Checkout() {
                   className="w-full mt-6"
                   size="lg"
                   onClick={handleCreateOrder}
-                  disabled={loading || !selectedShipping}
+                  disabled={loading || !selectedShipping || (paymentMethod === 'asaas' && !isCpfValid) || (paymentMethod === 'asaas' && asaasBillingType === 'CREDIT_CARD' && !isCardValid)}
                 >
                   {loading ? (
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
                   ) : paymentMethod === 'pix' ? (
                     <QrCode className="w-4 h-4 mr-2" />
+                  ) : asaasBillingType === 'CREDIT_CARD' ? (
+                    <CreditCard className="w-4 h-4 mr-2" />
                   ) : (
                     <CreditCard className="w-4 h-4 mr-2" />
                   )}
-                  {paymentMethod === 'pix' ? 'Gerar PIX e Pagar' : 'Ir para Pagamento'}
+                  {paymentMethod === 'pix' 
+                    ? 'Gerar PIX e Pagar' 
+                    : asaasBillingType === 'CREDIT_CARD'
+                    ? 'Pagar com Cartão'
+                    : 'Ir para Pagamento'
+                  }
                 </Button>
               </motion.div>
             )}
@@ -867,18 +1051,16 @@ export default function Checkout() {
                       </div>
                     )}
                     
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Frete</span>
-                      <span className={selectedShipping?.price === 0 ? 'text-primary' : ''}>
-                        {selectedShipping
-                          ? selectedShipping.price === 0
-                            ? 'Grátis'
-                            : formatCurrency(selectedShipping.price)
-                          : '-'
-                        }
-                      </span>
-                    </div>
-                    <div className="flex justify-between font-bold text-lg pt-2 border-t border-border">
+                    {selectedShipping && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Frete ({selectedShipping.service})</span>
+                        <span className={selectedShipping.price === 0 ? 'text-primary' : ''}>
+                          {selectedShipping.price === 0 ? 'Grátis' : formatCurrency(selectedShipping.price)}
+                        </span>
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-between text-lg font-bold pt-2 border-t border-border">
                       <span>Total</span>
                       <span className="text-primary">{formatCurrency(getTotalWithShipping())}</span>
                     </div>
