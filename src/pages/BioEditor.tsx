@@ -92,32 +92,55 @@ const BioEditor = () => {
     setSaving(true);
 
     try {
-      const slug = bioPage.slug || generateSlug(bioPage.title);
-      
-      const dataToSave = {
-        user_id: user.id,
-        title: bioPage.title,
-        subtitle: bioPage.subtitle || null,
-        profile_photo_url: bioPage.profile_photo_url || null,
-        gallery_photos: bioPage.gallery_photos as unknown as string,
-        buttons: bioPage.buttons as unknown as string,
-        theme: bioPage.theme as unknown as string,
-        is_active: bioPage.is_active ?? true,
-        slug,
-      };
-
       if (id) {
+        // Update existing page - don't change slug unless user explicitly changed it
+        const dataToUpdate = {
+          title: bioPage.title,
+          subtitle: bioPage.subtitle || null,
+          profile_photo_url: bioPage.profile_photo_url || null,
+          gallery_photos: bioPage.gallery_photos as unknown as string,
+          buttons: bioPage.buttons as unknown as string,
+          theme: bioPage.theme as unknown as string,
+          is_active: bioPage.is_active ?? true,
+        };
+
         const { error } = await supabase
           .from("bio_pages")
-          .update(dataToSave)
+          .update(dataToUpdate)
           .eq("id", id);
 
         if (error) throw error;
         toast.success("Página salva com sucesso!");
       } else {
+        // Create new page - generate unique slug
+        const baseSlug = bioPage.slug?.trim() || generateSlug(bioPage.title);
+        
+        // Check if slug exists and make it unique if needed
+        const { data: existingSlug } = await supabase
+          .from("bio_pages")
+          .select("id")
+          .eq("slug", baseSlug)
+          .maybeSingle();
+
+        const finalSlug = existingSlug 
+          ? `${baseSlug}-${Math.random().toString(36).substring(2, 6)}`
+          : baseSlug;
+
+        const dataToInsert = {
+          user_id: user.id,
+          title: bioPage.title,
+          subtitle: bioPage.subtitle || null,
+          profile_photo_url: bioPage.profile_photo_url || null,
+          gallery_photos: bioPage.gallery_photos as unknown as string,
+          buttons: bioPage.buttons as unknown as string,
+          theme: bioPage.theme as unknown as string,
+          is_active: bioPage.is_active ?? true,
+          slug: finalSlug,
+        };
+
         const { data, error } = await supabase
           .from("bio_pages")
-          .insert(dataToSave)
+          .insert(dataToInsert)
           .select()
           .single();
 
