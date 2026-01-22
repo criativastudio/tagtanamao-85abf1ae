@@ -30,6 +30,7 @@ import { ShippingQuote } from '@/types/ecommerce';
 import CouponInput from '@/components/checkout/CouponInput';
 import PixAwaitingPayment from '@/components/checkout/PixAwaitingPayment';
 import AsaasAwaitingPayment from '@/components/checkout/AsaasAwaitingPayment';
+import PaymentSuccessOverlay from '@/components/checkout/PaymentSuccessOverlay';
 
 interface AppliedCoupon {
   id: string;
@@ -791,89 +792,17 @@ export default function Checkout() {
             )}
 
             {step === 'confirmation' && orderResult && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="text-center"
-              >
-                <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-6">
-                  <Check className="w-10 h-10 text-primary" />
-                </div>
-                <h2 className="text-2xl font-bold mb-2">
-                  {orderResult.paymentMethod === 'pix' ? 'Pagamento Confirmado!' : 'Pedido Criado!'}
-                </h2>
-                <p className="text-muted-foreground mb-6">
-                  Pedido #{orderResult.orderId.slice(0, 8)}
-                </p>
-                
-                {/* Asaas Payment */}
-                {orderResult.paymentMethod === 'asaas' && (
-                  <Card className="glass-card mb-6">
-                    <CardContent className="pt-6">
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Clique no botão abaixo para efetuar o pagamento:
-                      </p>
-                      <Button
-                        size="lg"
-                        className="w-full"
-                        onClick={() => window.open(orderResult.paymentLink, '_blank')}
-                      >
-                        <CreditCard className="w-4 h-4 mr-2" />
-                        Pagar Agora
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Success message for PIX */}
-                {orderResult.paymentMethod === 'pix' && (
-                  <Card className="glass-card mb-6 text-left border-primary/30">
-                    <CardContent className="pt-6">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                          <Check className="w-5 h-5 text-primary" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold mb-1 text-primary">Pagamento recebido!</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Seu pagamento PIX foi confirmado e seu pedido está sendo processado.
-                            Você receberá atualizações por e-mail e WhatsApp.
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Info about tracking */}
-                <Card className="glass-card mb-6 text-left">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                        <Package className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold mb-1">Acompanhe seu pedido</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Todos os detalhes do seu pedido, incluindo status de pagamento, 
-                          produção e código de rastreio, estão disponíveis no menu{' '}
-                          <strong className="text-primary">Meus Pedidos</strong> do seu painel.
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <Button variant="outline" onClick={() => navigate('/meus-pedidos')}>
-                    <Package className="w-4 h-4 mr-2" />
-                    Ver Meus Pedidos
-                  </Button>
-                  <Button variant="ghost" onClick={() => navigate('/')}>
-                    Voltar à Loja
-                  </Button>
-                </div>
-              </motion.div>
+              <PaymentSuccessOverlay
+                orderId={orderResult.orderId}
+                totalAmount={getTotalWithShipping()}
+                paymentMethod={orderResult.paymentMethod}
+                estimatedDelivery={selectedShipping?.delivery_time 
+                  ? `${selectedShipping.delivery_time} dias úteis` 
+                  : undefined}
+                paymentLink={orderResult.paymentLink || undefined}
+                onNavigateDashboard={() => navigate('/dashboard')}
+                onNavigateHome={() => navigate('/')}
+              />
             )}
           </div>
 
