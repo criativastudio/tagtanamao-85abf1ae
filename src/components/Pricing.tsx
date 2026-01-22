@@ -1,8 +1,9 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Check, Star, Sparkles, ShoppingCart } from "lucide-react";
+import { Check, Star, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/useCart";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Product } from "@/types/ecommerce";
 
@@ -58,7 +59,8 @@ const pricingPlans = [
 
 const Pricing = () => {
   const navigate = useNavigate();
-  const { addToCart, getCartCount } = useCart();
+  const { addToCart } = useCart();
+  const { user } = useAuth();
   const { toast } = useToast();
 
   const handleBuyNow = (plan: typeof pricingPlans[0]) => {
@@ -76,6 +78,16 @@ const Pricing = () => {
     };
     
     addToCart(product);
+    
+    if (!user) {
+      toast({
+        title: "Faça login para continuar",
+        description: "Você precisa estar logado para finalizar a compra.",
+      });
+      navigate('/auth?redirect=/loja/checkout');
+      return;
+    }
+    
     toast({
       title: "Adicionado ao carrinho!",
       description: (

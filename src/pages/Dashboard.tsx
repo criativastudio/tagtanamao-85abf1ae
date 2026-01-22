@@ -12,14 +12,13 @@ import {
   Eye,
   BarChart3,
   MapPin,
-  Package,
-  Menu,
-  X
+  Menu
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import DashboardAnalytics from '@/components/dashboard/DashboardAnalytics';
 
 interface PetTag {
   id: string;
@@ -51,8 +50,6 @@ export default function Dashboard() {
   const [loadingData, setLoadingData] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Auth protection is now handled by ProtectedRoute wrapper in App.tsx
-
   useEffect(() => {
     if (user) {
       fetchData();
@@ -83,13 +80,11 @@ export default function Dashboard() {
     const displayIds = displaysData?.map(d => d.id) || [];
     
     if (tagIds.length > 0 || displayIds.length > 0) {
-      // Use parameterized .in() method for safe query construction
       let query = supabase
         .from('qr_scans')
         .select('*', { count: 'exact' });
 
       if (tagIds.length > 0 && displayIds.length > 0) {
-        // Both arrays have items - need to use .or() but with safe array interpolation
         query = query.or(`pet_tag_id.in.(${tagIds.join(',')}),display_id.in.(${displayIds.join(',')})`);
       } else if (tagIds.length > 0) {
         query = query.in('pet_tag_id', tagIds);
@@ -122,35 +117,6 @@ export default function Dashboard() {
       </div>
     );
   }
-
-  const stats = [
-    { 
-      label: 'Tags Pet', 
-      value: petTags.length, 
-      icon: Dog, 
-      color: 'text-primary',
-      active: petTags.filter(t => t.is_activated).length
-    },
-    { 
-      label: 'Displays', 
-      value: displays.length, 
-      icon: Building2, 
-      color: 'text-blue-400',
-      active: displays.filter(d => d.is_activated).length
-    },
-    { 
-      label: 'Leituras', 
-      value: scanStats.total, 
-      icon: Eye, 
-      color: 'text-purple-400' 
-    },
-    { 
-      label: 'QR Codes', 
-      value: petTags.length + displays.length, 
-      icon: QrCode, 
-      color: 'text-orange-400' 
-    },
-  ];
 
   const navItems = [
     { icon: BarChart3, label: 'Dashboard', path: '/dashboard', active: true },
@@ -246,29 +212,84 @@ export default function Dashboard() {
           </Button>
         </div>
 
-        {/* Stats Grid */}
+        {/* Stats Grid - Simplified for user */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {stats.map((stat, index) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="glass-card p-6 rounded-xl"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <stat.icon className={`w-8 h-8 ${stat.color}`} />
-                {'active' in stat && (
-                  <span className="text-xs text-muted-foreground">
-                    {stat.active} ativos
-                  </span>
-                )}
-              </div>
-              <div className="text-3xl font-bold text-foreground">{stat.value}</div>
-              <div className="text-sm text-muted-foreground">{stat.label}</div>
-            </motion.div>
-          ))}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-card p-6 rounded-xl"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <Dog className="w-8 h-8 text-primary" />
+              <span className="text-xs text-muted-foreground">
+                {petTags.filter(t => t.is_activated).length} ativos
+              </span>
+            </div>
+            <div className="text-3xl font-bold text-foreground">{petTags.length}</div>
+            <div className="text-sm text-muted-foreground">Tags Pet</div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="glass-card p-6 rounded-xl"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <Building2 className="w-8 h-8 text-blue-400" />
+              <span className="text-xs text-muted-foreground">
+                {displays.filter(d => d.is_activated).length} ativos
+              </span>
+            </div>
+            <div className="text-3xl font-bold text-foreground">{displays.length}</div>
+            <div className="text-sm text-muted-foreground">Displays</div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="glass-card p-6 rounded-xl"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <Eye className="w-8 h-8 text-purple-400" />
+            </div>
+            <div className="text-3xl font-bold text-foreground">{scanStats.total}</div>
+            <div className="text-sm text-muted-foreground">Leituras Totais</div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="glass-card p-6 rounded-xl"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <MapPin className="w-8 h-8 text-orange-400" />
+            </div>
+            <div className="text-lg font-bold text-foreground">
+              {scanStats.lastScan 
+                ? new Date(scanStats.lastScan).toLocaleDateString('pt-BR')
+                : '-'
+              }
+            </div>
+            <div className="text-sm text-muted-foreground">Última Leitura</div>
+          </motion.div>
         </div>
+
+        {/* Analytics Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="mb-8"
+        >
+          <h2 className="text-xl font-semibold text-foreground mb-4">Analytics</h2>
+          <DashboardAnalytics 
+            petTagIds={petTags.map(t => t.id)} 
+            displayIds={displays.map(d => d.id)} 
+          />
+        </motion.div>
 
         {/* Recent Products */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -292,10 +313,9 @@ export default function Dashboard() {
               <div className="text-center py-8">
                 <Dog className="w-12 h-12 mx-auto text-muted-foreground/50 mb-2" />
                 <p className="text-muted-foreground">Nenhuma tag cadastrada</p>
-                <Button variant="outline" size="sm" className="mt-4" onClick={() => navigate('/loja')}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Comprar Tag
-                </Button>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Ative um produto usando o código do manual.
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -345,10 +365,9 @@ export default function Dashboard() {
               <div className="text-center py-8">
                 <Building2 className="w-12 h-12 mx-auto text-muted-foreground/50 mb-2" />
                 <p className="text-muted-foreground">Nenhum display cadastrado</p>
-                <Button variant="outline" size="sm" className="mt-4" onClick={() => navigate('/loja')}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Comprar Display
-                </Button>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Ative um produto usando o código do manual.
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -378,24 +397,6 @@ export default function Dashboard() {
             )}
           </motion.div>
         </div>
-
-        {/* Last Scan Location */}
-        {scanStats.lastScan && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="glass-card p-6 rounded-xl mt-6"
-          >
-            <div className="flex items-center gap-3 mb-2">
-              <MapPin className="w-5 h-5 text-primary" />
-              <h2 className="text-lg font-semibold text-foreground">Última Leitura</h2>
-            </div>
-            <p className="text-muted-foreground">
-              {new Date(scanStats.lastScan).toLocaleString('pt-BR')}
-            </p>
-          </motion.div>
-        )}
       </main>
     </div>
   );

@@ -370,14 +370,9 @@ function EmptyState({ type, onActivate }: EmptyStateProps) {
       <p className="text-muted-foreground mb-6">
         Compre um produto e ative-o usando o código único do manual.
       </p>
-      <div className="flex items-center justify-center gap-4">
-        <Button variant="outline" onClick={() => window.location.href = '/loja'}>
-          Ir para Loja
-        </Button>
-        <Button variant="hero" onClick={onActivate}>
-          Ativar Produto
-        </Button>
-      </div>
+      <Button variant="hero" onClick={onActivate}>
+        Ativar Produto
+      </Button>
     </div>
   );
 }

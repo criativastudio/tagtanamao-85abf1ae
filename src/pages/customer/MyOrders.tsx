@@ -137,8 +137,13 @@ export default function MyOrders() {
             <p className="text-muted-foreground mb-6">
               Você ainda não fez nenhuma compra.
             </p>
-            <Button onClick={() => navigate('/loja')}>
-              Ir para a Loja
+            <Button onClick={() => {
+              navigate('/');
+              setTimeout(() => {
+                document.getElementById('precos')?.scrollIntoView({ behavior: 'smooth' });
+              }, 100);
+            }}>
+              Proteja seu Pet Hoje
             </Button>
           </div>
         ) : (

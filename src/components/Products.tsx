@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Check, Loader2 } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Product } from "@/types/ecommerce";
@@ -11,6 +12,7 @@ import { Product } from "@/types/ecommerce";
 const Products = () => {
   const navigate = useNavigate();
   const { addToCart, getCartCount } = useCart();
+  const { user } = useAuth();
   const { toast } = useToast();
 
   const { data: products, isLoading } = useQuery({
@@ -28,6 +30,14 @@ const Products = () => {
   });
 
   const handleAddToCart = (product: Product) => {
+    if (!user) {
+      toast({
+        title: "Faça login para continuar",
+        description: "Você precisa estar logado para adicionar produtos ao carrinho.",
+      });
+      navigate('/auth?redirect=/loja/checkout');
+      return;
+    }
     addToCart(product);
     toast({
       title: "Adicionado ao carrinho!",
@@ -41,6 +51,16 @@ const Products = () => {
   };
 
   const handleBuyNow = (product: Product) => {
+    if (!user) {
+      // Save product to cart for after login
+      addToCart(product);
+      toast({
+        title: "Faça login para continuar",
+        description: "Você precisa estar logado para finalizar a compra.",
+      });
+      navigate('/auth?redirect=/loja/checkout');
+      return;
+    }
     addToCart(product);
     navigate('/loja/checkout');
   };
