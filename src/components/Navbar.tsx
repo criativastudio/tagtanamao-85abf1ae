@@ -1,9 +1,10 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X, QrCode, User, LogOut } from "lucide-react";
+import { Menu, X, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import logoHorizontal from "@/assets/logo-horizontal.png";
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const {
@@ -37,12 +38,8 @@ const Navbar = () => {
         <div className="glass-strong rounded-2xl">
           <div className="container flex items-center justify-between h-16 px-4">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-glow-secondary flex items-center justify-center">
-                <QrCode className="w-6 h-6 text-primary-foreground" />
-              </div>
-              <span className="font-display font-bold text-xl">
-            </span>
+            <Link to="/" className="flex items-center">
+              <img src={logoHorizontal} alt="Tag Tá Na Mão" className="h-8" />
             </Link>
 
             {/* Desktop Navigation */}

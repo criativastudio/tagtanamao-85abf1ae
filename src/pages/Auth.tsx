@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, User, ArrowRight, Loader2, QrCode, Dog, Building2, ShoppingBag } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, QrCode, Dog, Building2 } from 'lucide-react';
+import logoHorizontal from "@/assets/logo-horizontal.png";
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -504,15 +505,9 @@ export default function Auth() {
                 initial={{ scale: 0.5 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2, type: 'spring' }}
-                className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
-                  skipActivation ? 'bg-blue-500/20' : 'bg-primary/20'
-                }`}
+                className="mb-4 flex justify-center"
               >
-                {skipActivation ? (
-                  <ShoppingBag className="w-8 h-8 text-blue-400" />
-                ) : (
-                  <User className="w-8 h-8 text-primary" />
-                )}
+                <img src={logoHorizontal} alt="Tag Tá Na Mão" className="h-10" />
               </motion.div>
               <h1 className="text-2xl font-bold text-foreground">
                 {isLogin ? 'Entrar na sua conta' : 'Criar nova conta'}

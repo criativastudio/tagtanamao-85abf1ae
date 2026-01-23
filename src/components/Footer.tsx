@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { QrCode, Mail, Phone, MapPin, Instagram, Facebook, Twitter } from "lucide-react";
+import { Mail, Phone, MapPin, Instagram, Facebook, Twitter } from "lucide-react";
+import logoHorizontal from "@/assets/logo-horizontal.png";
 
 const Footer = () => {
   return (
@@ -15,11 +16,8 @@ const Footer = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-glow-secondary flex items-center justify-center">
-                <QrCode className="w-6 h-6 text-primary-foreground" />
-              </div>
-              <span className="font-display font-bold text-xl">QRPet</span>
+            <div className="mb-4">
+              <img src={logoHorizontal} alt="Tag Tá Na Mão" className="h-8" />
             </div>
             <p className="text-muted-foreground text-sm mb-4">
               Tecnologia que protege quem você ama. Tags inteligentes com QR Code para pets e empresas.
