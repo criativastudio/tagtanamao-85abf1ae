@@ -3,6 +3,16 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+# Build arguments para variáveis do Vite (necessárias em tempo de build)
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_PUBLISHABLE_KEY
+ARG VITE_SUPABASE_PROJECT_ID
+
+# Definir como variáveis de ambiente para o build
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+ENV VITE_SUPABASE_PUBLISHABLE_KEY=$VITE_SUPABASE_PUBLISHABLE_KEY
+ENV VITE_SUPABASE_PROJECT_ID=$VITE_SUPABASE_PROJECT_ID
+
 # Copiar arquivos de dependências
 COPY package*.json ./
 
