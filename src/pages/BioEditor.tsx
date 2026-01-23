@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,11 @@ import { ImageUpload, GalleryUpload } from "@/components/bio/ImageUpload";
 const BioEditor = () => {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
+
+  const displayId = useMemo(() => searchParams.get("displayId"), [searchParams]);
+  const [displayQrCode, setDisplayQrCode] = useState<string | null>(null);
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -41,6 +45,34 @@ const BioEditor = () => {
     if (!user) return;
 
     const fetchBioPage = async () => {
+      // If opened from a Display, fetch its qr_code so "Visualizar" opens /display/:qrCode
+      if (displayId) {
+        const { data: displayData } = await supabase
+          .from("business_displays")
+          .select("qr_code")
+          .eq("id", displayId)
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        setDisplayQrCode(displayData?.qr_code || null);
+
+        // If no :id param, try to load (or reuse) the Bio Page already linked to this display
+        if (!id) {
+          const { data: existing, error: existingError } = await supabase
+            .from("bio_pages")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("display_id", displayId)
+            .maybeSingle();
+
+          // If there is already a linked page, redirect to edit it (prevents duplicates)
+          if (!existingError && existing?.id) {
+            navigate(`/dashboard/bio/${existing.id}`, { replace: true });
+            return;
+          }
+        }
+      }
+
       if (id) {
         const { data, error } = await supabase
           .from("bio_pages")
@@ -72,7 +104,7 @@ const BioEditor = () => {
     };
 
     fetchBioPage();
-  }, [id, user, navigate]);
+  }, [id, user, navigate, displayId]);
 
   const generateSlug = (title: string) => {
     return title
@@ -172,6 +204,7 @@ const BioEditor = () => {
 
         const dataToInsert = {
           user_id: user.id,
+          display_id: displayId || null,
           title: bioPage.title,
           subtitle: bioPage.subtitle || null,
           profile_photo_url: bioPage.profile_photo_url || null,
@@ -255,18 +288,30 @@ const BioEditor = () => {
       <header className="sticky top-0 z-50 glass border-b border-border">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(displayId ? "/dashboard/displays" : "/dashboard")}
+            >
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <h1 className="text-xl font-bold">Editor de Bio</h1>
           </div>
           
           <div className="flex items-center gap-3">
-            {bioPage.slug && (
+            {(bioPage.slug || displayQrCode) && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => window.open(`/bio/${bioPage.slug}`, '_blank')}
+                onClick={() => {
+                  if (displayQrCode) {
+                    window.open(`/display/${displayQrCode}`, "_blank");
+                    return;
+                  }
+                  if (bioPage.slug) {
+                    window.open(`/bio/${bioPage.slug}`, "_blank");
+                  }
+                }}
               >
                 <Eye className="h-4 w-4 mr-2" />
                 Visualizar
@@ -335,29 +380,31 @@ const BioEditor = () => {
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="slug">URL Personalizada</Label>
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground text-sm">/bio/</span>
-                        <Input
-                          id="slug"
-                          value={bioPage.slug || ""}
-                          onChange={(e) => handleSlugChange(e.target.value)}
-                          onBlur={handleSlugBlur}
-                          placeholder="meu-pet"
-                          className={slugError ? "border-destructive" : ""}
-                        />
-                        {checkingSlug && (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+                    {!displayId && (
+                      <div className="space-y-2">
+                        <Label htmlFor="slug">URL Personalizada</Label>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground text-sm">/bio/</span>
+                          <Input
+                            id="slug"
+                            value={bioPage.slug || ""}
+                            onChange={(e) => handleSlugChange(e.target.value)}
+                            onBlur={handleSlugBlur}
+                            placeholder="meu-pet"
+                            className={slugError ? "border-destructive" : ""}
+                          />
+                          {checkingSlug && (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+                          )}
+                        </div>
+                        {slugError && (
+                          <p className="text-sm text-destructive">{slugError}</p>
                         )}
+                        <p className="text-xs text-muted-foreground">
+                          Use letras, números, pontos (.), hífens (-) e underscores (_)
+                        </p>
                       </div>
-                      {slugError && (
-                        <p className="text-sm text-destructive">{slugError}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground">
-                        Use letras, números, pontos (.), hífens (-) e underscores (_)
-                      </p>
-                    </div>
+                    )}
 
                     <div className="flex items-center justify-between">
                       <Label htmlFor="active">Página Ativa</Label>
@@ -425,11 +472,19 @@ const BioEditor = () => {
               <CardHeader className="py-3 border-b">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm">Preview</CardTitle>
-                  {bioPage.slug && (
+                  {(bioPage.slug || displayQrCode) && (
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => window.open(`/bio/${bioPage.slug}`, '_blank')}
+                      onClick={() => {
+                        if (displayQrCode) {
+                          window.open(`/display/${displayQrCode}`, "_blank");
+                          return;
+                        }
+                        if (bioPage.slug) {
+                          window.open(`/bio/${bioPage.slug}`, "_blank");
+                        }
+                      }}
                     >
                       <ExternalLink className="h-4 w-4" />
                     </Button>

@@ -4,6 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BioButton, BioPage, DEFAULT_THEME } from "@/types/bioPage";
+import { BioPageHeader } from "@/components/bio/BioPageHeader";
+import { BioPageGallery } from "@/components/bio/BioPageGallery";
+import { BioPageButtons } from "@/components/bio/BioPageButtons";
 import { 
   AlertTriangle, 
   Building2, 
@@ -49,6 +53,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 const PublicDisplayPage = () => {
   const { qrCode } = useParams<{ qrCode: string }>();
   const [display, setDisplay] = useState<BusinessDisplay | null>(null);
+  const [bioPage, setBioPage] = useState<BioPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -92,6 +97,45 @@ const PublicDisplayPage = () => {
           buttons: parsedButtons
         });
 
+        // If this display has a linked Bio Page, render it directly in /display/:qrCode
+        const { data: bioData } = await supabase
+          .from("bio_pages")
+          .select("*")
+          .eq("display_id", data.id)
+          .eq("is_active", true)
+          .maybeSingle();
+
+        if (bioData) {
+          const galleryPhotos = Array.isArray(bioData.gallery_photos)
+            ? (bioData.gallery_photos as unknown as string[])
+            : [];
+          const buttons = Array.isArray(bioData.buttons)
+            ? (bioData.buttons as unknown as BioButton[])
+            : [];
+
+          const parsedBio: BioPage = {
+            ...(bioData as unknown as BioPage),
+            gallery_photos: galleryPhotos,
+            buttons,
+            theme:
+              typeof bioData.theme === "object"
+                ? { ...DEFAULT_THEME, ...(bioData.theme as any) }
+                : DEFAULT_THEME,
+          };
+
+          setBioPage(parsedBio);
+
+          // Log bio view (fire and forget)
+          supabase.from("bio_page_analytics").insert({
+            bio_page_id: parsedBio.id,
+            event_type: "view",
+            user_agent: navigator.userAgent,
+            referrer: document.referrer || null,
+          });
+        } else {
+          setBioPage(null);
+        }
+
         // Log the scan (no geolocation notification for business displays - they're just bio links)
         await supabase.from("qr_scans").insert({
           display_id: data.id,
@@ -125,6 +169,38 @@ const PublicDisplayPage = () => {
       const finalUrl = url.startsWith('http') ? url : `https://${url}`;
       window.open(finalUrl, "_blank");
     }
+  };
+
+  const handleBioButtonClick = async (button: BioButton) => {
+    if (!bioPage) return;
+
+    // Log click event (fire and forget)
+    supabase.from("bio_page_analytics").insert({
+      bio_page_id: bioPage.id,
+      event_type: "click",
+      button_id: button.id,
+      user_agent: navigator.userAgent,
+      referrer: document.referrer || null,
+    });
+
+    if (button.type === "contact") {
+      if (button.icon === "MessageCircle") {
+        const phone = button.url.replace(/\D/g, "");
+        window.open(`https://wa.me/${phone}`, "_blank");
+      } else if (button.icon === "Phone") {
+        window.open(`tel:${button.url}`, "_self");
+      } else if (button.icon === "Mail") {
+        window.open(`mailto:${button.url}`, "_blank");
+      } else if (button.icon === "MapPin") {
+        window.open(
+          `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(button.url)}`,
+          "_blank"
+        );
+      }
+      return;
+    }
+
+    window.open(button.url, "_blank");
   };
 
   if (loading) {
@@ -183,6 +259,52 @@ const PublicDisplayPage = () => {
             </p>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  // If there's an active Bio Page linked to this display, render the advanced layout here
+  if (bioPage) {
+    const theme = bioPage.theme;
+    const activeButtons = (bioPage.buttons || [])
+      .filter((b) => b.enabled)
+      .sort((a, b) => a.order - b.order);
+
+    return (
+      <div
+        className="min-h-screen py-8 px-4 relative overflow-hidden"
+        style={{
+          backgroundColor: `hsl(${theme.backgroundColor})`,
+          color: `hsl(${theme.textColor})`,
+        }}
+      >
+        {/* Background Effects */}
+        <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
+        <div
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-20 blur-3xl pointer-events-none"
+          style={{ backgroundColor: `hsl(${theme.primaryColor})` }}
+        />
+
+        <div className="relative z-10 max-w-md mx-auto space-y-8">
+          <BioPageHeader
+            title={bioPage.title}
+            subtitle={bioPage.subtitle}
+            photoUrl={bioPage.profile_photo_url}
+            theme={theme}
+          />
+
+          {theme.showGallery && bioPage.gallery_photos.length > 0 && (
+            <BioPageGallery photos={bioPage.gallery_photos} theme={theme} />
+          )}
+
+          <BioPageButtons
+            buttons={activeButtons}
+            theme={theme}
+            onButtonClick={handleBioButtonClick}
+          />
+
+          <p className="text-center text-xs opacity-50 pt-4">Powered by TagNaMão</p>
+        </div>
       </div>
     );
   }
