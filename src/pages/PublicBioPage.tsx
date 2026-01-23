@@ -83,7 +83,40 @@ const PublicBioPage = () => {
   const handleButtonClick = async (button: BioButton) => {
     if (!bioPage) return;
 
-    // Log click event
+    console.log("Button clicked:", button);
+
+    // Handle special button types FIRST before logging
+    if (button.icon === 'Wifi') {
+      const wifi = parseWifiData(button.url);
+      console.log("Opening Wi-Fi modal with:", wifi);
+      setWifiModal({ open: true, ...wifi });
+      // Log click event
+      supabase.from("bio_page_analytics").insert({
+        bio_page_id: bioPage.id,
+        event_type: 'click',
+        button_id: button.id,
+        user_agent: navigator.userAgent,
+        referrer: document.referrer || null,
+      });
+      return;
+    }
+
+    if (button.icon === 'QrCode') {
+      const pix = parsePixData(button.url);
+      console.log("Opening PIX modal with:", pix);
+      setPixModal({ open: true, pixKey: pix.pixKey, amount: pix.amount?.toString(), description: pix.description });
+      // Log click event
+      supabase.from("bio_page_analytics").insert({
+        bio_page_id: bioPage.id,
+        event_type: 'click',
+        button_id: button.id,
+        user_agent: navigator.userAgent,
+        referrer: document.referrer || null,
+      });
+      return;
+    }
+
+    // Log click event for other buttons
     supabase.from("bio_page_analytics").insert({
       bio_page_id: bioPage.id,
       event_type: 'click',
@@ -91,19 +124,6 @@ const PublicBioPage = () => {
       user_agent: navigator.userAgent,
       referrer: document.referrer || null,
     });
-
-    // Handle special button types
-    if (button.icon === 'Wifi') {
-      const wifi = parseWifiData(button.url);
-      setWifiModal({ open: true, ...wifi });
-      return;
-    }
-
-    if (button.icon === 'QrCode') {
-      const pix = parsePixData(button.url);
-      setPixModal({ open: true, pixKey: pix.pixKey, amount: pix.amount?.toString(), description: pix.description });
-      return;
-    }
 
     if (button.icon === 'Contact') {
       const vcard = parseVCardData(button.url);
@@ -113,13 +133,11 @@ const PublicBioPage = () => {
     }
 
     if (button.icon === 'Star') {
-      // Google Reviews - open URL directly
       window.open(button.url, "_blank");
       return;
     }
 
     if (button.icon === 'Calendar') {
-      // Scheduling - open URL directly
       window.open(button.url, "_blank");
       return;
     }
