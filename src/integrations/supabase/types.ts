@@ -920,6 +920,13 @@ export type Database = {
       }
     }
     Functions: {
+      increment_coupon_usage: {
+        Args: { coupon_uuid: string }
+        Returns: {
+          message: string
+          success: boolean
+        }[]
+      }
       is_admin: { Args: never; Returns: boolean }
     }
     Enums: {

@@ -352,12 +352,19 @@ export default function Checkout() {
 
       setCurrentOrderId(order.id);
 
-      // Increment coupon usage if applied
+      // Increment coupon usage atomically if applied
       if (appliedCoupon) {
-        await supabase
-          .from('coupons')
-          .update({ current_uses: appliedCoupon.current_uses + 1 })
-          .eq('id', appliedCoupon.id);
+        const { data: couponResult, error: couponError } = await supabase.rpc(
+          'increment_coupon_usage',
+          { coupon_uuid: appliedCoupon.id }
+        );
+
+        // Check if coupon usage failed (e.g., limit exceeded during race condition)
+        if (couponError || !couponResult?.[0]?.success) {
+          // Rollback the order since coupon is no longer valid
+          await supabase.from('orders').delete().eq('id', order.id);
+          throw new Error(couponResult?.[0]?.message || 'Limite de uso do cupom foi excedido');
+        }
       }
 
       // Create order items
