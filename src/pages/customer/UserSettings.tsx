@@ -130,6 +130,14 @@ const adminMenuItems: AdminMenuItem[] = [
 
 const adminSettingsItems: AdminMenuItem[] = [
   {
+    id: 'roles',
+    title: 'Gerenciar Funções',
+    description: 'Controle de permissões.',
+    icon: ShieldCheck,
+    path: '/admin/funcoes',
+    color: 'text-red-400'
+  },
+  {
     id: 'templates',
     title: 'Templates de Arte',
     description: 'Templates SVG para produtos.',
