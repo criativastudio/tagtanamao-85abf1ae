@@ -79,14 +79,22 @@ export const SOCIAL_ICONS: Record<string, string> = {
 };
 
 export const BUTTON_PRESETS = [
+  // Social
   { type: 'social' as const, label: 'Instagram', icon: 'Instagram', color: '330 70% 55%' },
   { type: 'social' as const, label: 'TikTok', icon: 'Music2', color: '0 0% 0%' },
   { type: 'social' as const, label: 'YouTube', icon: 'Youtube', color: '0 84% 60%' },
   { type: 'social' as const, label: 'Facebook', icon: 'Facebook', color: '220 84% 55%' },
   { type: 'social' as const, label: 'Twitter', icon: 'Twitter', color: '200 84% 55%' },
   { type: 'social' as const, label: 'LinkedIn', icon: 'Linkedin', color: '210 84% 45%' },
+  { type: 'social' as const, label: 'Google Reviews', icon: 'Star', color: '45 93% 47%' },
+  // Contact
   { type: 'contact' as const, label: 'WhatsApp', icon: 'MessageCircle', color: '142 70% 45%' },
   { type: 'contact' as const, label: 'Telefone', icon: 'Phone', color: '160 84% 45%' },
   { type: 'contact' as const, label: 'Email', icon: 'Mail', color: '200 84% 55%' },
   { type: 'contact' as const, label: 'Endereço', icon: 'MapPin', color: '0 84% 60%' },
+  { type: 'contact' as const, label: 'Salvar Contato', icon: 'Contact', color: '220 70% 50%' },
+  // Special
+  { type: 'custom' as const, label: 'Wi-Fi', icon: 'Wifi', color: '200 84% 55%' },
+  { type: 'custom' as const, label: 'PIX', icon: 'QrCode', color: '168 76% 42%' },
+  { type: 'custom' as const, label: 'Agendamento', icon: 'Calendar', color: '270 70% 55%' },
 ];

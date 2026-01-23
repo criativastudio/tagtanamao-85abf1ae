@@ -7,6 +7,8 @@ import { BioPage, BioTheme, BioButton, DEFAULT_THEME } from "@/types/bioPage";
 import { BioPageHeader } from "@/components/bio/BioPageHeader";
 import { BioPageGallery } from "@/components/bio/BioPageGallery";
 import { BioPageButtons } from "@/components/bio/BioPageButtons";
+import { WifiModal, PixModal } from "@/components/bio/SpecialButtonModals";
+import { generateVCard, downloadVCard, parseWifiData, parsePixData, parseVCardData } from "@/lib/buttonActions";
 
 const PublicBioPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -70,6 +72,14 @@ const PublicBioPage = () => {
     fetchBioPage();
   }, [slug]);
 
+  // State for special modals
+  const [wifiModal, setWifiModal] = useState<{ open: boolean; ssid: string; password: string; encryption: string }>({
+    open: false, ssid: '', password: '', encryption: 'WPA'
+  });
+  const [pixModal, setPixModal] = useState<{ open: boolean; pixKey: string; amount?: string; description?: string }>({
+    open: false, pixKey: '', amount: '', description: ''
+  });
+
   const handleButtonClick = async (button: BioButton) => {
     if (!bioPage) return;
 
@@ -82,7 +92,39 @@ const PublicBioPage = () => {
       referrer: document.referrer || null,
     });
 
-    // Handle different button types
+    // Handle special button types
+    if (button.icon === 'Wifi') {
+      const wifi = parseWifiData(button.url);
+      setWifiModal({ open: true, ...wifi });
+      return;
+    }
+
+    if (button.icon === 'QrCode') {
+      const pix = parsePixData(button.url);
+      setPixModal({ open: true, pixKey: pix.pixKey, amount: pix.amount?.toString(), description: pix.description });
+      return;
+    }
+
+    if (button.icon === 'Contact') {
+      const vcard = parseVCardData(button.url);
+      const vcardContent = generateVCard(vcard);
+      downloadVCard(vcardContent, vcard.name || 'contato');
+      return;
+    }
+
+    if (button.icon === 'Star') {
+      // Google Reviews - open URL directly
+      window.open(button.url, "_blank");
+      return;
+    }
+
+    if (button.icon === 'Calendar') {
+      // Scheduling - open URL directly
+      window.open(button.url, "_blank");
+      return;
+    }
+
+    // Handle standard contact buttons
     if (button.type === 'contact') {
       if (button.icon === 'MessageCircle') {
         const phone = button.url.replace(/\D/g, "");
@@ -138,47 +180,65 @@ const PublicBioPage = () => {
     .sort((a, b) => a.order - b.order);
 
   return (
-    <div 
-      className="min-h-screen py-8 px-4 relative overflow-hidden"
-      style={{ 
-        backgroundColor: `hsl(${theme.backgroundColor})`,
-        color: `hsl(${theme.textColor})`,
-      }}
-    >
-      {/* Background Effects */}
-      <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
+    <>
       <div 
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-20 blur-3xl pointer-events-none"
-        style={{ backgroundColor: `hsl(${theme.primaryColor})` }}
-      />
-
-      <div className="relative z-10 max-w-md mx-auto space-y-8">
-        {/* Header */}
-        <BioPageHeader 
-          title={bioPage.title}
-          subtitle={bioPage.subtitle}
-          photoUrl={bioPage.profile_photo_url}
-          theme={theme}
+        className="min-h-screen py-8 px-4 relative overflow-hidden"
+        style={{ 
+          backgroundColor: `hsl(${theme.backgroundColor})`,
+          color: `hsl(${theme.textColor})`,
+        }}
+      >
+        {/* Background Effects */}
+        <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
+        <div 
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-20 blur-3xl pointer-events-none"
+          style={{ backgroundColor: `hsl(${theme.primaryColor})` }}
         />
 
-        {/* Gallery */}
-        {theme.showGallery && bioPage.gallery_photos.length > 0 && (
-          <BioPageGallery photos={bioPage.gallery_photos} theme={theme} />
-        )}
+        <div className="relative z-10 max-w-md mx-auto space-y-8">
+          {/* Header */}
+          <BioPageHeader 
+            title={bioPage.title}
+            subtitle={bioPage.subtitle}
+            photoUrl={bioPage.profile_photo_url}
+            theme={theme}
+          />
 
-        {/* Buttons */}
-        <BioPageButtons 
-          buttons={activeButtons}
-          theme={theme}
-          onButtonClick={handleButtonClick}
-        />
+          {/* Gallery */}
+          {theme.showGallery && bioPage.gallery_photos.length > 0 && (
+            <BioPageGallery photos={bioPage.gallery_photos} theme={theme} />
+          )}
 
-        {/* Footer */}
-        <p className="text-center text-xs opacity-50 pt-4">
-          Powered by TagNaMão
-        </p>
+          {/* Buttons */}
+          <BioPageButtons 
+            buttons={activeButtons}
+            theme={theme}
+            onButtonClick={handleButtonClick}
+          />
+
+          {/* Footer */}
+          <p className="text-center text-xs opacity-50 pt-4">
+            Powered by TagNaMão
+          </p>
+        </div>
       </div>
-    </div>
+
+      {/* Special Modals */}
+      <WifiModal 
+        open={wifiModal.open}
+        onClose={() => setWifiModal(prev => ({ ...prev, open: false }))}
+        ssid={wifiModal.ssid}
+        password={wifiModal.password}
+        encryption={wifiModal.encryption}
+      />
+      <PixModal 
+        open={pixModal.open}
+        onClose={() => setPixModal(prev => ({ ...prev, open: false }))}
+        pixKey={pixModal.pixKey}
+        amount={pixModal.amount}
+        description={pixModal.description}
+      />
+    </>
   );
 };
 
