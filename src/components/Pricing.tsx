@@ -16,8 +16,8 @@ const pricingPlans = [
     features: [
       "1 Tag Pet QR Code Premium",
       "Página personalizada do pet",
-      "Geolocalização automática",
-      "Notificações WhatsApp",
+      "Geolocalização (enviada mediante autorização de quem escaneia o QR Code)",
+      "Notificações via WhatsApp",
       "Gestão via painel",
       "Suporte prioritário",
     ],
@@ -31,7 +31,7 @@ const pricingPlans = [
     features: [
       "2 Tags Pet QR Code Premium",
       "Páginas personalizadas",
-      "Geolocalização mediante autorização",
+      "Geolocalização (enviada mediante autorização de quem escaneia o QR Code)",
       "Notificação via WhatsApp",
       "Gestão centralizada",
       "Suporte",
@@ -47,10 +47,10 @@ const pricingPlans = [
     features: [
       "3 Tags Pet QR Code Premium",
       "Páginas personalizadas",
-      "Geolocalização automática",
-      "Notificações WhatsApp",
+      "Geolocalização (enviada mediante autorização de quem escaneia o QR Code)",
+      "Notificações via WhatsApp",
       "Gestão centralizada",
-      "Suporte VIP",
+      "Suporte",
       "39% de economia",
     ],
     popular: false,
