@@ -59,18 +59,20 @@ export default function Dashboard() {
   const fetchData = async () => {
     setLoadingData(true);
     
-    // Fetch pet tags
+    // Fetch pet tags belonging to this user
     const { data: tagsData } = await supabase
       .from('pet_tags')
       .select('*')
+      .eq('user_id', user?.id)
       .order('created_at', { ascending: false });
     
     if (tagsData) setPetTags(tagsData);
     
-    // Fetch business displays
+    // Fetch business displays belonging to this user
     const { data: displaysData } = await supabase
       .from('business_displays')
       .select('*')
+      .eq('user_id', user?.id)
       .order('created_at', { ascending: false });
     
     if (displaysData) setDisplays(displaysData);
