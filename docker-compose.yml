@@ -5,10 +5,10 @@ services:
       dockerfile: Dockerfile
     container_name: tagtanamao
     ports:
-      - "3000:3000"
+      - "3333:3333"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3333"]
       interval: 30s
       timeout: 10s
       retries: 3
