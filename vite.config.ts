@@ -24,6 +24,7 @@ export default defineConfig(({ mode }) => ({
   },
   preview: {
     host: "::",
+    allowedHosts: process.env.VITE_DOMAIN ? [process.env.VITE_DOMAIN] : [],
     port: 8080,
     hmr: {
       overlay: false,
