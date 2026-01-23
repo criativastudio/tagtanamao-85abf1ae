@@ -31,10 +31,10 @@ const pricingPlans = [
     features: [
       "2 Tags Pet QR Code Premium",
       "Páginas personalizadas",
-      "Geolocalização automática",
-      "Notificações WhatsApp",
+      "Geolocalização mediante autorização",
+      "Notificação via WhatsApp",
       "Gestão centralizada",
-      "Suporte prioritário",
+      "Suporte",
       "37% de economia",
     ],
     popular: true,
@@ -63,7 +63,7 @@ const Pricing = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const handleBuyNow = (plan: typeof pricingPlans[0]) => {
+  const handleBuyNow = (plan: (typeof pricingPlans)[0]) => {
     // Create product based on plan
     const quantity = plan.name.includes("3") ? 3 : plan.name.includes("2") ? 2 : 1;
     const product: Product = {
@@ -71,23 +71,23 @@ const Pricing = () => {
       name: plan.name,
       description: plan.description,
       price: parseFloat(plan.price.replace(",", ".")),
-      type: 'pet_tag',
+      type: "pet_tag",
       image_url: null,
       is_active: true,
       created_at: null,
     };
-    
+
     addToCart(product);
-    
+
     if (!user) {
       toast({
         title: "Faça login para continuar",
         description: "Você precisa estar logado para finalizar a compra.",
       });
-      navigate('/auth?redirect=/loja/checkout');
+      navigate("/auth?redirect=/loja/checkout");
       return;
     }
-    
+
     toast({
       title: "Adicionado ao carrinho!",
       description: (
@@ -97,14 +97,14 @@ const Pricing = () => {
         </div>
       ),
     });
-    navigate('/loja/checkout');
+    navigate("/loja/checkout");
   };
 
   return (
     <section id="precos" className="relative py-24 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 bg-radial-gradient" />
-      
+
       <div className="container relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -132,7 +132,7 @@ const Pricing = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className={`relative ${plan.popular ? 'md:-mt-4 md:mb-4' : ''}`}
+              className={`relative ${plan.popular ? "md:-mt-4 md:mb-4" : ""}`}
             >
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
@@ -142,12 +142,14 @@ const Pricing = () => {
                   </div>
                 </div>
               )}
-              
-              <div className={`h-full p-6 rounded-2xl border transition-all duration-300 ${
-                plan.popular 
-                  ? 'bg-card border-primary/50 shadow-[0_0_40px_hsl(var(--primary)/0.2)]' 
-                  : 'bg-card/50 border-border/50 hover:border-primary/30'
-              }`}>
+
+              <div
+                className={`h-full p-6 rounded-2xl border transition-all duration-300 ${
+                  plan.popular
+                    ? "bg-card border-primary/50 shadow-[0_0_40px_hsl(var(--primary)/0.2)]"
+                    : "bg-card/50 border-border/50 hover:border-primary/30"
+                }`}
+              >
                 <div className="text-center mb-6">
                   <h3 className="text-xl font-display font-bold mb-2">{plan.name}</h3>
                   <p className="text-muted-foreground text-sm mb-4">{plan.description}</p>
@@ -172,9 +174,9 @@ const Pricing = () => {
                   ))}
                 </ul>
 
-                <Button 
-                  variant={plan.popular ? "hero" : "outline"} 
-                  size="lg" 
+                <Button
+                  variant={plan.popular ? "hero" : "outline"}
+                  size="lg"
                   className="w-full"
                   onClick={() => handleBuyNow(plan)}
                 >
