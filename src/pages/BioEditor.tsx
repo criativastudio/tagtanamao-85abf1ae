@@ -24,6 +24,8 @@ const BioEditor = () => {
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [slugError, setSlugError] = useState<string | null>(null);
+  const [checkingSlug, setCheckingSlug] = useState(false);
   const [bioPage, setBioPage] = useState<Partial<BioPage>>({
     title: "Minha Bio",
     subtitle: "",
@@ -81,12 +83,65 @@ const BioEditor = () => {
       .replace(/^-|-$/g, '') + '-' + Math.random().toString(36).substring(2, 6);
   };
 
+  const checkSlugAvailability = async (slug: string) => {
+    if (!slug.trim()) {
+      setSlugError(null);
+      return true;
+    }
+
+    setCheckingSlug(true);
+    
+    try {
+      const { data: existingSlug } = await supabase
+        .from("bio_pages")
+        .select("id")
+        .eq("slug", slug)
+        .neq("id", id || "00000000-0000-0000-0000-000000000000")
+        .maybeSingle();
+
+      if (existingSlug) {
+        setSlugError("Este nome já está em uso. Tente adicionar pontos (.), hífens (-) ou números para torná-lo único.");
+        setCheckingSlug(false);
+        return false;
+      }
+
+      setSlugError(null);
+      setCheckingSlug(false);
+      return true;
+    } catch {
+      setCheckingSlug(false);
+      return true;
+    }
+  };
+
+  const handleSlugChange = (value: string) => {
+    // Allow letters, numbers, dots, hyphens, and underscores
+    const sanitizedSlug = value.toLowerCase().replace(/[^a-z0-9.\-_]/g, '');
+    setBioPage(prev => ({ ...prev, slug: sanitizedSlug }));
+    setSlugError(null);
+  };
+
+  const handleSlugBlur = () => {
+    if (bioPage.slug?.trim()) {
+      checkSlugAvailability(bioPage.slug);
+    }
+  };
+
   const handleSave = async () => {
     if (!user) return;
     
     if (!bioPage.title?.trim()) {
       toast.error("Digite um título para a página");
       return;
+    }
+
+    // Check slug availability before saving
+    if (bioPage.slug?.trim()) {
+      const isAvailable = await checkSlugAvailability(bioPage.slug);
+      if (!isAvailable) {
+        toast.error("O slug informado já está em uso. Por favor, escolha outro nome.");
+        return;
+      }
     }
 
     setSaving(true);
@@ -112,19 +167,8 @@ const BioEditor = () => {
         if (error) throw error;
         toast.success("Página salva com sucesso!");
       } else {
-        // Create new page - generate unique slug
+        // Create new page - generate unique slug if user didn't provide one
         const baseSlug = bioPage.slug?.trim() || generateSlug(bioPage.title);
-        
-        // Check if slug exists and make it unique if needed
-        const { data: existingSlug } = await supabase
-          .from("bio_pages")
-          .select("id")
-          .eq("slug", baseSlug)
-          .maybeSingle();
-
-        const finalSlug = existingSlug 
-          ? `${baseSlug}-${Math.random().toString(36).substring(2, 6)}`
-          : baseSlug;
 
         const dataToInsert = {
           user_id: user.id,
@@ -135,7 +179,7 @@ const BioEditor = () => {
           buttons: bioPage.buttons as unknown as string,
           theme: bioPage.theme as unknown as string,
           is_active: bioPage.is_active ?? true,
-          slug: finalSlug,
+          slug: baseSlug,
         };
 
         const { data, error } = await supabase
@@ -298,10 +342,21 @@ const BioEditor = () => {
                         <Input
                           id="slug"
                           value={bioPage.slug || ""}
-                          onChange={(e) => setBioPage(prev => ({ ...prev, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
+                          onChange={(e) => handleSlugChange(e.target.value)}
+                          onBlur={handleSlugBlur}
                           placeholder="meu-pet"
+                          className={slugError ? "border-destructive" : ""}
                         />
+                        {checkingSlug && (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+                        )}
                       </div>
+                      {slugError && (
+                        <p className="text-sm text-destructive">{slugError}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Use letras, números, pontos (.), hífens (-) e underscores (_)
+                      </p>
                     </div>
 
                     <div className="flex items-center justify-between">
