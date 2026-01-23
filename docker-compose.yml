@@ -4,6 +4,10 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: tagtanamao
+    environment:
+      - VITE_SUPABASE_PROJECT_ID=${VITE_SUPABASE_PROJECT_ID}
+      - VITE_SUPABASE_PUBLISHABLE_KEY=${VITE_SUPABASE_PUBLISHABLE_KEY}
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
     ports:
       - "8080:8080"
     restart: unless-stopped
