@@ -18,7 +18,7 @@ const steps = [
     icon: Bell,
     step: "03",
     title: "Você é Notificado",
-    description: "Recebe automaticamente a localização via WhatsApp em tempo real.",
+    description: "Recebe a localização via WhatsApp, mediante autorização do envio da geolocalização de quem encontrou o pet.",
   },
   {
     icon: Check,
