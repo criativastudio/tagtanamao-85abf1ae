@@ -877,6 +877,30 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       pet_tags_public: {
@@ -920,6 +944,24 @@ export type Database = {
       }
     }
     Functions: {
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      has_role_or_higher: {
+        Args: {
+          _min_role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       increment_coupon_usage: {
         Args: { coupon_uuid: string }
         Returns: {
@@ -930,7 +972,7 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "gestor" | "editor"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1057,6 +1099,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "gestor", "editor"],
+    },
   },
 } as const
