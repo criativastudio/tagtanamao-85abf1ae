@@ -22,4 +22,7 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     include: ["react", "react-dom"],
   },
+  preview: {
+    port: Number(process.env.VITE_PORT),
+  },
 }));
