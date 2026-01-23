@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { 
   Instagram, Music2, Youtube, Facebook, Twitter, Linkedin,
   MessageCircle, Phone, Mail, MapPin, Globe, Link,
+  Wifi, QrCode, Star, Calendar, Contact,
   LucideIcon
 } from "lucide-react";
 import { BioTheme, BioButton } from "@/types/bioPage";
@@ -25,6 +26,11 @@ const iconMap: Record<string, LucideIcon> = {
   MapPin,
   Globe,
   Link,
+  Wifi,
+  QrCode,
+  Star,
+  Calendar,
+  Contact,
 };
 
 const getIcon = (iconName: string): LucideIcon => {

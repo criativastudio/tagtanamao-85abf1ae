@@ -5,10 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SpecialButtonFields } from "./SpecialButtonFields";
 import { 
   Plus, Trash2, GripVertical, ChevronDown, ChevronUp,
   Instagram, Music2, Youtube, Facebook, Twitter, Linkedin,
-  MessageCircle, Phone, Mail, MapPin, Globe, Link
+  MessageCircle, Phone, Mail, MapPin, Globe, Link,
+  Wifi, QrCode, Star, Calendar, Contact
 } from "lucide-react";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
 import { BioButton, BUTTON_PRESETS } from "@/types/bioPage";
@@ -34,6 +36,11 @@ const ICON_OPTIONS = [
   { value: 'MapPin', label: 'Localização', icon: MapPin },
   { value: 'Globe', label: 'Website', icon: Globe },
   { value: 'Link', label: 'Link', icon: Link },
+  { value: 'Wifi', label: 'Wi-Fi', icon: Wifi },
+  { value: 'QrCode', label: 'PIX', icon: QrCode },
+  { value: 'Star', label: 'Google Reviews', icon: Star },
+  { value: 'Calendar', label: 'Agendamento', icon: Calendar },
+  { value: 'Contact', label: 'Salvar Contato', icon: Contact },
 ];
 
 export const BioButtonEditor = ({
@@ -201,20 +208,10 @@ export const BioButtonEditor = ({
                             </div>
                           </div>
 
-                          <div className="space-y-2">
-                            <Label>URL / Contato</Label>
-                            <Input
-                              value={button.url}
-                              onChange={(e) => onUpdateButton(button.id, { url: e.target.value })}
-                              placeholder={
-                                button.icon === 'MessageCircle' ? '+55 11 99999-9999' :
-                                button.icon === 'Phone' ? '+55 11 99999-9999' :
-                                button.icon === 'Mail' ? 'email@exemplo.com' :
-                                button.icon === 'MapPin' ? 'Rua Exemplo, 123 - Cidade' :
-                                'https://exemplo.com'
-                              }
-                            />
-                          </div>
+                          <SpecialButtonFields 
+                            button={button} 
+                            onUpdate={(updates) => onUpdateButton(button.id, updates)} 
+                          />
 
                           <div className="space-y-2">
                             <Label>Cor do Botão</Label>

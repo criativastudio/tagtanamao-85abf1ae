@@ -8,6 +8,8 @@ import { BioButton, BioPage, DEFAULT_THEME } from "@/types/bioPage";
 import { BioPageHeader } from "@/components/bio/BioPageHeader";
 import { BioPageGallery } from "@/components/bio/BioPageGallery";
 import { BioPageButtons } from "@/components/bio/BioPageButtons";
+import { WifiModal, PixModal } from "@/components/bio/SpecialButtonModals";
+import { generateVCard, downloadVCard, parseWifiData, parsePixData, parseVCardData } from "@/lib/buttonActions";
 import { 
   AlertTriangle, 
   Building2, 
@@ -171,6 +173,14 @@ const PublicDisplayPage = () => {
     }
   };
 
+  // State for special modals
+  const [wifiModal, setWifiModal] = useState<{ open: boolean; ssid: string; password: string; encryption: string }>({
+    open: false, ssid: '', password: '', encryption: 'WPA'
+  });
+  const [pixModal, setPixModal] = useState<{ open: boolean; pixKey: string; amount?: string; description?: string }>({
+    open: false, pixKey: '', amount: '', description: ''
+  });
+
   const handleBioButtonClick = async (button: BioButton) => {
     if (!bioPage) return;
 
@@ -182,6 +192,36 @@ const PublicDisplayPage = () => {
       user_agent: navigator.userAgent,
       referrer: document.referrer || null,
     });
+
+    // Handle special button types
+    if (button.icon === 'Wifi') {
+      const wifi = parseWifiData(button.url);
+      setWifiModal({ open: true, ...wifi });
+      return;
+    }
+
+    if (button.icon === 'QrCode') {
+      const pix = parsePixData(button.url);
+      setPixModal({ open: true, pixKey: pix.pixKey, amount: pix.amount?.toString(), description: pix.description });
+      return;
+    }
+
+    if (button.icon === 'Contact') {
+      const vcard = parseVCardData(button.url);
+      const vcardContent = generateVCard(vcard);
+      downloadVCard(vcardContent, vcard.name || 'contato');
+      return;
+    }
+
+    if (button.icon === 'Star') {
+      window.open(button.url, "_blank");
+      return;
+    }
+
+    if (button.icon === 'Calendar') {
+      window.open(button.url, "_blank");
+      return;
+    }
 
     if (button.type === "contact") {
       if (button.icon === "MessageCircle") {
@@ -392,6 +432,22 @@ const PublicDisplayPage = () => {
           </p>
         </CardContent>
       </Card>
+
+      {/* Special Modals */}
+      <WifiModal 
+        open={wifiModal.open}
+        onClose={() => setWifiModal(prev => ({ ...prev, open: false }))}
+        ssid={wifiModal.ssid}
+        password={wifiModal.password}
+        encryption={wifiModal.encryption}
+      />
+      <PixModal 
+        open={pixModal.open}
+        onClose={() => setPixModal(prev => ({ ...prev, open: false }))}
+        pixKey={pixModal.pixKey}
+        amount={pixModal.amount}
+        description={pixModal.description}
+      />
     </div>
   );
 };
