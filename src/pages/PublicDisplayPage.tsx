@@ -311,41 +311,59 @@ const PublicDisplayPage = () => {
       .sort((a, b) => a.order - b.order);
 
     return (
-      <div
-        className="min-h-screen py-8 px-4 relative overflow-hidden"
-        style={{
-          backgroundColor: `hsl(${theme.backgroundColor})`,
-          color: `hsl(${theme.textColor})`,
-        }}
-      >
-        {/* Background Effects */}
-        <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
+      <>
         <div
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-20 blur-3xl pointer-events-none"
-          style={{ backgroundColor: `hsl(${theme.primaryColor})` }}
-        />
-
-        <div className="relative z-10 max-w-md mx-auto space-y-8">
-          <BioPageHeader
-            title={bioPage.title}
-            subtitle={bioPage.subtitle}
-            photoUrl={bioPage.profile_photo_url}
-            theme={theme}
+          className="min-h-screen py-8 px-4 relative overflow-hidden"
+          style={{
+            backgroundColor: `hsl(${theme.backgroundColor})`,
+            color: `hsl(${theme.textColor})`,
+          }}
+        >
+          {/* Background Effects */}
+          <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
+          <div
+            className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-20 blur-3xl pointer-events-none"
+            style={{ backgroundColor: `hsl(${theme.primaryColor})` }}
           />
 
-          {theme.showGallery && bioPage.gallery_photos.length > 0 && (
-            <BioPageGallery photos={bioPage.gallery_photos} theme={theme} />
-          )}
+          <div className="relative z-10 max-w-md mx-auto space-y-8">
+            <BioPageHeader
+              title={bioPage.title}
+              subtitle={bioPage.subtitle}
+              photoUrl={bioPage.profile_photo_url}
+              theme={theme}
+            />
 
-          <BioPageButtons
-            buttons={activeButtons}
-            theme={theme}
-            onButtonClick={handleBioButtonClick}
-          />
+            {theme.showGallery && bioPage.gallery_photos.length > 0 && (
+              <BioPageGallery photos={bioPage.gallery_photos} theme={theme} />
+            )}
 
-          <p className="text-center text-xs opacity-50 pt-4">Powered by TagNaMão</p>
+            <BioPageButtons
+              buttons={activeButtons}
+              theme={theme}
+              onButtonClick={handleBioButtonClick}
+            />
+
+            <p className="text-center text-xs opacity-50 pt-4">Powered by TagNaMão</p>
+          </div>
         </div>
-      </div>
+        
+        {/* Special Modals */}
+        <WifiModal 
+          open={wifiModal.open}
+          onClose={() => setWifiModal(prev => ({ ...prev, open: false }))}
+          ssid={wifiModal.ssid}
+          password={wifiModal.password}
+          encryption={wifiModal.encryption}
+        />
+        <PixModal 
+          open={pixModal.open}
+          onClose={() => setPixModal(prev => ({ ...prev, open: false }))}
+          pixKey={pixModal.pixKey}
+          amount={pixModal.amount}
+          description={pixModal.description}
+        />
+      </>
     );
   }
 
