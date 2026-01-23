@@ -232,32 +232,63 @@ export default function DisplaysManager() {
     
     setSaving(true);
     
-    const { error } = await supabase
+    // Prepare buttons for storage
+    const buttonsToSave = formData.buttons.map(btn => ({
+      id: btn.id,
+      label: btn.label,
+      url: btn.url,
+      icon: btn.icon
+    }));
+    
+    const updateData = {
+      business_name: formData.business_name || null,
+      logo_url: formData.logo_url || null,
+      description: formData.description || null,
+      theme_color: formData.theme_color,
+      buttons: buttonsToSave,
+      updated_at: new Date().toISOString()
+    };
+
+    console.log('Saving display:', selectedDisplay.id, updateData);
+    
+    const { data, error } = await supabase
       .from('business_displays')
-      .update({
-        business_name: formData.business_name || null,
-        logo_url: formData.logo_url || null,
-        description: formData.description || null,
-        theme_color: formData.theme_color,
-        buttons: JSON.parse(JSON.stringify(formData.buttons)),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', selectedDisplay.id);
+      .update(updateData)
+      .eq('id', selectedDisplay.id)
+      .select();
     
     if (error) {
+      console.error('Error saving display:', error);
       toast({
         title: 'Erro ao salvar',
         description: error.message,
         variant: 'destructive'
       });
+    } else if (!data || data.length === 0) {
+      console.warn('No rows updated - RLS may be blocking the update');
+      toast({
+        title: 'Erro ao salvar',
+        description: 'Não foi possível atualizar. Você pode não ter permissão para editar este display.',
+        variant: 'destructive'
+      });
     } else {
+      console.log('Display saved successfully:', data[0]);
       toast({
         title: 'Display atualizado!',
         description: 'As informações foram salvas com sucesso.'
       });
       setEditMode(false);
+      
+      // Update local state with the returned data
+      const updatedDisplay = {
+        ...data[0],
+        buttons: buttonsToSave
+      } as BusinessDisplay;
+      
+      setSelectedDisplay(updatedDisplay);
+      
+      // Refresh list
       fetchDisplays();
-      setSelectedDisplay({ ...selectedDisplay, ...formData });
     }
     
     setSaving(false);
