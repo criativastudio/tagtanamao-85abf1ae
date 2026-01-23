@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { MessageCircle } from "lucide-react";
 
 const WhatsAppButton = () => {
-  const whatsappNumber = "5511999999999"; // Replace with actual number
+  const whatsappNumber = "5569992213658"; // Replace with actual number
   const message = "Olá! Gostaria de saber mais sobre as Tags Pet QR Code.";
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
 
@@ -20,7 +20,7 @@ const WhatsAppButton = () => {
     >
       {/* Pulse ring */}
       <span className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-30" />
-      
+
       {/* Button */}
       <div className="relative flex items-center justify-center w-14 h-14 rounded-full bg-green-500 shadow-[0_0_20px_rgba(34,197,94,0.5)] hover:shadow-[0_0_30px_rgba(34,197,94,0.7)] transition-shadow duration-300">
         <MessageCircle className="w-7 h-7 text-white fill-white" />

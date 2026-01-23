@@ -130,13 +130,13 @@ const Footer = () => {
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-primary" />
-                <a href="tel:+5511999999999" className="hover:text-primary transition-colors">
-                  (11) 99999-9999
+                <a href="tel:+5569992213658" className="hover:text-primary transition-colors">
+                  (69) 99221-3658
                 </a>
               </li>
               <li className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-primary mt-0.5" />
-                <span>São Paulo, SP - Brasil</span>
+                <span>Porto Velho, RO - Brasil</span>
               </li>
             </ul>
           </motion.div>

@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Dog, 
-  ArrowLeft, 
-  Eye, 
-  Edit2, 
-  MapPin, 
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Dog,
+  ArrowLeft,
+  Eye,
+  Edit2,
+  MapPin,
   Gift,
   Save,
   X,
@@ -23,18 +23,18 @@ import {
   ShieldAlert,
   ShieldCheck,
   Sparkles,
-  RefreshCw
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { ImageUpload } from '@/components/bio/ImageUpload';
+  RefreshCw,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { ImageUpload } from "@/components/bio/ImageUpload";
 import {
   Dialog,
   DialogContent,
@@ -42,7 +42,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 
 interface PetTag {
   id: string;
@@ -74,33 +74,33 @@ export default function PetTagsManager() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   const [petTags, setPetTags] = useState<PetTag[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTag, setSelectedTag] = useState<PetTag | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [scanStats, setScanStats] = useState<Record<string, ScanInfo>>({});
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  
+
   // Bulk delete state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
-  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState("");
   const [deletingBulk, setDeletingBulk] = useState(false);
-  
+
   // Form state
   const [formData, setFormData] = useState({
-    pet_name: '',
+    pet_name: "",
     lost_mode: false,
-    pet_photo_url: '',
-    owner_name: '',
-    phone: '',
-    whatsapp: '',
-    address: '',
+    pet_photo_url: "",
+    owner_name: "",
+    phone: "",
+    whatsapp: "",
+    address: "",
     reward_enabled: false,
-    reward_text: ''
+    reward_text: "",
   });
 
   useEffect(() => {
@@ -111,108 +111,105 @@ export default function PetTagsManager() {
 
   const fetchPetTags = async () => {
     setLoading(true);
-    
+
     try {
       // Build query - admins see all, users see only their own
-      let query = supabase
-        .from('pet_tags')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
+      let query = supabase.from("pet_tags").select("*").order("created_at", { ascending: false });
+
       // Filter by user_id for non-admin users
       if (!profile?.is_admin) {
-        query = query.eq('user_id', user?.id);
+        query = query.eq("user_id", user?.id);
       }
-      
+
       const { data, error } = await query;
-      
+
       if (error) {
-        console.error('Error fetching pet tags:', error);
+        console.error("Error fetching pet tags:", error);
         toast({
-          title: 'Erro ao carregar tags',
+          title: "Erro ao carregar tags",
           description: error.message,
-          variant: 'destructive'
+          variant: "destructive",
         });
         setLoading(false);
         return;
       }
-      
+
       if (data) {
         setPetTags(data);
-        
+
         // Fetch all scan stats in one query for better performance
-        const tagIds = data.map(tag => tag.id);
+        const tagIds = data.map((tag) => tag.id);
         if (tagIds.length > 0) {
           const { data: scans, error: scansError } = await supabase
-            .from('qr_scans')
-            .select('pet_tag_id, scanned_at, city, country')
-            .in('pet_tag_id', tagIds)
-            .order('scanned_at', { ascending: false });
-          
+            .from("qr_scans")
+            .select("pet_tag_id, scanned_at, city, country")
+            .in("pet_tag_id", tagIds)
+            .order("scanned_at", { ascending: false });
+
           if (scansError) {
-            console.error('Error fetching scans:', scansError);
+            console.error("Error fetching scans:", scansError);
           }
-          
+
           // Process scans into stats
           const stats: Record<string, ScanInfo> = {};
           const countMap: Record<string, number> = {};
           const lastScanMap: Record<string, { scanned_at: string; city: string | null; country: string | null }> = {};
-          
-          (scans || []).forEach(scan => {
+
+          (scans || []).forEach((scan) => {
             if (!scan.pet_tag_id) return;
             countMap[scan.pet_tag_id] = (countMap[scan.pet_tag_id] || 0) + 1;
             if (!lastScanMap[scan.pet_tag_id]) {
               lastScanMap[scan.pet_tag_id] = scan;
             }
           });
-          
-          data.forEach(tag => {
+
+          data.forEach((tag) => {
             const lastScan = lastScanMap[tag.id];
             stats[tag.id] = {
               count: countMap[tag.id] || 0,
               lastScan: lastScan?.scanned_at || null,
-              lastLocation: lastScan?.city ? `${lastScan.city}, ${lastScan.country}` : null
+              lastLocation: lastScan?.city ? `${lastScan.city}, ${lastScan.country}` : null,
             };
           });
-          
+
           setScanStats(stats);
         }
       }
     } catch (err) {
-      console.error('Error in fetchPetTags:', err);
+      console.error("Error in fetchPetTags:", err);
       toast({
-        title: 'Erro ao carregar',
-        description: 'Não foi possível carregar as tags.',
-        variant: 'destructive'
+        title: "Erro ao carregar",
+        description: "Não foi possível carregar as tags.",
+        variant: "destructive",
       });
     }
-    
+
     setLoading(false);
   };
 
   const handleSelectTag = (tag: PetTag) => {
     setSelectedTag(tag);
     setFormData({
-      pet_name: tag.pet_name || '',
-      pet_photo_url: tag.pet_photo_url || '',
-      owner_name: tag.owner_name || '',
-      phone: tag.phone || '',
-      whatsapp: tag.whatsapp || '',
-      address: tag.address || '',
+      pet_name: tag.pet_name || "",
+      pet_photo_url: tag.pet_photo_url || "",
+      owner_name: tag.owner_name || "",
+      phone: tag.phone || "",
+      whatsapp: tag.whatsapp || "",
+      address: tag.address || "",
       reward_enabled: tag.reward_enabled || false,
-      reward_text: tag.reward_text || '',
-      lost_mode: tag.lost_mode || false
+      reward_text: tag.reward_text || "",
+      lost_mode: tag.lost_mode || false,
     });
     setEditMode(false);
   };
 
   const handleSave = async () => {
     if (!selectedTag) return;
-    
+
     setSaving(true);
-    
+
     const { error } = await supabase
-      .from('pet_tags')
+      .from("pet_tags")
       .update({
         pet_name: formData.pet_name || null,
         pet_photo_url: formData.pet_photo_url || null,
@@ -223,53 +220,50 @@ export default function PetTagsManager() {
         reward_enabled: formData.reward_enabled,
         reward_text: formData.reward_text || null,
         lost_mode: formData.lost_mode,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
-      .eq('id', selectedTag.id);
-    
+      .eq("id", selectedTag.id);
+
     if (error) {
       toast({
-        title: 'Erro ao salvar',
+        title: "Erro ao salvar",
         description: error.message,
-        variant: 'destructive'
+        variant: "destructive",
       });
     } else {
       toast({
-        title: 'Tag atualizada!',
-        description: 'As informações foram salvas com sucesso.'
+        title: "Tag atualizada!",
+        description: "As informações foram salvas com sucesso.",
       });
       setEditMode(false);
       fetchPetTags();
       setSelectedTag({ ...selectedTag, ...formData });
     }
-    
+
     setSaving(false);
   };
 
   const handlePhotoUpload = (url: string) => {
-    setFormData(prev => ({ ...prev, pet_photo_url: url }));
+    setFormData((prev) => ({ ...prev, pet_photo_url: url }));
   };
 
   const handlePhotoRemove = () => {
-    setFormData(prev => ({ ...prev, pet_photo_url: '' }));
+    setFormData((prev) => ({ ...prev, pet_photo_url: "" }));
   };
 
   const handleDelete = async (tagId: string) => {
-    const { error } = await supabase
-      .from('pet_tags')
-      .delete()
-      .eq('id', tagId);
+    const { error } = await supabase.from("pet_tags").delete().eq("id", tagId);
 
     if (error) {
       toast({
-        title: 'Erro ao excluir',
+        title: "Erro ao excluir",
         description: error.message,
-        variant: 'destructive'
+        variant: "destructive",
       });
     } else {
       toast({
-        title: 'Tag excluída',
-        description: 'A tag foi removida com sucesso.'
+        title: "Tag excluída",
+        description: "A tag foi removida com sucesso.",
       });
       if (selectedTag?.id === tagId) {
         setSelectedTag(null);
@@ -281,7 +275,7 @@ export default function PetTagsManager() {
 
   // Toggle selection for bulk delete
   const toggleSelection = (id: string) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
         newSet.delete(id);
@@ -297,7 +291,7 @@ export default function PetTagsManager() {
     if (selectedIds.size === filteredTags.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredTags.map(t => t.id)));
+      setSelectedIds(new Set(filteredTags.map((t) => t.id)));
     }
   };
 
@@ -305,30 +299,33 @@ export default function PetTagsManager() {
   const handleBulkDelete = async () => {
     if (!passwordInput) {
       toast({
-        title: 'Senha obrigatória',
-        description: 'Digite a senha de confirmação.',
-        variant: 'destructive'
+        title: "Senha obrigatória",
+        description: "Digite a senha de confirmação.",
+        variant: "destructive",
       });
       return;
     }
 
     setDeletingBulk(true);
-    
+
     try {
       // Validate password via backend
-      const { data: validationResult, error: validationError } = await supabase.functions.invoke('validate-admin-password', {
-        body: { password: passwordInput }
-      });
+      const { data: validationResult, error: validationError } = await supabase.functions.invoke(
+        "validate-admin-password",
+        {
+          body: { password: passwordInput },
+        },
+      );
 
       if (validationError) {
-        throw new Error('Erro ao validar senha');
+        throw new Error("Erro ao validar senha");
       }
 
       if (!validationResult?.valid) {
         toast({
-          title: 'Senha incorreta',
-          description: validationResult?.error || 'A senha de confirmação está incorreta.',
-          variant: 'destructive'
+          title: "Senha incorreta",
+          description: validationResult?.error || "A senha de confirmação está incorreta.",
+          variant: "destructive",
         });
         setDeletingBulk(false);
         return;
@@ -336,22 +333,19 @@ export default function PetTagsManager() {
 
       // Password is valid, proceed with deletion
       const idsToDelete = Array.from(selectedIds);
-      
-      const { error } = await supabase
-        .from('pet_tags')
-        .delete()
-        .in('id', idsToDelete);
+
+      const { error } = await supabase.from("pet_tags").delete().in("id", idsToDelete);
 
       if (error) {
         toast({
-          title: 'Erro ao excluir',
+          title: "Erro ao excluir",
           description: error.message,
-          variant: 'destructive'
+          variant: "destructive",
         });
       } else {
         toast({
-          title: 'Tags excluídas',
-          description: `${idsToDelete.length} tags foram removidas com sucesso.`
+          title: "Tags excluídas",
+          description: `${idsToDelete.length} tags foram removidas com sucesso.`,
         });
         if (selectedTag && selectedIds.has(selectedTag.id)) {
           setSelectedTag(null);
@@ -361,27 +355,27 @@ export default function PetTagsManager() {
       }
     } catch (error: any) {
       toast({
-        title: 'Erro',
-        description: error.message || 'Erro ao processar exclusão.',
-        variant: 'destructive'
+        title: "Erro",
+        description: error.message || "Erro ao processar exclusão.",
+        variant: "destructive",
       });
     }
-    
+
     setDeletingBulk(false);
     setBulkDeleteOpen(false);
-    setPasswordInput('');
+    setPasswordInput("");
   };
 
   // Filter tags based on search term
-  const filteredTags = petTags.filter(tag => {
+  const filteredTags = petTags.filter((tag) => {
     const term = searchTerm.toLowerCase();
     return (
       tag.qr_code.toLowerCase().includes(term) ||
       tag.id.toLowerCase().includes(term) ||
-      (tag.pet_name || '').toLowerCase().includes(term) ||
-      (tag.owner_name || '').toLowerCase().includes(term) ||
-      (tag.phone || '').toLowerCase().includes(term) ||
-      (tag.whatsapp || '').toLowerCase().includes(term)
+      (tag.pet_name || "").toLowerCase().includes(term) ||
+      (tag.owner_name || "").toLowerCase().includes(term) ||
+      (tag.phone || "").toLowerCase().includes(term) ||
+      (tag.whatsapp || "").toLowerCase().includes(term)
     );
   });
 
@@ -399,7 +393,7 @@ export default function PetTagsManager() {
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div className="flex items-center gap-3">
@@ -410,20 +404,16 @@ export default function PetTagsManager() {
                 <h1 className="text-lg font-bold text-foreground">Tags Pet</h1>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span>{petTags.length} tags</span>
-                  <span className="text-primary">• {petTags.filter(t => t.is_activated).length} ativas</span>
-                  <span className="text-muted-foreground">• {petTags.filter(t => !t.is_activated).length} inativas</span>
+                  <span className="text-primary">• {petTags.filter((t) => t.is_activated).length} ativas</span>
+                  <span className="text-muted-foreground">
+                    • {petTags.filter((t) => !t.is_activated).length} inativas
+                  </span>
                 </div>
               </div>
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => fetchPetTags()}
-            disabled={loading}
-            title="Atualizar lista"
-          >
-            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+          <Button variant="ghost" size="icon" onClick={() => fetchPetTags()} disabled={loading} title="Atualizar lista">
+            <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
           </Button>
         </div>
       </header>
@@ -436,17 +426,13 @@ export default function PetTagsManager() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-semibold text-muted-foreground">SUAS TAGS</h2>
                 {profile?.is_admin && selectedIds.size > 0 && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setBulkDeleteOpen(true)}
-                  >
+                  <Button variant="destructive" size="sm" onClick={() => setBulkDeleteOpen(true)}>
                     <Trash2 className="w-4 h-4 mr-1" />
                     Excluir ({selectedIds.size})
                   </Button>
                 )}
               </div>
-              
+
               {/* Search Input */}
               <div className="relative mb-4">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -457,7 +443,7 @@ export default function PetTagsManager() {
                   className="pl-10"
                 />
               </div>
-              
+
               {/* Select All (Admin only) */}
               {profile?.is_admin && filteredTags.length > 0 && (
                 <div className="flex items-center gap-2 mb-3 p-2 rounded-lg bg-muted/30">
@@ -471,17 +457,12 @@ export default function PetTagsManager() {
                   </Label>
                 </div>
               )}
-              
+
               {petTags.length === 0 ? (
                 <div className="text-center py-8">
                   <Dog className="w-12 h-12 mx-auto text-muted-foreground/50 mb-2" />
                   <p className="text-muted-foreground">Nenhuma tag cadastrada</p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="mt-4"
-                    onClick={() => navigate('/dashboard/activate')}
-                  >
+                  <Button variant="outline" size="sm" className="mt-4" onClick={() => navigate("/dashboard/activate")}>
                     Ativar Tag
                   </Button>
                 </div>
@@ -498,11 +479,11 @@ export default function PetTagsManager() {
                       key={tag.id}
                       whileHover={{ scale: 1.02 }}
                       className={`relative flex items-center gap-2 p-3 rounded-lg transition-colors ${
-                        selectedTag?.id === tag.id 
-                          ? 'bg-primary/20 border border-primary/30' 
+                        selectedTag?.id === tag.id
+                          ? "bg-primary/20 border border-primary/30"
                           : selectedIds.has(tag.id)
-                            ? 'bg-destructive/10 border border-destructive/30'
-                            : 'bg-muted/30 hover:bg-muted/50'
+                            ? "bg-destructive/10 border border-destructive/30"
+                            : "bg-muted/30 hover:bg-muted/50"
                       }`}
                     >
                       {/* Checkbox for bulk selection (Admin only) */}
@@ -513,15 +494,12 @@ export default function PetTagsManager() {
                           className="shrink-0"
                         />
                       )}
-                      
-                      <button
-                        onClick={() => handleSelectTag(tag)}
-                        className="flex items-center gap-3 flex-1 text-left"
-                      >
+
+                      <button onClick={() => handleSelectTag(tag)} className="flex items-center gap-3 flex-1 text-left">
                         {tag.pet_photo_url ? (
-                          <img 
+                          <img
                             src={tag.pet_photo_url}
-                            alt={tag.pet_name || 'Pet'}
+                            alt={tag.pet_name || "Pet"}
                             className="w-12 h-12 rounded-full object-cover"
                           />
                         ) : (
@@ -530,9 +508,7 @@ export default function PetTagsManager() {
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-foreground truncate">
-                            {tag.pet_name || 'Pet sem nome'}
-                          </p>
+                          <p className="font-medium text-foreground truncate">{tag.pet_name || "Pet sem nome"}</p>
                           <p className="text-xs text-muted-foreground font-mono">{tag.qr_code}</p>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <Eye className="w-3 h-3" />
@@ -540,7 +516,7 @@ export default function PetTagsManager() {
                           </div>
                         </div>
                       </button>
-                      
+
                       {/* Delete button */}
                       {deleteConfirm === tag.id ? (
                         <div className="flex items-center gap-1">
@@ -571,13 +547,13 @@ export default function PetTagsManager() {
                           <Trash2 className="w-3 h-3" />
                         </Button>
                       )}
-                      
-                      <div className={`w-2 h-2 rounded-full ${tag.is_activated ? 'bg-primary' : 'bg-muted'}`} />
+
+                      <div className={`w-2 h-2 rounded-full ${tag.is_activated ? "bg-primary" : "bg-muted"}`} />
                     </motion.div>
                   ))}
                 </div>
               )}
-              
+
               {/* Results count */}
               {searchTerm && filteredTags.length > 0 && (
                 <p className="text-xs text-muted-foreground mt-3 text-center">
@@ -602,9 +578,9 @@ export default function PetTagsManager() {
                   <div className="relative h-48 bg-gradient-to-br from-primary/30 to-primary/10">
                     <div className="absolute inset-0 flex items-center justify-center">
                       {formData.pet_photo_url ? (
-                        <img 
-                          src={formData.pet_photo_url} 
-                          alt={formData.pet_name || 'Pet'}
+                        <img
+                          src={formData.pet_photo_url}
+                          alt={formData.pet_name || "Pet"}
                           className="w-32 h-32 rounded-full object-cover border-4 border-background shadow-xl"
                         />
                       ) : (
@@ -613,21 +589,17 @@ export default function PetTagsManager() {
                         </div>
                       )}
                     </div>
-                    
+
                     {/* Actions */}
                     <div className="absolute top-4 right-4 flex gap-2">
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => navigate(`/dashboard/tags/${selectedTag.id}`)}
-                      >
+                      <Button variant="default" size="sm" onClick={() => navigate(`/dashboard/tags/${selectedTag.id}`)}>
                         <Sparkles className="w-4 h-4 mr-2" />
                         Personalizar
                       </Button>
                       <Button
                         variant="secondary"
                         size="sm"
-                        onClick={() => window.open(`/pet/${selectedTag.qr_code}`, '_blank')}
+                        onClick={() => window.open(`/pet/${selectedTag.qr_code}`, "_blank")}
                       >
                         <ExternalLink className="w-4 h-4 mr-2" />
                         Ver Página
@@ -663,17 +635,16 @@ export default function PetTagsManager() {
                       <div className="text-center p-4 rounded-lg bg-muted/30">
                         <Clock className="w-5 h-5 mx-auto mb-1 text-blue-400" />
                         <p className="text-sm font-medium text-foreground">
-                          {scanStats[selectedTag.id]?.lastScan 
-                            ? new Date(scanStats[selectedTag.id].lastScan!).toLocaleDateString('pt-BR')
-                            : '-'
-                          }
+                          {scanStats[selectedTag.id]?.lastScan
+                            ? new Date(scanStats[selectedTag.id].lastScan!).toLocaleDateString("pt-BR")
+                            : "-"}
                         </p>
                         <p className="text-xs text-muted-foreground">Última leitura</p>
                       </div>
                       <div className="text-center p-4 rounded-lg bg-muted/30">
                         <MapPin className="w-5 h-5 mx-auto mb-1 text-orange-400" />
                         <p className="text-sm font-medium text-foreground truncate">
-                          {scanStats[selectedTag.id]?.lastLocation || '-'}
+                          {scanStats[selectedTag.id]?.lastLocation || "-"}
                         </p>
                         <p className="text-xs text-muted-foreground">Local</p>
                       </div>
@@ -709,7 +680,7 @@ export default function PetTagsManager() {
                           <Input
                             id="pet_name"
                             value={formData.pet_name}
-                            onChange={(e) => setFormData(prev => ({ ...prev, pet_name: e.target.value }))}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, pet_name: e.target.value }))}
                             disabled={!editMode}
                             placeholder="Ex: Rex"
                           />
@@ -719,7 +690,7 @@ export default function PetTagsManager() {
                           <Input
                             id="owner_name"
                             value={formData.owner_name}
-                            onChange={(e) => setFormData(prev => ({ ...prev, owner_name: e.target.value }))}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, owner_name: e.target.value }))}
                             disabled={!editMode}
                             placeholder="Ex: João Silva"
                           />
@@ -732,7 +703,7 @@ export default function PetTagsManager() {
                           <Input
                             id="phone"
                             value={formData.phone}
-                            onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
                             disabled={!editMode}
                             placeholder="Ex: (11) 99999-9999"
                           />
@@ -742,9 +713,9 @@ export default function PetTagsManager() {
                           <Input
                             id="whatsapp"
                             value={formData.whatsapp}
-                            onChange={(e) => setFormData(prev => ({ ...prev, whatsapp: e.target.value }))}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, whatsapp: e.target.value }))}
                             disabled={!editMode}
-                            placeholder="Ex: 5511999999999"
+                            placeholder="Ex: 5569992213658"
                           />
                         </div>
                       </div>
@@ -754,7 +725,7 @@ export default function PetTagsManager() {
                         <Textarea
                           id="address"
                           value={formData.address}
-                          onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, address: e.target.value }))}
                           disabled={!editMode}
                           placeholder="Endereço para localização no mapa"
                           rows={2}
@@ -762,7 +733,9 @@ export default function PetTagsManager() {
                       </div>
 
                       {/* Lost Mode Section - Important privacy control */}
-                      <div className={`p-4 rounded-lg border-2 ${formData.lost_mode ? 'border-red-500 bg-red-500/10' : 'border-primary/30 bg-primary/5'}`}>
+                      <div
+                        className={`p-4 rounded-lg border-2 ${formData.lost_mode ? "border-red-500 bg-red-500/10" : "border-primary/30 bg-primary/5"}`}
+                      >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
                             {formData.lost_mode ? (
@@ -770,20 +743,23 @@ export default function PetTagsManager() {
                             ) : (
                               <ShieldCheck className="w-5 h-5 text-primary" />
                             )}
-                            <Label htmlFor="lost_mode" className={formData.lost_mode ? 'text-red-500 font-semibold' : 'font-semibold'}>
-                              {formData.lost_mode ? 'Pet Perdido!' : 'Pet Seguro em Casa'}
+                            <Label
+                              htmlFor="lost_mode"
+                              className={formData.lost_mode ? "text-red-500 font-semibold" : "font-semibold"}
+                            >
+                              {formData.lost_mode ? "Pet Perdido!" : "Pet Seguro em Casa"}
                             </Label>
                           </div>
                           <Switch
                             id="lost_mode"
                             checked={formData.lost_mode}
-                            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, lost_mode: checked }))}
+                            onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, lost_mode: checked }))}
                             disabled={!editMode}
                           />
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {formData.lost_mode 
-                            ? 'Seus dados de contato (telefone, WhatsApp, endereço) estão VISÍVEIS para quem escanear o QR code.'
+                          {formData.lost_mode
+                            ? "Seus dados de contato (telefone, WhatsApp, endereço) estão VISÍVEIS para quem escanear o QR code."
                             : 'Seus dados de contato estão PROTEGIDOS. Ative o modo "Pet Perdido" para permitir que quem encontrar seu pet entre em contato.'}
                         </p>
                       </div>
@@ -798,14 +774,14 @@ export default function PetTagsManager() {
                           <Switch
                             id="reward"
                             checked={formData.reward_enabled}
-                            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, reward_enabled: checked }))}
+                            onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, reward_enabled: checked }))}
                             disabled={!editMode}
                           />
                         </div>
                         {formData.reward_enabled && (
                           <Textarea
                             value={formData.reward_text}
-                            onChange={(e) => setFormData(prev => ({ ...prev, reward_text: e.target.value }))}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, reward_text: e.target.value }))}
                             disabled={!editMode}
                             placeholder="Ex: Ofereço R$ 100 de recompensa para quem encontrar meu pet!"
                             rows={2}
@@ -845,7 +821,7 @@ export default function PetTagsManager() {
               Esta ação é irreversível. Digite a senha de administrador para confirmar a exclusão.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="py-4">
             <Label htmlFor="password">Senha de confirmação</Label>
             <div className="relative mt-2">
@@ -860,19 +836,18 @@ export default function PetTagsManager() {
               />
             </div>
           </div>
-          
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setBulkDeleteOpen(false);
-              setPasswordInput('');
-            }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setBulkDeleteOpen(false);
+                setPasswordInput("");
+              }}
+            >
               Cancelar
             </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleBulkDelete}
-              disabled={deletingBulk || !passwordInput}
-            >
+            <Button variant="destructive" onClick={handleBulkDelete} disabled={deletingBulk || !passwordInput}>
               {deletingBulk ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
