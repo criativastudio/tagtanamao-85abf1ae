@@ -46,6 +46,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ArtTemplate, EditableField } from '@/types/ecommerce';
 import { Json } from '@/integrations/supabase/types';
+import { prepareSvgForDisplay } from '@/lib/sanitize';
 
 export default function TemplatesManager() {
   const { profile, loading } = useAuth();
@@ -401,7 +402,7 @@ export default function TemplatesManager() {
                       <div 
                         className="w-full h-40 rounded-lg bg-muted flex items-center justify-center"
                         dangerouslySetInnerHTML={{ 
-                          __html: template.svg_content.replace(/width="[^"]*"/, 'width="100%"').replace(/height="[^"]*"/, 'height="100%"')
+                          __html: prepareSvgForDisplay(template.svg_content)
                         }}
                       />
                     )}
@@ -537,9 +538,7 @@ export default function TemplatesManager() {
                     <div 
                       className="w-full h-48 flex items-center justify-center bg-background rounded"
                       dangerouslySetInnerHTML={{ 
-                        __html: formData.svg_content
-                          .replace(/width="[^"]*"/, 'width="auto"')
-                          .replace(/height="[^"]*"/, 'height="100%"')
+                        __html: prepareSvgForDisplay(formData.svg_content, 'auto', '100%')
                       }}
                     />
                   </div>
@@ -647,9 +646,7 @@ export default function TemplatesManager() {
               <div 
                 className="w-full aspect-square flex items-center justify-center bg-muted rounded-lg p-4"
                 dangerouslySetInnerHTML={{ 
-                  __html: previewTemplate.svg_content
-                    .replace(/width="[^"]*"/, 'width="100%"')
-                    .replace(/height="[^"]*"/, 'height="100%"')
+                  __html: prepareSvgForDisplay(previewTemplate.svg_content)
                 }}
               />
             )}

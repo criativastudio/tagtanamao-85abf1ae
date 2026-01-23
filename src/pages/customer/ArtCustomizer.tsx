@@ -26,6 +26,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { ArtTemplate, CustomerArt, EditableField } from '@/types/ecommerce';
+import { prepareSvgForDisplay } from '@/lib/sanitize';
 
 export default function ArtCustomizer() {
   const navigate = useNavigate();
@@ -338,9 +339,7 @@ export default function ArtCustomizer() {
                   ref={svgRef}
                   className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden"
                   dangerouslySetInnerHTML={{ 
-                    __html: previewSvg
-                      .replace(/width="[^"]*"/, 'width="100%"')
-                      .replace(/height="[^"]*"/, 'height="100%"')
+                    __html: prepareSvgForDisplay(previewSvg)
                   }}
                 />
               </CardContent>
