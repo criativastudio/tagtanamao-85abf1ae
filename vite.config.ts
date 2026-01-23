@@ -23,6 +23,10 @@ export default defineConfig(({ mode }) => ({
     include: ["react", "react-dom"],
   },
   preview: {
+    host: "::",
     port: Number(process.env.VITE_PORT),
+    hmr: {
+      overlay: false,
+    },
   },
 }));
