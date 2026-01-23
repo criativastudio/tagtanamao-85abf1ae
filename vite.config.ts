@@ -7,7 +7,7 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
-    port: 8080,
+    port: 3333,
     hmr: {
       overlay: false,
     },
@@ -21,5 +21,12 @@ export default defineConfig(({ mode }) => ({
   },
   optimizeDeps: {
     include: ["react", "react-dom"],
+  },
+  preview: {
+    host: "::",
+    port: 8080,
+    hmr: {
+      overlay: false,
+    },
   },
 }));
