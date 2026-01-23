@@ -113,10 +113,18 @@ export default function PetTagsManager() {
     setLoading(true);
     
     try {
-      const { data, error } = await supabase
+      // Build query - admins see all, users see only their own
+      let query = supabase
         .from('pet_tags')
         .select('*')
         .order('created_at', { ascending: false });
+      
+      // Filter by user_id for non-admin users
+      if (!profile?.is_admin) {
+        query = query.eq('user_id', user?.id);
+      }
+      
+      const { data, error } = await query;
       
       if (error) {
         console.error('Error fetching pet tags:', error);
