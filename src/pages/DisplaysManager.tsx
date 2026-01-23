@@ -230,9 +230,18 @@ export default function DisplaysManager() {
   const handleSave = async () => {
     if (!selectedDisplay) return;
     
+    if (!user) {
+      toast({
+        title: 'Erro',
+        description: 'Você precisa estar logado para salvar.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
     setSaving(true);
     
-    // Prepare buttons for storage
+    // Prepare buttons for storage - ensure proper JSON format
     const buttonsToSave = formData.buttons.map(btn => ({
       id: btn.id,
       label: btn.label,
@@ -241,54 +250,92 @@ export default function DisplaysManager() {
     }));
     
     const updateData = {
-      business_name: formData.business_name || null,
-      logo_url: formData.logo_url || null,
-      description: formData.description || null,
-      theme_color: formData.theme_color,
+      business_name: formData.business_name?.trim() || null,
+      logo_url: formData.logo_url?.trim() || null,
+      description: formData.description?.trim() || null,
+      theme_color: formData.theme_color || '#10b981',
       buttons: buttonsToSave,
       updated_at: new Date().toISOString()
     };
 
-    console.log('Saving display:', selectedDisplay.id, updateData);
+    console.log('User ID:', user.id);
+    console.log('Display ID:', selectedDisplay.id);
+    console.log('Display user_id:', selectedDisplay);
+    console.log('Update data:', JSON.stringify(updateData, null, 2));
     
-    const { data, error } = await supabase
-      .from('business_displays')
-      .update(updateData)
-      .eq('id', selectedDisplay.id)
-      .select();
-    
-    if (error) {
-      console.error('Error saving display:', error);
+    try {
+      const { data, error } = await supabase
+        .from('business_displays')
+        .update(updateData)
+        .eq('id', selectedDisplay.id)
+        .select();
+      
+      console.log('Supabase response - data:', data);
+      console.log('Supabase response - error:', error);
+      
+      if (error) {
+        console.error('Error saving display:', error);
+        toast({
+          title: 'Erro ao salvar',
+          description: error.message,
+          variant: 'destructive'
+        });
+      } else if (!data || data.length === 0) {
+        console.warn('No rows updated - RLS may be blocking the update');
+        toast({
+          title: 'Erro ao salvar',
+          description: 'Não foi possível atualizar. Você pode não ter permissão para editar este display.',
+          variant: 'destructive'
+        });
+      } else {
+        // Verify the data was actually saved
+        const savedData = data[0];
+        console.log('Saved data from DB:', savedData);
+        
+        if (savedData.business_name !== updateData.business_name) {
+          console.warn('Data mismatch! Expected:', updateData.business_name, 'Got:', savedData.business_name);
+        }
+        
+        toast({
+          title: 'Display atualizado!',
+          description: 'As informações foram salvas com sucesso.'
+        });
+        setEditMode(false);
+        
+        // Parse the returned buttons properly
+        let parsedButtons: DisplayButton[] = [];
+        if (Array.isArray(savedData.buttons)) {
+          parsedButtons = (savedData.buttons as unknown[]).map((btn: unknown) => {
+            const b = btn as Record<string, unknown>;
+            return {
+              id: String(b.id || crypto.randomUUID()),
+              label: String(b.label || ''),
+              url: String(b.url || ''),
+              icon: String(b.icon || 'link')
+            };
+          });
+        }
+        
+        // Update local state with the returned data
+        const updatedDisplay: BusinessDisplay = {
+          ...savedData,
+          buttons: parsedButtons
+        };
+        
+        setSelectedDisplay(updatedDisplay);
+        
+        // Update the displays list with the new data
+        setDisplays(prev => prev.map(d => 
+          d.id === updatedDisplay.id ? updatedDisplay : d
+        ));
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err);
       toast({
-        title: 'Erro ao salvar',
-        description: error.message,
+        title: 'Erro inesperado',
+        description: 'Ocorreu um erro ao salvar. Tente novamente.',
         variant: 'destructive'
       });
-    } else if (!data || data.length === 0) {
-      console.warn('No rows updated - RLS may be blocking the update');
-      toast({
-        title: 'Erro ao salvar',
-        description: 'Não foi possível atualizar. Você pode não ter permissão para editar este display.',
-        variant: 'destructive'
-      });
-    } else {
-      console.log('Display saved successfully:', data[0]);
-      toast({
-        title: 'Display atualizado!',
-        description: 'As informações foram salvas com sucesso.'
-      });
-      setEditMode(false);
-      
-      // Update local state with the returned data
-      const updatedDisplay = {
-        ...data[0],
-        buttons: buttonsToSave
-      } as BusinessDisplay;
-      
-      setSelectedDisplay(updatedDisplay);
-      
-      // Refresh list
-      fetchDisplays();
     }
     
     setSaving(false);
