@@ -951,10 +951,10 @@ export default function DisplaysManager() {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => navigate('/dashboard/bio')}
+                          onClick={() => navigate(`/dashboard/bio?displayId=${selectedDisplay.id}`)}
                         >
                           <ExternalLink className="w-4 h-4 mr-2" />
-                          Criar Bio Page Avançada
+                          Personalizar (modo avançado)
                         </Button>
                       </div>
                     </div>
