@@ -49,8 +49,7 @@ const Hero = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8"
           >
-            Tags inteligentes com QR Code que enviam a localização do seu pet diretamente para você. Porque cada segundo
-            importa.
+            Tags inteligentes com QR Code que conectam quem encontrou seu pet a você em poucos segundos.
           </motion.p>
 
           {/* CTA Buttons */}
