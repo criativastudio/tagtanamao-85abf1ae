@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LocationShareDialog } from "@/components/pet/LocationShareDialog";
 import { 
   Phone, MessageCircle, MapPin, Gift, AlertTriangle, ShieldCheck,
   ChevronLeft, ChevronRight, Instagram, Music2, Youtube, Facebook, 
@@ -63,6 +64,8 @@ const PublicPetPage = () => {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [showLocationDialog, setShowLocationDialog] = useState(false);
+  const dialogTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const sanitizeBrazilPhone = (value: string) => {
     // Keep digits only
@@ -165,7 +168,29 @@ const PublicPetPage = () => {
     };
 
     fetchPetAndLogScan();
+
+    // Cleanup timer on unmount
+    return () => {
+      if (dialogTimerRef.current) {
+        clearTimeout(dialogTimerRef.current);
+      }
+    };
   }, [qrCode]);
+
+  // Timer to show location share dialog after 8 seconds (only in lost mode with whatsapp)
+  useEffect(() => {
+    if (pet?.lost_mode && pet?.whatsapp && pet?.is_activated) {
+      dialogTimerRef.current = setTimeout(() => {
+        setShowLocationDialog(true);
+      }, 8000);
+    }
+
+    return () => {
+      if (dialogTimerRef.current) {
+        clearTimeout(dialogTimerRef.current);
+      }
+    };
+  }, [pet?.lost_mode, pet?.whatsapp, pet?.is_activated]);
 
   // Auto-slide gallery
   useEffect(() => {
@@ -594,6 +619,14 @@ const PublicPetPage = () => {
           }
         </p>
       </div>
+      {/* Location Share Dialog - appears 8 seconds after page loads */}
+      <LocationShareDialog
+        open={showLocationDialog}
+        onOpenChange={setShowLocationDialog}
+        petTagId={pet?.id || ""}
+        petName={pet?.pet_name || "este pet"}
+        ownerWhatsapp={pet?.whatsapp || null}
+      />
     </div>
   );
 };
