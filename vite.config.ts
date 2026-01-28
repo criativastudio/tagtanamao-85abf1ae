@@ -32,9 +32,18 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
     resolve: {
-      alias: {
-        "@": path.resolve(__dirname, "./src"),
-      },
+      alias: [
+        // Force all app imports to use a resilient runtime client wrapper.
+        // This prevents hard-crashes when Vite env injection is missing/misconfigured.
+        {
+          find: "@/integrations/supabase/client",
+          replacement: path.resolve(__dirname, "./src/integrations/supabase/runtime-client.ts"),
+        },
+        {
+          find: "@",
+          replacement: path.resolve(__dirname, "./src"),
+        },
+      ],
       dedupe: ["react", "react-dom"],
     },
     optimizeDeps: {
