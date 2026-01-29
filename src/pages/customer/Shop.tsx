@@ -256,7 +256,7 @@ export default function Shop() {
           {showCart && cart.length > 0 && (
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="lg:w-80">
               <div className="glass-card rounded-xl p-6 sticky top-24">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-8">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                   <ShoppingCart className="w-5 h-5" />
                   Carrinho
                 </h3>
