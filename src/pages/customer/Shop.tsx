@@ -1,30 +1,14 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import {
-  ShoppingCart,
-  Plus,
-  Minus,
-  ArrowRight,
-  Package,
-  Truck,
-  CreditCard,
-  Check
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
-import { Product } from '@/types/ecommerce';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { ShoppingCart, Plus, Minus, ArrowRight, Package, Truck, CreditCard, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { Product } from "@/types/ecommerce";
 
 interface CartItem {
   product: Product;
@@ -35,7 +19,7 @@ export default function Shop() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  
+
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -48,28 +32,28 @@ export default function Shop() {
 
   const fetchProducts = async () => {
     setLoadingProducts(true);
-    
+
     const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false });
+      .from("products")
+      .select("*")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
 
     if (error) {
       toast({
-        title: 'Erro ao carregar produtos',
+        title: "Erro ao carregar produtos",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } else {
       setProducts(data || []);
     }
-    
+
     setLoadingProducts(false);
   };
 
   const loadCartFromStorage = () => {
-    const saved = localStorage.getItem('qrpet-cart');
+    const saved = localStorage.getItem("qrpet-cart");
     if (saved) {
       try {
         setCart(JSON.parse(saved));
@@ -80,51 +64,51 @@ export default function Shop() {
   };
 
   const saveCartToStorage = (newCart: CartItem[]) => {
-    localStorage.setItem('qrpet-cart', JSON.stringify(newCart));
+    localStorage.setItem("qrpet-cart", JSON.stringify(newCart));
   };
 
   const addToCart = (product: Product) => {
-    setCart(prev => {
-      const existing = prev.find(item => item.product.id === product.id);
+    setCart((prev) => {
+      const existing = prev.find((item) => item.product.id === product.id);
       let newCart;
-      
+
       if (existing) {
-        newCart = prev.map(item =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
+        newCart = prev.map((item) =>
+          item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item,
         );
       } else {
         newCart = [...prev, { product, quantity: 1 }];
       }
-      
+
       saveCartToStorage(newCart);
       return newCart;
     });
-    
+
     toast({
-      title: 'Adicionado ao carrinho',
+      title: "Adicionado ao carrinho",
       description: product.name,
     });
   };
 
   const updateQuantity = (productId: string, delta: number) => {
-    setCart(prev => {
-      const newCart = prev.map(item => {
-        if (item.product.id === productId) {
-          const newQty = Math.max(0, item.quantity + delta);
-          return { ...item, quantity: newQty };
-        }
-        return item;
-      }).filter(item => item.quantity > 0);
-      
+    setCart((prev) => {
+      const newCart = prev
+        .map((item) => {
+          if (item.product.id === productId) {
+            const newQty = Math.max(0, item.quantity + delta);
+            return { ...item, quantity: newQty };
+          }
+          return item;
+        })
+        .filter((item) => item.quantity > 0);
+
       saveCartToStorage(newCart);
       return newCart;
     });
   };
 
   const getCartTotal = () => {
-    return cart.reduce((total, item) => total + (item.product.price * item.quantity), 0);
+    return cart.reduce((total, item) => total + item.product.price * item.quantity, 0);
   };
 
   const getCartCount = () => {
@@ -134,21 +118,21 @@ export default function Shop() {
   const handleCheckout = () => {
     if (!user) {
       toast({
-        title: 'Faça login',
-        description: 'Você precisa estar logado para finalizar a compra.',
-        variant: 'destructive',
+        title: "Faça login",
+        description: "Você precisa estar logado para finalizar a compra.",
+        variant: "destructive",
       });
-      navigate('/auth');
+      navigate("/auth");
       return;
     }
-    
-    navigate('/loja/checkout');
+
+    navigate("/loja/checkout");
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
     }).format(value);
   };
 
@@ -157,26 +141,17 @@ export default function Shop() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-xl border-b border-border">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div 
-            className="flex items-center gap-2 cursor-pointer"
-            onClick={() => navigate('/')}
-          >
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
             <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
               <Package className="w-6 h-6 text-primary-foreground" />
             </div>
             <span className="text-xl font-bold">QRPet Shop</span>
           </div>
-          
-          <Button
-            variant="outline"
-            className="relative"
-            onClick={() => setShowCart(!showCart)}
-          >
+
+          <Button variant="outline" className="relative" onClick={() => setShowCart(!showCart)}>
             <ShoppingCart className="w-5 h-5" />
             {getCartCount() > 0 && (
-              <Badge className="absolute -top-2 -right-2 px-2 py-0.5 text-xs">
-                {getCartCount()}
-              </Badge>
+              <Badge className="absolute -top-2 -right-2 px-2 py-0.5 text-xs">{getCartCount()}</Badge>
             )}
           </Button>
         </div>
@@ -184,11 +159,7 @@ export default function Shop() {
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Hero */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             Tags QR Premium para seu <span className="text-gradient">Pet</span>
           </h1>
@@ -200,9 +171,9 @@ export default function Shop() {
         {/* Benefits */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           {[
-            { icon: Truck, title: 'Frete Grátis', desc: 'Em todo o Brasil' },
-            { icon: CreditCard, title: 'Pagamento Seguro', desc: 'PIX, Boleto ou Cartão' },
-            { icon: Check, title: 'Garantia 1 Ano', desc: 'Material Premium' },
+            { icon: Truck, title: "Frete Grátis", desc: "Em todo o Brasil" },
+            { icon: CreditCard, title: "Pagamento Seguro", desc: "PIX, Boleto ou Cartão" },
+            { icon: Check, title: "Garantia 1 Ano", desc: "Material Premium" },
           ].map((benefit, index) => (
             <motion.div
               key={benefit.title}
@@ -222,7 +193,7 @@ export default function Shop() {
           {/* Products Grid */}
           <div className="flex-1">
             <h2 className="text-2xl font-bold mb-6">Nossos Produtos</h2>
-            
+
             {loadingProducts ? (
               <div className="flex items-center justify-center py-20">
                 <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -231,9 +202,7 @@ export default function Shop() {
               <div className="text-center py-20">
                 <Package className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
                 <h2 className="text-xl font-semibold text-foreground mb-2">Em breve!</h2>
-                <p className="text-muted-foreground">
-                  Novos produtos sendo adicionados.
-                </p>
+                <p className="text-muted-foreground">Novos produtos sendo adicionados.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -248,7 +217,7 @@ export default function Shop() {
                       <CardHeader className="pb-2">
                         <CardTitle className="text-lg">{product.name}</CardTitle>
                         <CardDescription className="line-clamp-2">
-                          {product.description || 'Produto premium QRPet'}
+                          {product.description || "Produto premium QRPet"}
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="flex-1">
@@ -265,14 +234,12 @@ export default function Shop() {
                         )}
                         <div className="mt-4">
                           <span className="text-xs bg-muted px-2 py-1 rounded">
-                            {product.type === 'pet_tag' ? 'Tag Pet' : 'Display'}
+                            {product.type === "pet_tag" ? "Tag Pet" : "Display"}
                           </span>
                         </div>
                       </CardContent>
                       <CardFooter className="flex items-center justify-between">
-                        <span className="text-2xl font-bold text-primary">
-                          {formatCurrency(product.price)}
-                        </span>
+                        <span className="text-2xl font-bold text-primary">{formatCurrency(product.price)}</span>
                         <Button onClick={() => addToCart(product)}>
                           <Plus className="w-4 h-4 mr-1" />
                           Adicionar
@@ -287,19 +254,15 @@ export default function Shop() {
 
           {/* Cart Sidebar */}
           {showCart && cart.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="lg:w-80"
-            >
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="lg:w-80">
               <div className="glass-card rounded-xl p-6 sticky top-24">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-8">
                   <ShoppingCart className="w-5 h-5" />
                   Carrinho
                 </h3>
-                
+
                 <div className="space-y-4 mb-6">
-                  {cart.map(item => (
+                  {cart.map((item) => (
                     <div key={item.product.id} className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded bg-muted flex items-center justify-center">
                         {item.product.image_url ? (
@@ -314,9 +277,7 @@ export default function Shop() {
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-medium line-clamp-1">{item.product.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatCurrency(item.product.price)}
-                        </p>
+                        <p className="text-xs text-muted-foreground">{formatCurrency(item.product.price)}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Button
