@@ -16,14 +16,14 @@ const Products = () => {
   const { toast } = useToast();
 
   const { data: products, isLoading } = useQuery({
-    queryKey: ['landing-products'],
+    queryKey: ["landing-products"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-      
+        .from("products")
+        .select("*")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+
       if (error) throw error;
       return data as Product[];
     },
@@ -35,7 +35,7 @@ const Products = () => {
         title: "Faça login para continuar",
         description: "Você precisa estar logado para adicionar produtos ao carrinho.",
       });
-      navigate('/auth?redirect=/loja/checkout');
+      navigate("/auth?redirect=/loja/checkout");
       return;
     }
     addToCart(product);
@@ -58,17 +58,17 @@ const Products = () => {
         title: "Faça login para continuar",
         description: "Você precisa estar logado para finalizar a compra.",
       });
-      navigate('/auth?redirect=/loja/checkout');
+      navigate("/auth?redirect=/loja/checkout");
       return;
     }
     addToCart(product);
-    navigate('/loja/checkout');
+    navigate("/loja/checkout");
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
     }).format(value);
   };
 
@@ -76,7 +76,7 @@ const Products = () => {
     <section id="produtos" className="relative py-24 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 bg-grid opacity-20" />
-      
+
       <div className="container relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -114,51 +114,42 @@ const Products = () => {
                 <div className="relative h-full p-6 rounded-3xl bg-card border border-border/50 hover:border-primary/30 transition-all duration-500 hover:shadow-[0_0_60px_hsl(var(--primary)/0.15)] overflow-hidden flex flex-col">
                   {/* Gradient overlay */}
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-glow-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  
+
                   <div className="relative z-10 flex flex-col h-full">
                     {/* Product Image */}
                     {product.image_url && (
                       <div className="w-32 h-32 mb-4 mx-auto">
-                        <img 
-                          src={product.image_url} 
-                          alt={product.name} 
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
                           className="w-full h-full object-contain drop-shadow-[0_0_20px_hsl(var(--primary)/0.4)]"
                         />
                       </div>
                     )}
-                    
+
                     {/* Badge based on type */}
-                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium mb-4 w-fit ${
-                      product.type === 'pet_tag' 
-                        ? 'bg-primary/10 text-primary' 
-                        : 'bg-glow-secondary/10 text-glow-secondary'
-                    }`}>
-                      {product.type === 'pet_tag' ? 'Para Pets' : 'Para Empresas'}
+                    <div
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium mb-4 w-fit ${
+                        product.type === "pet_tag"
+                          ? "bg-primary/10 text-primary"
+                          : "bg-glow-secondary/10 text-glow-secondary"
+                      }`}
+                    >
+                      {product.type === "pet_tag" ? "Para Pets" : "Para Empresas"}
                     </div>
-                    
+
                     <h3 className="text-xl font-display font-bold mb-2">{product.name}</h3>
-                    <p className="text-muted-foreground text-sm mb-6 flex-grow">
-                      {product.description}
-                    </p>
-                    
+                    <p className="text-muted-foreground text-sm mb-6 flex-grow">{product.description}</p>
+
                     <div className="flex items-center justify-between mt-auto">
                       <div>
-                        <p className="text-2xl font-display font-bold text-gradient">
-                          {formatCurrency(product.price)}
-                        </p>
+                        <p className="text-2xl font-display font-bold text-gradient">{formatCurrency(product.price)}</p>
                       </div>
                       <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="icon"
-                          onClick={() => handleAddToCart(product)}
-                        >
+                        <Button variant="outline" size="icon" onClick={() => handleAddToCart(product)}>
                           <ShoppingCart className="w-4 h-4" />
                         </Button>
-                        <Button 
-                          variant="hero"
-                          onClick={() => handleBuyNow(product)}
-                        >
+                        <Button variant="hero" onClick={() => handleBuyNow(product)}>
                           Comprar
                         </Button>
                       </div>
@@ -179,12 +170,12 @@ const Products = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="fixed bottom-6 right-6 z-50"
+            className="fixed bottom-6 right-25 z-50"
           >
             <Button
               size="lg"
               className="rounded-full shadow-lg glow-primary"
-              onClick={() => navigate('/loja/checkout')}
+              onClick={() => navigate("/loja/checkout")}
             >
               <ShoppingCart className="w-5 h-5 mr-2" />
               Carrinho ({getCartCount()})
