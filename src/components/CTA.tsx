@@ -27,8 +27,8 @@ const CTA = () => {
           </h2>
 
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-            Não espere acontecer o pior. Com a Tag Pet QR Code, você tem a tranquilidade de saber que seu amigo pode
-            voltar para casa.
+            Não espere acontecer o pior. Com as nossas Tags de Identificação para Pet, você tem a tranquilidade de saber
+            que seu amigo pode voltar para casa.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
