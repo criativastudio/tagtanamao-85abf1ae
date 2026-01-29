@@ -42,7 +42,7 @@ const CTA = () => {
           </div>
 
           <p className="text-sm text-muted-foreground">
-            ✓ Compra 100% Segura &nbsp;•&nbsp; ✓ Garantia 1 Ano &nbsp;•&nbsp; ✓ Suporte 24h
+            ✓ Compra 100% Segura &nbsp;•&nbsp; ✓ Garantia 90 Dias &nbsp;•&nbsp; ✓ Suporte 24h
           </p>
         </motion.div>
       </div>
