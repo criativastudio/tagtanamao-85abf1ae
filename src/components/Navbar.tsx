@@ -39,7 +39,7 @@ const Navbar = () => {
           <div className="container flex items-center justify-between h-16 px-4">
             {/* Logo */}
             <Link to="/" className="flex items-center">
-              <img alt="Tag Tá Na Mão" className="h-8 object-scale-down" src="/lovable-uploads/41ae8473-f8c8-4d65-bc07-a5d50110414b.png" />
+              <img alt="Tag Tá Na Mão" className="h-8 object-scale-down" src="/lovable-uploads/4562349a-f493-428a-bcd4-6c06dd04165d.png" />
             </Link>
 
             {/* Desktop Navigation */}
