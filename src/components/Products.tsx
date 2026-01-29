@@ -170,7 +170,7 @@ const Products = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="fixed bottom-6 right-10 z-50"
+            className="fixed bottom-6 right-15 z-50"
           >
             <Button
               size="lg"
