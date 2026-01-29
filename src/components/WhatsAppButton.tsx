@@ -8,7 +8,8 @@ const WhatsAppButton = () => {
 
   return (
     <motion.a
-      href={whatsappUrl}
+      href={https://wa.me/5569992213658?text=Ol%C3%A1%21%20Gostaria%20de%20saber%20mais%20sobre%20as%20Tags%20Pet%20QR%20Code.
+}
       target="_blank"
       rel="noopener noreferrer"
       className="fixed bottom-6 right-4 z-200 group"
