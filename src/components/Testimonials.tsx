@@ -4,14 +4,14 @@ import { Star } from "lucide-react";
 const testimonials = [
   {
     name: "Ana Carolina",
-    pet: "Luna (Golden Retriever)",
+    pet: "Luna - Golden Retriever",
     image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face",
     content: "A Luna fugiu e em menos de 2 hora já sabíamos onde ela estava a tag ajudou de mais.",
     rating: 5,
   },
   {
     name: "Roberto Santos",
-    pet: "Thor (Husky Siberiano)",
+    pet: "Thor - Husky Siberiano",
     image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
     content: "Atendeu minhas expectativas o painel é simples e funciona bem recomendo demais!",
     rating: 5,
