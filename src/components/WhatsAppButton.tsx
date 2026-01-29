@@ -19,7 +19,7 @@ const WhatsAppButton = () => {
       whileTap={{ scale: 0.95 }}
     >
       {/* Pulse ring */}
-      <span className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-30" />
+      <span className="absolute inset-20 rounded-full bg-green-500 animate-ping opacity-30" />
 
       {/* Button */}
       <div className="relative flex items-center justify-center w-14 h-14 rounded-full bg-green-500 shadow-[0_0_20px_rgba(34,197,94,0.5)] hover:shadow-[0_0_30px_rgba(34,197,94,0.7)] transition-shadow duration-300">
