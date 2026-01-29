@@ -1,13 +1,13 @@
-import { useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { CheckCircle, Package, ArrowRight, Home, Sparkles } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { motion } from "framer-motion";
+import { CheckCircle, Package, ArrowRight, Home, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function ThankYou() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const orderId = searchParams.get('pedido');
+  const orderId = searchParams.get("pedido");
 
   useEffect(() => {
     // Confetti effect on mount
@@ -40,18 +40,18 @@ export default function ThankYou() {
             key={i}
             className="absolute w-2 h-2 bg-primary/30 rounded-full"
             initial={{
-              x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000),
-              y: (typeof window !== 'undefined' ? window.innerHeight : 800) + 20,
+              x: Math.random() * (typeof window !== "undefined" ? window.innerWidth : 1000),
+              y: (typeof window !== "undefined" ? window.innerHeight : 800) + 20,
             }}
             animate={{
               y: -20,
-              x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000),
+              x: Math.random() * (typeof window !== "undefined" ? window.innerWidth : 1000),
             }}
             transition={{
               duration: Math.random() * 10 + 10,
               repeat: Infinity,
               delay: Math.random() * 5,
-              ease: 'linear',
+              ease: "linear",
             }}
           />
         ))}
@@ -68,7 +68,7 @@ export default function ThankYou() {
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+            transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
             className="relative mx-auto w-24 h-24"
           >
             <div className="absolute inset-0 bg-primary/30 rounded-full blur-xl animate-pulse" />
@@ -79,23 +79,15 @@ export default function ThankYou() {
               className="absolute -top-2 -right-2"
               initial={{ scale: 0, rotate: -45 }}
               animate={{ scale: 1, rotate: 0 }}
-              transition={{ delay: 0.5, type: 'spring' }}
+              transition={{ delay: 0.5, type: "spring" }}
             >
               <Sparkles className="w-6 h-6 text-glow-secondary" />
             </motion.div>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <h1 className="text-3xl md:text-4xl font-display font-bold mb-2">
-              Obrigado pela compra!
-            </h1>
-            <p className="text-muted-foreground">
-              Seu pedido foi recebido com sucesso.
-            </p>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+            <h1 className="text-3xl md:text-4xl font-display font-bold mb-2">Obrigado pela compra!</h1>
+            <p className="text-muted-foreground">Seu pedido foi recebido com sucesso.</p>
           </motion.div>
 
           {orderId && (
@@ -106,9 +98,7 @@ export default function ThankYou() {
               className="p-4 rounded-xl bg-primary/10 border border-primary/20"
             >
               <p className="text-sm text-muted-foreground mb-1">Número do pedido</p>
-              <p className="font-mono font-bold text-lg text-primary">
-                #{orderId.slice(0, 8).toUpperCase()}
-              </p>
+              <p className="font-mono font-bold text-lg text-primary">#{orderId.slice(0, 8).toUpperCase()}</p>
             </motion.div>
           )}
 
@@ -135,18 +125,11 @@ export default function ThankYou() {
             transition={{ delay: 0.6 }}
             className="flex flex-col sm:flex-row gap-3 pt-4"
           >
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => navigate('/')}
-            >
+            <Button variant="outline" className="flex-1" onClick={() => navigate("/")}>
               <Home className="w-4 h-4 mr-2" />
               Voltar ao início
             </Button>
-            <Button
-              className="flex-1"
-              onClick={() => navigate('/dashboard')}
-            >
+            <Button className="flex-1" onClick={() => navigate("/dashboard")}>
               Ver meus produtos
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
@@ -161,7 +144,7 @@ export default function ThankYou() {
           className="flex justify-center gap-6 mt-8 text-muted-foreground text-sm"
         >
           <span>✓ Pagamento Seguro</span>
-          <span>✓ Frete Grátis</span>
+          <span>✓ Compra 100% Segura</span>
         </motion.div>
       </motion.div>
     </div>

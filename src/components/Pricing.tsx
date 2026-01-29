@@ -198,7 +198,7 @@ const Pricing = () => {
         >
           <div className="flex items-center gap-2">
             <Check className="w-4 h-4 text-primary" />
-            <span>Frete Grátis Brasil</span>
+            <span>Compra 100% Segura</span>
           </div>
           <div className="flex items-center gap-2">
             <Check className="w-4 h-4 text-primary" />
