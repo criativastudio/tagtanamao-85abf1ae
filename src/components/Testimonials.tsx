@@ -6,24 +6,21 @@ const testimonials = [
     name: "Ana Carolina",
     pet: "Luna (Golden Retriever)",
     image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face",
-    content:
-      "A Luna fugiu durante uma tempestade e em menos de 1 hora já sabíamos exatamente onde ela estava! A tag salvou nossa família.",
+    content: "A Luna fugiu e em menos de 2 hora já sabíamos onde ela estava a tag ajudou de mais.",
     rating: 5,
   },
   {
     name: "Roberto Santos",
     pet: "Thor (Husky Siberiano)",
     image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
-    content:
-      "Tenho 3 tags para meus 3 huskies. Gerencio tudo pelo painel e a tranquilidade não tem preço. Recomendo demais!",
+    content: "Atendeu minhas expectativas o painel é simples e funciona bem recomendo demais!",
     rating: 5,
   },
   {
     name: "Mariana Lima",
     pet: "Café (SRD)",
     image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face",
-    content:
-      "Simples, bonito e funciona perfeitamente. A página do Café fica linda e já recebi elogios de quem encontrou ele passeando.",
+    content: "Simples bonito e funciona perfeitamente.",
     rating: 5,
   },
   {
@@ -31,7 +28,7 @@ const testimonials = [
     pet: "Barbearia Vintage",
     image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face",
     content:
-      "Uso o Display QR na minha barbearia e meus clientes adoram! Avaliações no Google aumentaram 300% em 2 meses.",
+      "Uso o Display QR na barbearia e os clientes curtem bastante. As avaliações no Google aumentaram muito em pouco tempo.",
     rating: 5,
   },
 ];
