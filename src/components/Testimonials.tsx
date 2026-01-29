@@ -17,9 +17,9 @@ const testimonials = [
     rating: 5,
   },
   {
-    name: "Mariana Lima",
-    pet: "Café (SRD)",
-    image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face",
+    name: "Anne Lopes",
+    pet: "Café ",
+    image: "https://drive.google.com/file/d/147PSJWV185NyFDP1X5Mqq2wPjHOxkOdn/view?usp=sharing",
     content: "Simples bonito e funciona perfeitamente.",
     rating: 5,
   },
