@@ -202,7 +202,7 @@ const Pricing = () => {
           </div>
           <div className="flex items-center gap-2">
             <Check className="w-4 h-4 text-primary" />
-            <span>Garantia de 1 ano</span>
+            <span>Garantia 90 Dias</span>
           </div>
           <div className="flex items-center gap-2">
             <Check className="w-4 h-4 text-primary" />
