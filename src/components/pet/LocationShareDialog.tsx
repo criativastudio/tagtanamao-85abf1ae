@@ -48,8 +48,8 @@ export const LocationShareDialog = ({
     setError(null);
   };
 
-  const handleSend = async () => {
-    // Validate phone
+  const handleSend = () => {
+    // Validate phone BEFORE triggering location (sync validation)
     const digits = finderPhone.replace(/\D/g, "");
     if (digits.length < 10) {
       setError("Digite um número de WhatsApp válido com DDD");
@@ -64,57 +64,59 @@ export const LocationShareDialog = ({
     setSending(true);
     setError(null);
 
-    try {
-      // Get current location
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 0,
-        });
-      });
+    // CRITICAL: Call geolocation IMMEDIATELY in the click handler
+    // This preserves the user gesture context required by browsers
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
 
-      const { latitude, longitude } = position.coords;
+          // Send notification via Evolution API
+          const { data, error: fnError } = await supabase.functions.invoke("send-pet-location-whatsapp", {
+            body: {
+              petTagId,
+              petName,
+              ownerWhatsapp,
+              finderPhone: digits,
+              latitude,
+              longitude,
+            },
+          });
 
-      // Send notification via Evolution API
-      const { data, error: fnError } = await supabase.functions.invoke("send-pet-location-whatsapp", {
-        body: {
-          petTagId,
-          petName,
-          ownerWhatsapp,
-          finderPhone: digits,
-          latitude,
-          longitude,
-        },
-      });
+          if (fnError || data?.error) {
+            throw new Error(fnError?.message || data?.error || "Erro ao enviar");
+          }
 
-      if (fnError || data?.error) {
-        throw new Error(fnError?.message || data?.error || "Erro ao enviar");
-      }
-
-      setSent(true);
-      
-      // Close after 3 seconds
-      setTimeout(() => {
-        onOpenChange(false);
-      }, 3000);
-
-    } catch (err) {
-      console.error("Location share error:", err);
-      if (err instanceof GeolocationPositionError) {
-        if (err.code === err.PERMISSION_DENIED) {
+          setSent(true);
+          
+          // Close after 3 seconds
+          setTimeout(() => {
+            onOpenChange(false);
+          }, 3000);
+        } catch (err) {
+          console.error("Send error:", err);
+          setError(err instanceof Error ? err.message : "Erro ao enviar mensagem");
+        } finally {
+          setSending(false);
+        }
+      },
+      (geoError) => {
+        console.error("Geolocation error:", geoError);
+        setSending(false);
+        if (geoError.code === geoError.PERMISSION_DENIED) {
           setError("Você precisa permitir o acesso à localização");
-        } else if (err.code === err.TIMEOUT) {
+        } else if (geoError.code === geoError.TIMEOUT) {
           setError("Tempo esgotado ao obter localização. Tente novamente.");
         } else {
           setError("Não foi possível obter sua localização");
         }
-      } else {
-        setError(err instanceof Error ? err.message : "Erro ao enviar mensagem");
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
       }
-    } finally {
-      setSending(false);
-    }
+    );
   };
 
   if (sent) {
