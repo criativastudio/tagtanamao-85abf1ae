@@ -74,28 +74,89 @@ serve(async (req) => {
     console.log("Sending message to:", ownerNumber);
     console.log("Message content:", message);
 
-    // Send message via Evolution API
+    // Send message via Evolution API with timeout and retry
     const evolutionUrl = `${evolutionApiUrl.replace(/\/$/, "")}/message/sendText/${evolutionInstanceName}`;
     
-    const evolutionResponse = await fetch(evolutionUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": evolutionApiKey,
-      },
-      body: JSON.stringify({
-        number: ownerNumber,
-        text: message,
-      }),
-    });
+    console.log("Evolution URL:", evolutionUrl);
+    console.log("Instance name:", evolutionInstanceName);
+    
+    const sendWithTimeout = async (timeoutMs: number): Promise<Response> => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      
+      try {
+        const response = await fetch(evolutionUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": evolutionApiKey,
+          },
+          body: JSON.stringify({
+            number: ownerNumber,
+            text: message,
+          }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        return response;
+      } catch (error) {
+        clearTimeout(timeoutId);
+        throw error;
+      }
+    };
 
-    const evolutionResult = await evolutionResponse.json();
-    console.log("Evolution API response:", evolutionResult);
+    let evolutionResponse: Response;
+    let evolutionResult: unknown;
+    let lastError: Error | null = null;
 
-    if (!evolutionResponse.ok) {
-      console.error("Evolution API error:", evolutionResult);
+    // Try up to 2 times with 15 second timeout each
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        console.log(`Attempt ${attempt} to send message...`);
+        evolutionResponse = await sendWithTimeout(15000);
+        evolutionResult = await evolutionResponse.json();
+        console.log("Evolution API response:", evolutionResult);
+
+        if (evolutionResponse.ok) {
+          break; // Success, exit loop
+        } else {
+          lastError = new Error(`API returned ${evolutionResponse.status}`);
+          console.error(`Attempt ${attempt} failed:`, evolutionResult);
+        }
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.error(`Attempt ${attempt} error:`, lastError.message);
+        
+        if (attempt < 2) {
+          console.log("Retrying in 2 seconds...");
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+    }
+
+    // If all attempts failed, still log the scan but return error
+    if (lastError && (!evolutionResponse! || !evolutionResponse!.ok)) {
+      console.error("All attempts failed:", lastError.message);
+      
+      // Still log the scan attempt even if message failed
+      const supabaseAdmin = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      );
+
+      await supabaseAdmin.from("qr_scans").insert({
+        pet_tag_id: petTagId,
+        latitude: hasLocation ? latitude : null,
+        longitude: hasLocation ? longitude : null,
+        city: `Finder: ${finderNumber} (msg failed)`,
+      });
+
       return new Response(
-        JSON.stringify({ success: false, error: "Erro ao enviar mensagem" }),
+        JSON.stringify({ 
+          success: false, 
+          error: "Não foi possível enviar a mensagem. Tente novamente ou entre em contato diretamente." 
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
       );
     }
