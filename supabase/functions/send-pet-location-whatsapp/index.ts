@@ -27,13 +27,15 @@ serve(async (req) => {
 
     console.log("Received location share request:", { petTagId, petName, latitude, longitude });
 
-    // Validate required fields
-    if (!petTagId || !ownerWhatsapp || !finderPhone || latitude === undefined || longitude === undefined) {
+    // Validate required fields (location is now optional)
+    if (!petTagId || !ownerWhatsapp || !finderPhone) {
       return new Response(
         JSON.stringify({ success: false, error: "Dados incompletos" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
+
+    const hasLocation = latitude !== undefined && latitude !== null && longitude !== undefined && longitude !== null;
 
     // Get Evolution API credentials
     const evolutionApiUrl = Deno.env.get("EVOLUTION_API_URL");
@@ -60,11 +62,14 @@ serve(async (req) => {
       finderNumber = "55" + finderNumber;
     }
 
-    // Build the location link
-    const locationLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
-
-    // Build the message
-    const message = `🐾 *Alerta TagTaNaMão*\n\nAlguém encontrou *${petName || "seu pet"}*!\n\n📍 Localização: ${locationLink}\n\n📱 Contato: wa.me/${finderNumber}\n\nMensagem do encontrador:\n_"Olá, encontrei o seu pet nessa localização. Esse é o meu número para contato."_`;
+    // Build the message based on whether we have location
+    let message: string;
+    if (hasLocation) {
+      const locationLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
+      message = `🐾 *Alerta TagTaNaMão*\n\nAlguém encontrou *${petName || "seu pet"}*!\n\n📍 Localização: ${locationLink}\n\n📱 Contato: wa.me/${finderNumber}\n\nMensagem do encontrador:\n_"Olá, encontrei o seu pet nessa localização. Esse é o meu número para contato."_`;
+    } else {
+      message = `🐾 *Alerta TagTaNaMão*\n\nAlguém encontrou *${petName || "seu pet"}*!\n\n📱 Contato: wa.me/${finderNumber}\n\nMensagem do encontrador:\n_"Olá, encontrei o seu pet e gostaria de entrar em contato para devolvê-lo."_\n\n⚠️ _Localização não disponível_`;
+    }
 
     console.log("Sending message to:", ownerNumber);
     console.log("Message content:", message);
@@ -105,8 +110,8 @@ serve(async (req) => {
     // Log the scan with finder info
     await supabaseAdmin.from("qr_scans").insert({
       pet_tag_id: petTagId,
-      latitude,
-      longitude,
+      latitude: hasLocation ? latitude : null,
+      longitude: hasLocation ? longitude : null,
       city: `Finder: ${finderNumber}`,
     });
 
