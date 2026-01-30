@@ -1,12 +1,24 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { QrCode, Dog, Building2, ShoppingBag, Settings, LogOut, Plus, Eye, BarChart3, MapPin, Menu } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import DashboardAnalytics from '@/components/dashboard/DashboardAnalytics';
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import {
+  QrCode,
+  Dog,
+  Building2,
+  ShoppingBag,
+  Settings,
+  LogOut,
+  Plus,
+  Eye,
+  BarChart3,
+  MapPin,
+  Menu,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import DashboardAnalytics from "@/components/dashboard/DashboardAnalytics";
 interface PetTag {
   id: string;
   pet_name: string | null;
@@ -26,18 +38,13 @@ interface ScanStats {
   lastScan: string | null;
 }
 export default function Dashboard() {
-  const {
-    user,
-    profile,
-    loading,
-    signOut
-  } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [petTags, setPetTags] = useState<PetTag[]>([]);
   const [displays, setDisplays] = useState<BusinessDisplay[]>([]);
   const [scanStats, setScanStats] = useState<ScanStats>({
     total: 0,
-    lastScan: null
+    lastScan: null,
   });
   const [loadingData, setLoadingData] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -50,111 +57,125 @@ export default function Dashboard() {
     setLoadingData(true);
 
     // Fetch pet tags belonging to this user
-    const {
-      data: tagsData
-    } = await supabase.from('pet_tags').select('*').eq('user_id', user?.id).order('created_at', {
-      ascending: false
+    const { data: tagsData } = await supabase.from("pet_tags").select("*").eq("user_id", user?.id).order("created_at", {
+      ascending: false,
     });
     if (tagsData) setPetTags(tagsData);
 
     // Fetch business displays belonging to this user
-    const {
-      data: displaysData
-    } = await supabase.from('business_displays').select('*').eq('user_id', user?.id).order('created_at', {
-      ascending: false
-    });
+    const { data: displaysData } = await supabase
+      .from("business_displays")
+      .select("*")
+      .eq("user_id", user?.id)
+      .order("created_at", {
+        ascending: false,
+      });
     if (displaysData) setDisplays(displaysData);
 
     // Fetch scan stats
-    const tagIds = tagsData?.map(t => t.id) || [];
-    const displayIds = displaysData?.map(d => d.id) || [];
+    const tagIds = tagsData?.map((t) => t.id) || [];
+    const displayIds = displaysData?.map((d) => d.id) || [];
     if (tagIds.length > 0 || displayIds.length > 0) {
-      let query = supabase.from('qr_scans').select('*', {
-        count: 'exact'
+      let query = supabase.from("qr_scans").select("*", {
+        count: "exact",
       });
       if (tagIds.length > 0 && displayIds.length > 0) {
-        query = query.or(`pet_tag_id.in.(${tagIds.join(',')}),display_id.in.(${displayIds.join(',')})`);
+        query = query.or(`pet_tag_id.in.(${tagIds.join(",")}),display_id.in.(${displayIds.join(",")})`);
       } else if (tagIds.length > 0) {
-        query = query.in('pet_tag_id', tagIds);
+        query = query.in("pet_tag_id", tagIds);
       } else {
-        query = query.in('display_id', displayIds);
+        query = query.in("display_id", displayIds);
       }
-      const {
-        data: scansData,
-        count
-      } = await query.order('scanned_at', {
-        ascending: false
-      }).limit(1);
+      const { data: scansData, count } = await query
+        .order("scanned_at", {
+          ascending: false,
+        })
+        .limit(1);
       setScanStats({
         total: count || 0,
-        lastScan: scansData?.[0]?.scanned_at || null
+        lastScan: scansData?.[0]?.scanned_at || null,
       });
     }
     setLoadingData(false);
   };
   const handleSignOut = async () => {
     await signOut();
-    navigate('/');
+    navigate("/");
   };
   if (loading) {
-    return <div className="min-h-screen bg-background flex items-center justify-center">
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>;
+      </div>
+    );
   }
-  const navItems = [{
-    icon: BarChart3,
-    label: 'Dashboard',
-    path: '/dashboard',
-    active: true
-  }, {
-    icon: QrCode,
-    label: 'Meus Produtos',
-    path: '/dashboard/produtos',
-    active: false
-  }, {
-    icon: ShoppingBag,
-    label: 'Pedidos',
-    path: '/meus-pedidos',
-    active: false
-  }, {
-    icon: Settings,
-    label: 'Configurações',
-    path: '/dashboard/configuracoes',
-    active: false
-  }];
-  const SidebarContent = ({
-    onNavigate
-  }: {
-    onNavigate?: () => void;
-  }) => <>
+  const navItems = [
+    {
+      icon: BarChart3,
+      label: "Dashboard",
+      path: "/dashboard",
+      active: true,
+    },
+    {
+      icon: QrCode,
+      label: "Produtos",
+      path: "/dashboard/produtos",
+      active: false,
+    },
+    {
+      icon: ShoppingBag,
+      label: "Pedidos",
+      path: "/meus-pedidos",
+      active: false,
+    },
+    {
+      icon: Settings,
+      label: "Configurações",
+      path: "/dashboard/configuracoes",
+      active: false,
+    },
+  ];
+  const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => (
+    <>
       <div className="flex items-center gap-2 mb-8">
         <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
           <QrCode className="w-6 h-6 text-primary-foreground" />
         </div>
-        <span className="text-xl font-bold gradient-text">Tag Tá Na Mão    </span>
+        <span className="text-xl font-bold gradient-text">Tag Tá Na Mão </span>
       </div>
 
       <nav className="space-y-2">
-        {navItems.map(item => <button key={item.path} onClick={() => {
-        navigate(item.path);
-        onNavigate?.();
-      }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${item.active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted/50'}`}>
+        {navItems.map((item) => (
+          <button
+            key={item.path}
+            onClick={() => {
+              navigate(item.path);
+              onNavigate?.();
+            }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${item.active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/50"}`}
+          >
             <item.icon className="w-5 h-5" />
             {item.label}
-          </button>)}
+          </button>
+        ))}
       </nav>
 
       <div className="absolute bottom-4 left-4 right-4">
-        <button onClick={() => {
-        handleSignOut();
-        onNavigate?.();
-      }} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors">
+        <button
+          onClick={() => {
+            handleSignOut();
+            onNavigate?.();
+          }}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+        >
           <LogOut className="w-5 h-5" />
           Sair
         </button>
       </div>
-    </>;
-  return <div className="min-h-screen bg-background">
+    </>
+  );
+  return (
+    <div className="min-h-screen bg-background">
       {/* Mobile Header */}
       <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -186,11 +207,11 @@ export default function Dashboard() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              Olá, {profile?.full_name || profile?.email?.split('@')[0] || 'Usuário'}!
+              Olá, {profile?.full_name || profile?.email?.split("@")[0] || "Usuário"}!
             </h1>
             <p className="text-muted-foreground">Gerencie suas tags e displays</p>
           </div>
-          <Button variant="hero" onClick={() => navigate('/dashboard/activate')}>
+          <Button variant="hero" onClick={() => navigate("/dashboard/activate")}>
             <Plus className="w-5 h-5 mr-2" />
             Ativar Produto
           </Button>
@@ -198,51 +219,65 @@ export default function Dashboard() {
 
         {/* Stats Grid - Simplified for user */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <motion.div initial={{
-          opacity: 0,
-          y: 20
-        }} animate={{
-          opacity: 1,
-          y: 0
-        }} className="glass-card p-6 rounded-xl">
+          <motion.div
+            initial={{
+              opacity: 0,
+              y: 20,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            className="glass-card p-6 rounded-xl"
+          >
             <div className="flex items-center justify-between mb-4">
               <Dog className="w-8 h-8 text-primary" />
               <span className="text-xs text-muted-foreground">
-                {petTags.filter(t => t.is_activated).length} ativos
+                {petTags.filter((t) => t.is_activated).length} ativos
               </span>
             </div>
             <div className="text-3xl font-bold text-foreground">{petTags.length}</div>
             <div className="text-sm text-muted-foreground">Tags Pet</div>
           </motion.div>
 
-          <motion.div initial={{
-          opacity: 0,
-          y: 20
-        }} animate={{
-          opacity: 1,
-          y: 0
-        }} transition={{
-          delay: 0.1
-        }} className="glass-card p-6 rounded-xl">
+          <motion.div
+            initial={{
+              opacity: 0,
+              y: 20,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              delay: 0.1,
+            }}
+            className="glass-card p-6 rounded-xl"
+          >
             <div className="flex items-center justify-between mb-4">
               <Building2 className="w-8 h-8 text-blue-400" />
               <span className="text-xs text-muted-foreground">
-                {displays.filter(d => d.is_activated).length} ativos
+                {displays.filter((d) => d.is_activated).length} ativos
               </span>
             </div>
             <div className="text-3xl font-bold text-foreground">{displays.length}</div>
             <div className="text-sm text-muted-foreground">Displays</div>
           </motion.div>
 
-          <motion.div initial={{
-          opacity: 0,
-          y: 20
-        }} animate={{
-          opacity: 1,
-          y: 0
-        }} transition={{
-          delay: 0.2
-        }} className="glass-card p-6 rounded-xl">
+          <motion.div
+            initial={{
+              opacity: 0,
+              y: 20,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              delay: 0.2,
+            }}
+            className="glass-card p-6 rounded-xl"
+          >
             <div className="flex items-center justify-between mb-4">
               <Eye className="w-8 h-8 text-purple-400" />
             </div>
@@ -250,125 +285,160 @@ export default function Dashboard() {
             <div className="text-sm text-muted-foreground">Leituras Totais</div>
           </motion.div>
 
-          <motion.div initial={{
-          opacity: 0,
-          y: 20
-        }} animate={{
-          opacity: 1,
-          y: 0
-        }} transition={{
-          delay: 0.3
-        }} className="glass-card p-6 rounded-xl">
+          <motion.div
+            initial={{
+              opacity: 0,
+              y: 20,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              delay: 0.3,
+            }}
+            className="glass-card p-6 rounded-xl"
+          >
             <div className="flex items-center justify-between mb-4">
               <MapPin className="w-8 h-8 text-orange-400" />
             </div>
             <div className="text-lg font-bold text-foreground">
-              {scanStats.lastScan ? new Date(scanStats.lastScan).toLocaleDateString('pt-BR') : '-'}
+              {scanStats.lastScan ? new Date(scanStats.lastScan).toLocaleDateString("pt-BR") : "-"}
             </div>
             <div className="text-sm text-muted-foreground">Última Leitura</div>
           </motion.div>
         </div>
 
         {/* Analytics Section */}
-        <motion.div initial={{
-        opacity: 0,
-        y: 20
-      }} animate={{
-        opacity: 1,
-        y: 0
-      }} transition={{
-        delay: 0.4
-      }} className="mb-8">
+        <motion.div
+          initial={{
+            opacity: 0,
+            y: 20,
+          }}
+          animate={{
+            opacity: 1,
+            y: 0,
+          }}
+          transition={{
+            delay: 0.4,
+          }}
+          className="mb-8"
+        >
           <h2 className="text-xl font-semibold text-foreground mb-4">Analytics</h2>
-          <DashboardAnalytics petTagIds={petTags.map(t => t.id)} displayIds={displays.map(d => d.id)} />
+          <DashboardAnalytics petTagIds={petTags.map((t) => t.id)} displayIds={displays.map((d) => d.id)} />
         </motion.div>
 
         {/* Recent Products */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Pet Tags */}
-          <motion.div initial={{
-          opacity: 0,
-          x: -20
-        }} animate={{
-          opacity: 1,
-          x: 0
-        }} className="glass-card p-6 rounded-xl">
+          <motion.div
+            initial={{
+              opacity: 0,
+              x: -20,
+            }}
+            animate={{
+              opacity: 1,
+              x: 0,
+            }}
+            className="glass-card p-6 rounded-xl"
+          >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-foreground">Tags Pet</h2>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard/produtos')}>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard/produtos")}>
                 Ver todas
               </Button>
             </div>
-            {loadingData ? <div className="flex items-center justify-center py-8">
+            {loadingData ? (
+              <div className="flex items-center justify-center py-8">
                 <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              </div> : petTags.length === 0 ? <div className="text-center py-8">
+              </div>
+            ) : petTags.length === 0 ? (
+              <div className="text-center py-8">
                 <Dog className="w-12 h-12 mx-auto text-muted-foreground/50 mb-2" />
                 <p className="text-muted-foreground">Nenhuma tag cadastrada</p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Ative um produto usando o código do manual.
-                </p>
-              </div> : <div className="space-y-3">
-                {petTags.slice(0, 3).map(tag => <div key={tag.id} onClick={() => navigate('/dashboard/produtos')} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer">
+                <p className="text-sm text-muted-foreground mt-2">Ative um produto usando o código do manual.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {petTags.slice(0, 3).map((tag) => (
+                  <div
+                    key={tag.id}
+                    onClick={() => navigate("/dashboard/produtos")}
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
+                  >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
                         <Dog className="w-5 h-5 text-primary" />
                       </div>
                       <div>
-                        <p className="font-medium text-foreground">
-                          {tag.pet_name || 'Pet sem nome'}
-                        </p>
+                        <p className="font-medium text-foreground">{tag.pet_name || "Pet sem nome"}</p>
                         <p className="text-xs text-muted-foreground">
-                          {tag.is_activated ? 'Ativado' : 'Aguardando ativação'}
+                          {tag.is_activated ? "Ativado" : "Aguardando ativação"}
                         </p>
                       </div>
                     </div>
-                    <div className={`w-2 h-2 rounded-full ${tag.is_activated ? 'bg-primary' : 'bg-yellow-500'}`} />
-                  </div>)}
-              </div>}
+                    <div className={`w-2 h-2 rounded-full ${tag.is_activated ? "bg-primary" : "bg-yellow-500"}`} />
+                  </div>
+                ))}
+              </div>
+            )}
           </motion.div>
 
           {/* Business Displays */}
-          <motion.div initial={{
-          opacity: 0,
-          x: 20
-        }} animate={{
-          opacity: 1,
-          x: 0
-        }} className="glass-card p-6 rounded-xl">
+          <motion.div
+            initial={{
+              opacity: 0,
+              x: 20,
+            }}
+            animate={{
+              opacity: 1,
+              x: 0,
+            }}
+            className="glass-card p-6 rounded-xl"
+          >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-foreground">Displays Empresariais</h2>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard/produtos')}>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard/produtos")}>
                 Ver todos
               </Button>
             </div>
-            {loadingData ? <div className="flex items-center justify-center py-8">
+            {loadingData ? (
+              <div className="flex items-center justify-center py-8">
                 <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              </div> : displays.length === 0 ? <div className="text-center py-8">
+              </div>
+            ) : displays.length === 0 ? (
+              <div className="text-center py-8">
                 <Building2 className="w-12 h-12 mx-auto text-muted-foreground/50 mb-2" />
                 <p className="text-muted-foreground">Nenhum display cadastrado</p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Ative um produto usando o código do manual.
-                </p>
-              </div> : <div className="space-y-3">
-                {displays.slice(0, 3).map(display => <div key={display.id} onClick={() => navigate('/dashboard/produtos')} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer">
+                <p className="text-sm text-muted-foreground mt-2">Ative um produto usando o código do manual.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {displays.slice(0, 3).map((display) => (
+                  <div
+                    key={display.id}
+                    onClick={() => navigate("/dashboard/produtos")}
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
+                  >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
                         <Building2 className="w-5 h-5 text-blue-400" />
                       </div>
                       <div>
-                        <p className="font-medium text-foreground">
-                          {display.business_name || 'Empresa sem nome'}
-                        </p>
+                        <p className="font-medium text-foreground">{display.business_name || "Empresa sem nome"}</p>
                         <p className="text-xs text-muted-foreground">
-                          {display.is_activated ? 'Ativado' : 'Aguardando ativação'}
+                          {display.is_activated ? "Ativado" : "Aguardando ativação"}
                         </p>
                       </div>
                     </div>
-                    <div className={`w-2 h-2 rounded-full ${display.is_activated ? 'bg-blue-400' : 'bg-yellow-500'}`} />
-                  </div>)}
-              </div>}
+                    <div className={`w-2 h-2 rounded-full ${display.is_activated ? "bg-blue-400" : "bg-yellow-500"}`} />
+                  </div>
+                ))}
+              </div>
+            )}
           </motion.div>
         </div>
       </main>
-    </div>;
+    </div>
+  );
 }
