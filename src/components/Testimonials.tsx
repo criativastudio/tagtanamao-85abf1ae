@@ -25,10 +25,10 @@ const testimonials = [
   },
   {
     name: "Felipe Oliveira",
-    pet: "Barbearia Vintage",
+    pet: "Fred",
     image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face",
     content:
-      "Uso o Display QR na barbearia e os clientes curtem bastante. As avaliações no Google aumentaram muito em pouco tempo.",
+      "Comprei a tag QR porque meu cachorro já fugiu duas vezes. Agora fico tranquilo, pois quem encontrar consegue me localizar facilmente.",
     rating: 5,
   },
 ];
