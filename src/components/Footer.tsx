@@ -24,22 +24,39 @@ const Footer = () => {
             </p>
             <div className="flex gap-3">
               <a
-                href="#"
+                href="https://www.instagram.com/tagtanamao"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center hover:bg-primary/20 transition-colors"
               >
                 <Instagram className="w-4 h-4" />
               </a>
+
               <a
-                href="#"
+                href="https://www.facebook.com/tagtanamao"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center hover:bg-primary/20 transition-colors"
               >
                 <Facebook className="w-4 h-4" />
               </a>
+
               <a
-                href="#"
+                href="https://wa.me/5569992213658"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center hover:bg-primary/20 transition-colors"
               >
-                <Twitter className="w-4 h-4" />
+                <MessageCircle className="w-4 h-4" />
+              </a>
+
+              <a
+                href="https://www.tiktok.com/@tagtanamao"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center hover:bg-primary/20 transition-colors"
+              >
+                <Music className="w-4 h-4" />
               </a>
             </div>
           </motion.div>
