@@ -66,7 +66,7 @@ serve(async (req) => {
     let message: string;
     if (hasLocation) {
       const locationLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
-      message = `🐾 *Alerta TagTaNaMão*\n\nAlguém encontrou *${petName || "seu pet"}*!\n\n📍 Localização: ${locationLink}\n\n📱 Contato: wa.me/${finderNumber}\n\nMensagem do encontrador:\n_"Olá, encontrei o seu pet nessa localização. Esse é o meu número para contato."_`;
+      message = `🐾 *Alerta TagTaNaMão*\n\nAlguém encontrou *${petName || "seu pet"}*!\n\n📱 Contato: wa.me/${finderNumber}\n\n📍 Localização aproximada de onde o pet foi encontrado:\n${locationLink}\n\nMensagem do encontrador:\n_"Olá, encontrei o seu pet nessa localização. Esse é o meu número para contato."_`;
     } else {
       message = `🐾 *Alerta TagTaNaMão*\n\nAlguém encontrou *${petName || "seu pet"}*!\n\n📱 Contato: wa.me/${finderNumber}\n\nMensagem do encontrador:\n_"Olá, encontrei o seu pet e gostaria de entrar em contato para devolvê-lo."_\n\n⚠️ _Localização não disponível_`;
     }
