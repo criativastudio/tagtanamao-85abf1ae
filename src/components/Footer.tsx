@@ -133,7 +133,16 @@ const Footer = () => {
                 <a href="tel:+5569992213658" className="hover:text-primary transition-colors">
                   (69) 99221-3658
                 </a>
+                <a
+                  href="https://wa.me/5569992213658"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-primary transition-colors text-sm"
+                >
+                  WhatsApp
+                </a>
               </li>
+
               <li className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-primary mt-0.5" />
                 <span>Porto Velho, RO - Brasil</span>
