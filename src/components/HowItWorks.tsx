@@ -18,7 +18,8 @@ const steps = [
     icon: Bell,
     step: "03",
     title: "Você é Notificado",
-    description: "Recebe a localização via WhatsApp, mediante autorização do envio da geolocalização de quem encontrou o pet.",
+    description:
+      "Recebe a localização e numero de Whatsapp de quem leu o QR Code, mediante autorização do envio da geolocalização de quem encontrou o pet.",
   },
   {
     icon: Check,
@@ -32,7 +33,7 @@ const HowItWorks = () => {
   return (
     <section id="como-funciona" className="relative py-24 overflow-hidden">
       <div className="absolute inset-0 bg-secondary/30" />
-      
+
       <div className="container relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -47,9 +48,7 @@ const HowItWorks = () => {
           <h2 className="text-4xl md:text-5xl font-display font-bold mb-4">
             Como <span className="text-gradient">funciona</span>
           </h2>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Em 4 passos simples, seu pet está protegido
-          </p>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">Em 4 passos simples, seu pet está protegido</p>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -66,23 +65,19 @@ const HowItWorks = () => {
               {index < steps.length - 1 && (
                 <div className="hidden lg:block absolute top-12 left-[60%] w-full h-px bg-gradient-to-r from-primary/50 to-transparent" />
               )}
-              
+
               <div className="relative p-6 rounded-2xl bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/30 transition-all duration-300 group">
                 {/* Step number */}
                 <div className="absolute -top-3 -right-3 w-10 h-10 rounded-full bg-gradient-to-r from-primary to-glow-secondary flex items-center justify-center text-primary-foreground font-display font-bold text-sm">
                   {item.step}
                 </div>
-                
+
                 <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors duration-300">
                   <item.icon className="w-7 h-7 text-primary" />
                 </div>
-                
-                <h3 className="text-xl font-display font-semibold mb-2">
-                  {item.title}
-                </h3>
-                <p className="text-muted-foreground text-sm">
-                  {item.description}
-                </p>
+
+                <h3 className="text-xl font-display font-semibold mb-2">{item.title}</h3>
+                <p className="text-muted-foreground text-sm">{item.description}</p>
               </div>
             </motion.div>
           ))}
