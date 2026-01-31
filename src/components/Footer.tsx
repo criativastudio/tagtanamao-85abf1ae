@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Mail, Phone, MapPin, Instagram, Facebook, Twitter } from "lucide-react";
+import { Mail, Phone, MapPin, Instagram, Facebook, MessageCircle, Music } from "lucide-react";
 import logoHorizontal from "@/assets/logo-horizontal.png";
 
 const Footer = () => {
