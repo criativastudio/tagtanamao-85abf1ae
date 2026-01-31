@@ -93,51 +93,26 @@ export const LocationShareDialog = ({
     setError(null);
 
     // Try to get location - call immediately in click handler
+    // If denied or fails, automatically send without location (no interruption)
     navigator.geolocation.getCurrentPosition(
       async (position) => {
+        // Location granted - send with coordinates
         await sendNotification(position.coords.latitude, position.coords.longitude);
       },
-      (geoError) => {
+      async (geoError) => {
         console.error("Geolocation error:", geoError);
-        // Show location denied state - user can still send without location
-        if (geoError.code === geoError.PERMISSION_DENIED) {
-          setSending(false);
-          setLocationDenied(true);
-          setError("Localização negada. Você ainda pode enviar apenas seu contato.");
-        } else if (geoError.code === geoError.TIMEOUT) {
-          setSending(false);
-          setLocationDenied(true);
-          setError("Tempo esgotado. Você pode enviar sem a localização.");
-        } else {
-          setSending(false);
-          setLocationDenied(true);
-          setError("Não foi possível obter localização. Envie apenas seu contato.");
-        }
+        // Location denied or failed - automatically continue sending without location
+        setLocationDenied(true);
+        await sendNotification(); // Send without location, don't interrupt flow
       },
       {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
+        enableHighAccuracy: false,
+        timeout: 15000,
+        maximumAge: 60000,
       }
     );
   };
 
-  const handleSendWithoutLocation = async () => {
-    const digits = finderPhone.replace(/\D/g, "");
-    if (digits.length < 10) {
-      setError("Digite um número de WhatsApp válido com DDD");
-      return;
-    }
-
-    if (!ownerWhatsapp) {
-      setError("O dono não cadastrou WhatsApp");
-      return;
-    }
-
-    setSending(true);
-    setError(null);
-    await sendNotification();
-  };
 
   if (sent) {
     return (
@@ -235,43 +210,23 @@ export const LocationShareDialog = ({
             Cancelar
           </Button>
           
-          {locationDenied ? (
-            <Button
-              onClick={handleSendWithoutLocation}
-              disabled={sending || !finderPhone}
-              className="bg-primary hover:bg-primary/90"
-            >
-              {sending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Enviando...
-                </>
-              ) : (
-                <>
-                  <Send className="mr-2 h-4 w-4" />
-                  Enviar Contato
-                </>
-              )}
-            </Button>
-          ) : (
-            <Button
-              onClick={handleSend}
-              disabled={sending || !finderPhone}
-              className="bg-primary hover:bg-primary/90"
-            >
-              {sending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Obtendo localização...
-                </>
-              ) : (
-                <>
-                  <Send className="mr-2 h-4 w-4" />
-                  Enviar Localização
-                </>
-              )}
-            </Button>
-          )}
+          <Button
+            onClick={handleSend}
+            disabled={sending || !finderPhone}
+            className="bg-primary hover:bg-primary/90"
+          >
+            {sending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Enviando...
+              </>
+            ) : (
+              <>
+                <Send className="mr-2 h-4 w-4" />
+                Enviar Contato
+              </>
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
