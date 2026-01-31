@@ -19,7 +19,7 @@ const pricingPlans = [
       "Geolocalização (enviada mediante autorização de quem escaneia o QR Code)",
       "Notificações via WhatsApp",
       "Gestão centralizada",
-      "Suporte"
+      "Suporte",
       "25% OFF por tempo limitado",
     ],
     popular: false,
