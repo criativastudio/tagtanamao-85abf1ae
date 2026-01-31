@@ -60,7 +60,7 @@ const Footer = () => {
               </li>
               <li>
                 <a href="#" className="hover:text-primary transition-colors">
-                  Display QR Empresas
+                  Display Empresas (Em breve)
                 </a>
               </li>
               <li>
