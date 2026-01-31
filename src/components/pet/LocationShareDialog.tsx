@@ -92,32 +92,39 @@ export const LocationShareDialog = ({
     setSending(true);
     setError(null);
 
-    // Try to get location - call immediately in click handler
+    // Check if geolocation is available
+    if (!navigator.geolocation) {
+      console.error("Geolocation not supported");
+      setLocationDenied(true);
+      setError("Seu navegador não suporta geolocalização. Envie apenas seu contato.");
+      setSending(false);
+      return;
+    }
+
+    // Try to get location with lower accuracy first (more reliable)
     navigator.geolocation.getCurrentPosition(
       async (position) => {
+        console.log("Location obtained:", position.coords.latitude, position.coords.longitude);
         await sendNotification(position.coords.latitude, position.coords.longitude);
       },
       (geoError) => {
-        console.error("Geolocation error:", geoError);
-        // Show location denied state - user can still send without location
-        if (geoError.code === geoError.PERMISSION_DENIED) {
-          setSending(false);
-          setLocationDenied(true);
-          setError("Localização negada. Você ainda pode enviar apenas seu contato.");
-        } else if (geoError.code === geoError.TIMEOUT) {
-          setSending(false);
-          setLocationDenied(true);
-          setError("Tempo esgotado. Você pode enviar sem a localização.");
+        console.error("Geolocation error code:", geoError.code, "message:", geoError.message);
+        setSending(false);
+        setLocationDenied(true);
+        
+        // Use numeric codes: 1 = PERMISSION_DENIED, 2 = POSITION_UNAVAILABLE, 3 = TIMEOUT
+        if (geoError.code === 1) {
+          setError("Permissão de localização negada. Você pode enviar apenas seu contato.");
+        } else if (geoError.code === 3) {
+          setError("Tempo esgotado ao obter localização. Você pode enviar sem a localização.");
         } else {
-          setSending(false);
-          setLocationDenied(true);
-          setError("Não foi possível obter localização. Envie apenas seu contato.");
+          setError("Não foi possível obter sua localização. Envie apenas seu contato.");
         }
       },
       {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
+        enableHighAccuracy: false, // Start with low accuracy for faster/more reliable results
+        timeout: 15000,
+        maximumAge: 60000, // Accept cached position up to 1 minute old
       }
     );
   };
