@@ -229,12 +229,12 @@ export default function Checkout() {
     // Simulated shipping quotes (would integrate with Correios API)
     setTimeout(() => {
       const quotes: ShippingQuote[] = [
-        { service: "PAC", carrier: "Correios", price: 0, delivery_time: 8 },
-        { service: "SEDEX", carrier: "Correios", price: 15.9, delivery_time: 3 },
+        { service: "PAC", carrier: "Correios", price: 12.9, delivery_time: 8 },
+        { service: "SEDEX", carrier: "Correios", price: 24.9, delivery_time: 3 },
       ];
 
       setShippingQuotes(quotes);
-      setSelectedShipping(quotes[0]); // Default to free shipping
+      setSelectedShipping(quotes[0]); // Default to PAC
       setLoadingShipping(false);
     }, 1000);
   };
