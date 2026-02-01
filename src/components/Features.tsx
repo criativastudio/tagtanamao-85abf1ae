@@ -5,17 +5,18 @@ const features = [
   {
     icon: QrCode,
     title: "QR Code Único",
-    description: "Cada tag possui um QR Code exclusivo que direciona para a página personalizada do seu pet ou empresa.",
+    description: "Cada tag possui um QR Code exclusivo que direciona para a página personalizada do seu pet.",
   },
   {
     icon: MapPin,
     title: "Geolocalização Automática",
-    description: "Receba a localização exata sempre que alguém escanear a tag do seu pet. Notificação instantânea.",
+    description:
+      "Receba o telefone e a localização sempre que alguém escanear a tag do seu pet e autorizar o envio. Notificação instantânea.",
   },
   {
     icon: Bell,
     title: "Notificações em Tempo Real",
-    description: "Alertas via WhatsApp quando alguém encontrar seu pet com localização e horário.",
+    description: "Você recebe avisos instantâneos no WhatsApp sempre que sua tag for escaneada.",
   },
   {
     icon: Shield,
@@ -25,7 +26,7 @@ const features = [
   {
     icon: Smartphone,
     title: "Gestão Completa",
-    description: "Painel intuitivo para gerenciar todas as suas tags e displays em um único lugar.",
+    description: "Painel intuitivo para gerenciar todas as suas tags em um único lugar.",
   },
   {
     icon: Zap,
@@ -74,12 +75,8 @@ const Features = () => {
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors duration-300">
                   <feature.icon className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="text-xl font-display font-semibold mb-2">
-                  {feature.title}
-                </h3>
-                <p className="text-muted-foreground">
-                  {feature.description}
-                </p>
+                <h3 className="text-xl font-display font-semibold mb-2">{feature.title}</h3>
+                <p className="text-muted-foreground">{feature.description}</p>
               </div>
             </motion.div>
           ))}
