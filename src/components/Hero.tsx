@@ -39,7 +39,7 @@ const Hero = () => {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="text-5xl md:text-7xl lg:text-8xl font-display font-bold leading-tight mb-6"
           >
-            Seu pet sempre <span className="text-gradient">seguro com nossas tags</span>
+            Seu pet sempre <span className="text-gradient">seguro</span>
           </motion.h1>
 
           {/* Subtitle */}
