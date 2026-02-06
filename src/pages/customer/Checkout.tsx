@@ -215,7 +215,10 @@ export default function Checkout() {
           }));
 
           // Fetch shipping quotes
-          fetchShippingQuotes(zip.replace(/\D/g, ""));
+          // Fetch shipping quotes after state update
+          const updatedCity = data.localidade || "";
+          const updatedState = data.uf || "";
+          fetchShippingQuotesWithAddress(zip.replace(/\D/g, ""), updatedCity, updatedState);
         }
       } catch (error) {
         console.error("Error fetching CEP:", error);
@@ -223,21 +226,33 @@ export default function Checkout() {
     }
   };
 
-  const fetchShippingQuotes = async (zip: string) => {
+  const fetchShippingQuotesWithAddress = (zip: string, city: string, state: string) => {
     setLoadingShipping(true);
 
-    // Simulated shipping quotes (would integrate with Correios API)
     setTimeout(() => {
-      const quotes: ShippingQuote[] = [
+      const quotes: ShippingQuote[] = [];
+
+      const normalizedCity = city.trim().toLowerCase();
+      const normalizedState = state.trim().toUpperCase();
+
+      if (normalizedState === "RO" && normalizedCity === "porto velho") {
+        quotes.push({ service: "LOCAL_PORTO_VELHO", carrier: "Entrega Local", price: 5.0, delivery_time: 2 });
+      } else if (normalizedState === "RO" && normalizedCity === "jaru") {
+        quotes.push({ service: "LOCAL_JARU", carrier: "Entrega Local", price: 5.0, delivery_time: 2 });
+      }
+
+      quotes.push(
         { service: "PAC", carrier: "Correios", price: 12.9, delivery_time: 8 },
         { service: "SEDEX", carrier: "Correios", price: 24.9, delivery_time: 3 },
-      ];
+      );
 
       setShippingQuotes(quotes);
-      setSelectedShipping(quotes[0]); // Default to PAC
+      setSelectedShipping(quotes[0]);
       setLoadingShipping(false);
     }, 1000);
   };
+
+
 
   const validateShipping = () => {
     const required = ["name", "phone", "zip", "address", "number", "city", "state"];
@@ -756,8 +771,10 @@ export default function Checkout() {
                               <div className="flex items-center gap-3">
                                 <RadioGroupItem value={quote.service} id={quote.service} />
                                 <div>
-                                  <p className="font-medium">
-                                    {quote.carrier} {quote.service}
+                                <p className="font-medium">
+                                    {quote.service.startsWith("LOCAL_") 
+                                      ? `Entrega Local – ${quote.service === "LOCAL_PORTO_VELHO" ? "Porto Velho" : "Jaru"}`
+                                      : `${quote.carrier} ${quote.service}`}
                                   </p>
                                   <p className="text-sm text-muted-foreground">
                                     Entrega em até {quote.delivery_time} dias úteis
