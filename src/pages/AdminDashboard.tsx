@@ -296,6 +296,11 @@ export default function AdminDashboard() {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [exportCategory, setExportCategory] = useState<string>('');
   
+  // Manual QR Code creation
+  const [manualCode, setManualCode] = useState('');
+  const [manualType, setManualType] = useState<'pet_tag' | 'business_display'>('pet_tag');
+  const [creatingManual, setCreatingManual] = useState(false);
+  
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -500,6 +505,49 @@ export default function AdminDashboard() {
       title: "Códigos adicionados",
       description: `${selected.length} código(s) adicionado(s) à categoria.`
     });
+  };
+
+  const createManualQRCode = async () => {
+    if (!/^\d{1,6}$/.test(manualCode)) {
+      toast({ title: 'Código inválido', description: 'O código deve ser numérico com no máximo 6 caracteres.', variant: 'destructive' });
+      return;
+    }
+
+    setCreatingManual(true);
+    try {
+      // Check duplicates in both tables
+      const [petCheck, displayCheck] = await Promise.all([
+        supabase.from('pet_tags').select('id').eq('qr_code', manualCode).maybeSingle(),
+        supabase.from('business_displays').select('id').eq('qr_code', manualCode).maybeSingle(),
+      ]);
+
+      if (petCheck.data || displayCheck.data) {
+        toast({ title: 'Código duplicado', description: 'Este código já existe no sistema.', variant: 'destructive' });
+        return;
+      }
+
+      const table = manualType === 'pet_tag' ? 'pet_tags' : 'business_displays';
+      const { data, error } = await supabase
+        .from(table)
+        .insert({ user_id: user?.id, qr_code: manualCode })
+        .select('id, qr_code')
+        .single();
+
+      if (error) throw error;
+
+      const baseUrl = window.location.origin;
+      const url = manualType === 'pet_tag' ? `${baseUrl}/pet/${data.qr_code}` : `${baseUrl}/display/${data.qr_code}`;
+      const qrSize = Math.round(QR_DIAMETER_PX * 0.72);
+      const dataUrl = await QRCodeLib.toDataURL(url, { width: qrSize, margin: 0, color: { dark: '#000000', light: '#FFFFFF' }, errorCorrectionLevel: 'H' });
+
+      setGeneratedCodes(prev => [...prev, { id: data.id, qr_code: data.qr_code, type: manualType, dataUrl }]);
+      setManualCode('');
+      toast({ title: 'QR Code criado!', description: `Código ${data.qr_code} (${manualType === 'pet_tag' ? 'Pet Tag' : 'Display'}) criado com sucesso.` });
+    } catch (error: any) {
+      toast({ title: 'Erro ao criar', description: error.message, variant: 'destructive' });
+    } finally {
+      setCreatingManual(false);
+    }
   };
 
   const deleteCategory = (categoryId: string) => {
@@ -802,7 +850,55 @@ export default function AdminDashboard() {
         </motion.div>
       </div>
 
-      {/* Generated QR Codes */}
+      {/* Manual QR Code Creation */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="glass-card p-6 rounded-xl mb-8"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <QrCode className="w-6 h-6 text-primary" />
+          <h2 className="text-lg font-semibold text-foreground">Criar QR Code Manual</h2>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+          <div>
+            <Label htmlFor="manualCode">Código (numérico, max 6 dígitos)</Label>
+            <Input
+              id="manualCode"
+              value={manualCode}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                setManualCode(val);
+              }}
+              placeholder="Ex: 123456"
+              maxLength={6}
+              className="mt-1 font-mono"
+            />
+          </div>
+          <div>
+            <Label>Tipo</Label>
+            <Select value={manualType} onValueChange={(v) => setManualType(v as 'pet_tag' | 'business_display')}>
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pet_tag">Pet Tag</SelectItem>
+                <SelectItem value="business_display">Meu Display</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            onClick={createManualQRCode}
+            disabled={creatingManual || !manualCode}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            {creatingManual ? 'Criando...' : 'Criar'}
+          </Button>
+        </div>
+      </motion.div>
+
       {generatedCodes.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
