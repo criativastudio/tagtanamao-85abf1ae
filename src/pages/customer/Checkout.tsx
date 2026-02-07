@@ -450,18 +450,20 @@ export default function Checkout() {
         if (cardResult?.success) {
           clearCart();
 
-          if (cardResult.status === "APPROVED") {
-            // Payment approved - redirect to thank you page
+          const payStatus = String(cardResult.payment?.status || cardResult.status || "").toUpperCase();
+          const mapped = String(cardResult.mappedPaymentStatus || "").toLowerCase();
+          const isApproved = ["CONFIRMED", "RECEIVED"].includes(payStatus) || mapped === "confirmed";
+          const isPending = payStatus === "PENDING" || mapped === "pending";
+
+          if (isApproved) {
             toast({
               title: "Pagamento aprovado!",
               description: "Seu pedido foi confirmado com sucesso.",
             });
             navigate(`/obrigado?pedido=${order.id}`);
-          } else if (cardResult.status === "PENDING") {
-            // Payment pending - start polling
+          } else if (isPending) {
             pollPaymentStatus(cardResult.payment?.id, order.id);
           } else {
-            // Payment rejected
             throw new Error("Pagamento recusado. Tente outro cartão.");
           }
         } else {
