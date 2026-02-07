@@ -58,9 +58,27 @@ export default function ActivateProduct() {
         }
       });
 
+      // supabase.functions.invoke throws FunctionsHttpError for non-2xx
+      // but the response body may still contain useful error info
       if (error) {
-        console.error('Edge function error:', error);
-        throw new Error(error.message || 'Erro ao ativar produto');
+        // Try to extract the JSON error message from the response
+        let errorMsg = 'Erro ao ativar produto';
+        try {
+          const errorContext = (error as any)?.context;
+          if (errorContext && typeof errorContext.json === 'function') {
+            const errorBody = await errorContext.json();
+            errorMsg = errorBody?.error || errorMsg;
+          }
+        } catch {
+          // fallback
+        }
+        toast({
+          title: 'Erro',
+          description: errorMsg,
+          variant: 'destructive'
+        });
+        setIsLoading(false);
+        return;
       }
 
       if (!data?.success) {
