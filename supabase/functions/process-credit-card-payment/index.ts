@@ -242,11 +242,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     const isConfirmed = payment.status === "CONFIRMED" || payment.status === "RECEIVED";
     const isPending = payment.status === "PENDING";
+    const mappedPaymentStatus = isConfirmed ? "confirmed" : isPending ? "pending" : "failed";
 
     const { error: updateOrderError } = await supabase.from("orders").update({
       asaas_payment_id: payment.id, payment_method: "credit_card",
-      payment_status: isConfirmed ? "confirmed" : isPending ? "pending" : "failed",
-      status: isConfirmed ? "paid" : "pending",
+      payment_status: mappedPaymentStatus,
+      status: mappedPaymentStatus === "confirmed" ? "paid" : "pending",
     }).eq("id", data.orderId);
 
     if (updateOrderError) {
@@ -265,11 +266,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
       paid_at: isConfirmed ? new Date().toISOString() : null,
     });
 
-    const frontendStatus = isConfirmed ? 'APPROVED' : isPending ? 'PENDING' : 'REJECTED';
-    console.log("Payment result:", { orderId: data.orderId, status: frontendStatus });
+    const frontendStatus = isConfirmed ? 'CONFIRMED' : isPending ? 'PENDING' : 'REJECTED';
+    console.log("Payment result:", { orderId: data.orderId, status: frontendStatus, mappedPaymentStatus });
 
     return new Response(JSON.stringify({
-      success: true, status: frontendStatus,
+      success: true, status: frontendStatus, mappedPaymentStatus,
       payment: { id: payment.id, status: payment.status, value: payment.value, invoiceUrl: payment.invoiceUrl },
     }), { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } });
 
