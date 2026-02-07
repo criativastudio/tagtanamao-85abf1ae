@@ -25,7 +25,8 @@ import {
   X,
   Download,
   Plus,
-  Printer
+  Printer,
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +41,16 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Select,
   SelectContent,
@@ -327,6 +338,8 @@ export default function UserSettings() {
   const [exportCategory, setExportCategory] = useState('');
   const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
   const [loadingQR, setLoadingQR] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingTags, setDeletingTags] = useState(false);
 
   const allCodes = [...petTags, ...displays];
 
@@ -383,6 +396,39 @@ export default function UserSettings() {
       newSet.has(id) ? newSet.delete(id) : newSet.add(id);
       return newSet;
     });
+  };
+
+  const deleteSelectedTags = async () => {
+    setDeletingTags(true);
+    try {
+      const selectedItems = allCodes.filter(c => selectedCodes.has(c.id));
+      const petIds = selectedItems.filter(c => c.type === 'pet_tag').map(c => c.id);
+      const displayIds = selectedItems.filter(c => c.type === 'business_display').map(c => c.id);
+
+      if (petIds.length > 0) {
+        const { error } = await supabase.from('pet_tags').delete().in('id', petIds);
+        if (error) throw error;
+      }
+      if (displayIds.length > 0) {
+        const { error } = await supabase.from('business_displays').delete().in('id', displayIds);
+        if (error) throw error;
+      }
+
+      setPetTags(prev => prev.filter(t => !selectedCodes.has(t.id)));
+      setDisplays(prev => prev.filter(d => !selectedCodes.has(d.id)));
+      setCategories(prev => prev.map(cat => ({
+        ...cat,
+        codes: cat.codes.filter(c => !selectedCodes.has(c.id))
+      })));
+      setSelectedCodes(new Set());
+      setShowDeleteConfirm(false);
+
+      toast({ title: 'Tags apagadas!', description: `${selectedItems.length} tag(s) removida(s) com sucesso.` });
+    } catch (error: any) {
+      toast({ title: 'Erro ao apagar', description: error.message, variant: 'destructive' });
+    } finally {
+      setDeletingTags(false);
+    }
   };
 
   const exportCategoryAsSVG = async (categoryId: string) => {
@@ -788,7 +834,17 @@ export default function UserSettings() {
                           </Button>
                         )}
                         {selectedCodes.size > 0 && (
-                          <span className="text-sm text-primary font-medium">{selectedCodes.size} selecionado(s)</span>
+                          <>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => setShowDeleteConfirm(true)}
+                            >
+                              <Trash2 className="w-4 h-4 mr-1" />
+                              Apagar Tag ({selectedCodes.size})
+                            </Button>
+                            <span className="text-sm text-primary font-medium">{selectedCodes.size} selecionado(s)</span>
+                          </>
                         )}
                       </div>
                     </div>
@@ -834,6 +890,28 @@ export default function UserSettings() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* AlertDialog para confirmar exclusão */}
+              <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Apagar {selectedCodes.size} tag(s)?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação é irreversível. As tags selecionadas serão permanentemente excluídas do sistema.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={deletingTags}>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={deleteSelectedTags}
+                      disabled={deletingTags}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {deletingTags ? 'Apagando...' : 'Apagar'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </motion.div>
           </TabsContent>
         )}
