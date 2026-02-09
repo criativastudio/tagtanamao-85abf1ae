@@ -37,9 +37,9 @@ const Hero = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-5xl md:text-7xl lg:text-8xl font-display font-bold leading-tight mb-6 text-pink-500"
+            className="text-5xl md:text-7xl lg:text-8xl font-display font-bold leading-tight mb-6 text-foreground"
           >
-            Seu pet sempre <span className="text-pink-500">seguro</span>
+            Seu pet sempre <span className="text-primary">seguro</span>
           </motion.h1>
 
           {/* Subtitle */}
