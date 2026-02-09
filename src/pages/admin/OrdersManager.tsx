@@ -215,12 +215,19 @@ export default function OrdersManager() {
     setGeneratingLabel(orderId);
     try {
       const { data: session } = await supabase.auth.getSession();
-      const { data, error } = await supabase.functions.invoke("melhor-envio?action=generate-label", {
-        body: { orderId },
-        headers: { Authorization: `Bearer ${session?.session?.access_token}` },
-      });
-
-      if (error) throw error;
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/melhor-envio?action=generate-label`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.session?.access_token}`,
+          },
+          body: JSON.stringify({ orderId }),
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || "Erro ao gerar etiqueta");
 
       if (data?.success) {
         toast({
