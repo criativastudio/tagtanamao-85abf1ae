@@ -9,12 +9,11 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const melhorEnvioToken = Deno.env.get("MELHOR_ENVIO_TOKEN")!;
 
-// Melhor Envio: sandbox tokens are usually shorter or environment is set separately
-// Use production URL by default - user should set MELHOR_ENVIO_SANDBOX=true for sandbox
+// Melhor Envio: use MELHOR_ENVIO_SANDBOX=true for sandbox environment
 const isSandbox = Deno.env.get("MELHOR_ENVIO_SANDBOX") === "true";
 const ME_BASE_URL = isSandbox
   ? "https://sandbox.melhorenvio.com.br/api/v2"
-  : "https://www.melhorenvio.com.br/api/v2";
+  : "https://melhorenvio.com.br/api/v2";
 
 const ORIGIN_POSTAL_CODE = "76890000";
 
