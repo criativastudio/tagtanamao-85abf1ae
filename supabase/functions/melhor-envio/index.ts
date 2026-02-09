@@ -29,7 +29,9 @@ interface ShipmentProduct {
 }
 
 async function meRequest(path: string, method = "GET", body?: any) {
-  const res = await fetch(`${ME_BASE_URL}${path}`, {
+  const url = `${ME_BASE_URL}${path}`;
+  console.log(`ME Request: ${method} ${url}`);
+  const res = await fetch(url, {
     method,
     headers: {
       "Content-Type": "application/json",
@@ -39,9 +41,14 @@ async function meRequest(path: string, method = "GET", body?: any) {
     },
     body: body ? JSON.stringify(body) : undefined,
   });
-  const data = await res.json();
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = { raw: text }; }
   if (!res.ok) {
-    console.error("Melhor Envio API error:", JSON.stringify(data));
+    console.error(`Melhor Envio API error (${res.status}):`, text);
+    if (res.status === 403) {
+      throw new Error("Token do Melhor Envio inválido ou sem permissão. Verifique o token nas configurações.");
+    }
     throw new Error(data?.message || data?.error || `Melhor Envio error ${res.status}`);
   }
   return data;
