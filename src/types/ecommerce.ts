@@ -95,6 +95,8 @@ export interface ShippingQuote {
   carrier: string;
   price: number;
   delivery_time: number;
+  serviceCode?: string;
+  carrierPicture?: string;
 }
 
 export type OrderStatus = 

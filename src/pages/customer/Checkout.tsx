@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { ShippingQuote } from "@/types/ecommerce";
+import { Skeleton } from "@/components/ui/skeleton";
 import CouponInput from "@/components/checkout/CouponInput";
 import CPFInput from "@/components/checkout/CPFInput";
 import CreditCardForm, { CardData } from "@/components/checkout/CreditCardForm";
@@ -226,30 +227,67 @@ export default function Checkout() {
     }
   };
 
-  const fetchShippingQuotesWithAddress = (zip: string, city: string, state: string) => {
+  const fetchShippingQuotesWithAddress = async (zip: string, city: string, state: string) => {
     setLoadingShipping(true);
+    setShippingQuotes([]);
+    setSelectedShipping(null);
 
-    setTimeout(() => {
-      const quotes: ShippingQuote[] = [];
+    try {
+      // Build products payload from cart
+      const products = cart.map((item) => ({
+        weight: (item.product as any).weight || 0.2,
+        width: (item.product as any).width || 15,
+        height: (item.product as any).height || 15,
+        length: (item.product as any).length || 5,
+        quantity: item.quantity,
+        unitPrice: item.product.price,
+        name: item.product.name,
+      }));
 
-      const normalizedCity = city.trim().toLowerCase();
-      const normalizedState = state.trim().toUpperCase();
+      const { data, error } = await supabase.functions.invoke("melhor-envio?action=quote", {
+        body: { postalCode: zip, products },
+      });
 
-      if (normalizedState === "RO" && normalizedCity === "porto velho") {
-        quotes.push({ service: "LOCAL_PORTO_VELHO", carrier: "Entrega Local", price: 5.0, delivery_time: 2 });
-      } else if (normalizedState === "RO" && normalizedCity === "jaru") {
-        quotes.push({ service: "LOCAL_JARU", carrier: "Entrega Local", price: 5.0, delivery_time: 2 });
+      if (error) throw error;
+
+      if (data?.success && data?.quotes?.length > 0) {
+        const quotes: ShippingQuote[] = data.quotes.map((q: any) => ({
+          service: q.service,
+          carrier: q.carrier,
+          price: q.price,
+          delivery_time: q.delivery_time,
+          serviceCode: q.serviceCode,
+          carrierPicture: q.carrierPicture,
+        }));
+
+        // Add local delivery options if applicable
+        const normalizedCity = city.trim().toLowerCase();
+        const normalizedState = state.trim().toUpperCase();
+        if (normalizedState === "RO" && normalizedCity === "porto velho") {
+          quotes.unshift({ service: "Entrega Local - Porto Velho", carrier: "Entrega Local", price: 5.0, delivery_time: 2 });
+        } else if (normalizedState === "RO" && normalizedCity === "jaru") {
+          quotes.unshift({ service: "Entrega Local - Jaru", carrier: "Entrega Local", price: 5.0, delivery_time: 2 });
+        }
+
+        setShippingQuotes(quotes);
+        setSelectedShipping(quotes[0]);
+      } else {
+        toast({
+          title: "Nenhum frete disponível",
+          description: "Não encontramos opções de frete para o CEP informado.",
+          variant: "destructive",
+        });
       }
-
-      quotes.push(
-        { service: "PAC", carrier: "Correios", price: 12.9, delivery_time: 8 },
-        { service: "SEDEX", carrier: "Correios", price: 24.9, delivery_time: 3 },
-      );
-
-      setShippingQuotes(quotes);
-      setSelectedShipping(quotes[0]);
+    } catch (error: any) {
+      console.error("Error fetching shipping quotes:", error);
+      toast({
+        title: "Erro ao calcular frete",
+        description: "Tente novamente ou verifique o CEP.",
+        variant: "destructive",
+      });
+    } finally {
       setLoadingShipping(false);
-    }, 1000);
+    }
   };
 
 
@@ -344,6 +382,9 @@ export default function Checkout() {
           shipping_zip: shippingData.zip,
           shipping_cost: selectedShipping?.price || 0,
           shipping_method: selectedShipping?.service,
+          shipping_carrier: (selectedShipping as any)?.carrier || null,
+          shipping_service_name: selectedShipping?.service || null,
+          shipping_delivery_time: selectedShipping?.delivery_time || null,
           coupon_id: appliedCoupon?.id || null,
           discount_amount: discountAmount,
           notes: paymentMethod === "pix" ? `Pagamento PIX - Aguardando confirmação` : null,
@@ -774,10 +815,11 @@ export default function Checkout() {
                                 <RadioGroupItem value={quote.service} id={quote.service} />
                                 <div>
                                 <p className="font-medium">
-                                    {quote.service.startsWith("LOCAL_") 
-                                      ? `Entrega Local – ${quote.service === "LOCAL_PORTO_VELHO" ? "Porto Velho" : "Jaru"}`
-                                      : `${quote.carrier} ${quote.service}`}
+                                    {quote.carrier === "Entrega Local" 
+                                      ? quote.service
+                                      : `${quote.service}`}
                                   </p>
+                                  <p className="text-xs text-muted-foreground/70">{quote.carrier}</p>
                                   <p className="text-sm text-muted-foreground">
                                     Entrega em até {quote.delivery_time} dias úteis
                                   </p>

@@ -13,32 +13,29 @@ const ASAAS_BASE_URL = asaasApiKey?.includes("_hmlg_")
   ? "https://sandbox.asaas.com/api/v3"
   : "https://api.asaas.com/v3";
 
-// --- Shipping validation ---
-const VALID_SHIPPING: Record<string, { price: number; localOnly?: boolean }> = {
-  PAC: { price: 12.90 }, SEDEX: { price: 24.90 },
-  LOCAL_PORTO_VELHO: { price: 5.00, localOnly: true },
-  LOCAL_JARU: { price: 5.00, localOnly: true },
+// --- Shipping validation (Melhor Envio dynamic prices) ---
+const LOCAL_SHIPPING: Record<string, { price: number; city: string; state: string }> = {
+  "Entrega Local - Porto Velho": { price: 5.00, city: "porto velho", state: "RO" },
+  "Entrega Local - Jaru": { price: 5.00, city: "jaru", state: "RO" },
 };
 
 function validateShippingMethod(method: string | null, cost: number | null, city: string | null, state: string | null): string | null {
   if (!method) return "Método de envio não informado";
-  const cfg = VALID_SHIPPING[method];
-  if (!cfg) return `Método de envio inválido: ${method}`;
-  if (Math.abs((cost || 0) - cfg.price) > 0.01) return `Valor de frete inválido para ${method}`;
-  if (cfg.localOnly) {
+  if (cost === null || cost === undefined || cost < 0) return "Valor de frete inválido";
+  
+  const localCfg = LOCAL_SHIPPING[method];
+  if (localCfg) {
+    if (Math.abs((cost || 0) - localCfg.price) > 0.01) return `Valor de frete inválido para ${method}`;
     const c = (city || "").trim().toLowerCase();
     const s = (state || "").trim().toUpperCase();
-    if (s !== "RO") return "Entrega local disponível apenas para RO";
-    if (method === "LOCAL_PORTO_VELHO" && c !== "porto velho") return "Entrega local Porto Velho indisponível para esta cidade";
-    if (method === "LOCAL_JARU" && c !== "jaru") return "Entrega local Jaru indisponível para esta cidade";
+    if (s !== localCfg.state) return `Entrega local disponível apenas para ${localCfg.state}`;
+    if (c !== localCfg.city) return `Entrega local indisponível para esta cidade`;
   }
   return null;
 }
 
 function getShippingLabel(method: string): string {
-  if (method === "LOCAL_PORTO_VELHO") return "Entrega Local - Porto Velho";
-  if (method === "LOCAL_JARU") return "Entrega Local - Jaru";
-  return method;
+  return method || "Envio";
 }
 
 async function validateOrderAmount(supabase: any, orderId: string, frontendAmount: number): Promise<string | null> {

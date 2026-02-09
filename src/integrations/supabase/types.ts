@@ -442,17 +442,23 @@ export type Database = {
           created_at: string | null
           discount_amount: number | null
           id: string
+          melhor_envio_label_url: string | null
+          melhor_envio_shipment_id: string | null
           notes: string | null
           payment_method: string | null
           payment_status: string | null
           shipping_address: string | null
+          shipping_carrier: string | null
           shipping_city: string | null
           shipping_cost: number | null
+          shipping_delivery_time: number | null
           shipping_label_url: string | null
           shipping_method: string | null
           shipping_name: string | null
           shipping_phone: string | null
+          shipping_service_name: string | null
           shipping_state: string | null
+          shipping_status: string | null
           shipping_zip: string | null
           status: string | null
           total_amount: number
@@ -467,17 +473,23 @@ export type Database = {
           created_at?: string | null
           discount_amount?: number | null
           id?: string
+          melhor_envio_label_url?: string | null
+          melhor_envio_shipment_id?: string | null
           notes?: string | null
           payment_method?: string | null
           payment_status?: string | null
           shipping_address?: string | null
+          shipping_carrier?: string | null
           shipping_city?: string | null
           shipping_cost?: number | null
+          shipping_delivery_time?: number | null
           shipping_label_url?: string | null
           shipping_method?: string | null
           shipping_name?: string | null
           shipping_phone?: string | null
+          shipping_service_name?: string | null
           shipping_state?: string | null
+          shipping_status?: string | null
           shipping_zip?: string | null
           status?: string | null
           total_amount: number
@@ -492,17 +504,23 @@ export type Database = {
           created_at?: string | null
           discount_amount?: number | null
           id?: string
+          melhor_envio_label_url?: string | null
+          melhor_envio_shipment_id?: string | null
           notes?: string | null
           payment_method?: string | null
           payment_status?: string | null
           shipping_address?: string | null
+          shipping_carrier?: string | null
           shipping_city?: string | null
           shipping_cost?: number | null
+          shipping_delivery_time?: number | null
           shipping_label_url?: string | null
           shipping_method?: string | null
           shipping_name?: string | null
           shipping_phone?: string | null
+          shipping_service_name?: string | null
           shipping_state?: string | null
+          shipping_status?: string | null
           shipping_zip?: string | null
           status?: string | null
           total_amount?: number
@@ -724,32 +742,44 @@ export type Database = {
         Row: {
           created_at: string | null
           description: string | null
+          height: number | null
           id: string
           image_url: string | null
           is_active: boolean | null
+          length: number | null
           name: string
           price: number
           type: string
+          weight: number | null
+          width: number | null
         }
         Insert: {
           created_at?: string | null
           description?: string | null
+          height?: number | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          length?: number | null
           name: string
           price: number
           type: string
+          weight?: number | null
+          width?: number | null
         }
         Update: {
           created_at?: string | null
           description?: string | null
+          height?: number | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          length?: number | null
           name?: string
           price?: number
           type?: string
+          weight?: number | null
+          width?: number | null
         }
         Relationships: []
       }
