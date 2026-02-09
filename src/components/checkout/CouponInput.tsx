@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Ticket, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,10 @@ export default function CouponInput({ orderTotal, appliedCoupon, onApplyCoupon }
   const { toast } = useToast();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    console.debug('[checkout] orderTotal (verificar frete Melhor Envio):', orderTotal);
+  }, [orderTotal]);
 
   const validateAndApplyCoupon = async () => {
     if (!code.trim()) {
