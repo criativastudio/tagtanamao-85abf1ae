@@ -19,6 +19,7 @@ import {
   User,
   Mail,
   Phone,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,12 @@ import { Order, OrderItem } from "@/types/ecommerce";
 
 interface OrderWithItems extends Order {
   items?: OrderItem[];
+  melhor_envio_shipment_id?: string | null;
+  melhor_envio_label_url?: string | null;
+  shipping_carrier?: string | null;
+  shipping_service_name?: string | null;
+  shipping_delivery_time?: number | null;
+  shipping_status?: string | null;
   profile?: {
     email: string | null;
     full_name: string | null;
@@ -76,6 +83,7 @@ export default function OrdersManager() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null);
   const [showOrderDialog, setShowOrderDialog] = useState(false);
+  const [generatingLabel, setGeneratingLabel] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && profile && !profile.is_admin) {
@@ -202,6 +210,115 @@ export default function OrdersManager() {
 
     return matchesSearch && matchesStatus;
   });
+
+  const handleGenerateLabel = async (orderId: string) => {
+    setGeneratingLabel(orderId);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const { data, error } = await supabase.functions.invoke("melhor-envio?action=generate-label", {
+        body: { orderId },
+        headers: { Authorization: `Bearer ${session?.session?.access_token}` },
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({
+          title: "Etiqueta gerada!",
+          description: data.labelUrl ? "Clique no ícone de download para baixar." : "Etiqueta gerada com sucesso.",
+        });
+        fetchOrders();
+        if (data.labelUrl) {
+          window.open(data.labelUrl, "_blank");
+        }
+      } else {
+        throw new Error(data?.error || "Erro ao gerar etiqueta");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro ao gerar etiqueta",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingLabel(null);
+    }
+  };
+
+  const generateContentDeclaration = (order: OrderWithItems) => {
+    const declWindow = window.open("", "_blank");
+    if (!declWindow) {
+      toast({ title: "Erro", description: "Permita pop-ups para gerar a declaração.", variant: "destructive" });
+      return;
+    }
+
+    const items = order.items || [];
+    const itemsRows = items.map((item, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${item.product?.name || "Produto"}</td>
+        <td>${item.quantity}</td>
+        <td>R$ ${item.unit_price.toFixed(2)}</td>
+        <td>R$ ${(item.unit_price * item.quantity).toFixed(2)}</td>
+      </tr>
+    `).join("");
+
+    const totalValue = items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
+
+    const content = `<!DOCTYPE html>
+<html><head><title>Declaração de Conteúdo - #${order.id.slice(0, 8)}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; padding: 30px; font-size: 12px; }
+  h1 { text-align: center; font-size: 16px; margin-bottom: 20px; }
+  .section { margin-bottom: 15px; }
+  .section-title { font-weight: bold; margin-bottom: 5px; border-bottom: 1px solid #000; padding-bottom: 3px; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+  th, td { border: 1px solid #000; padding: 5px 8px; text-align: left; }
+  th { background: #f0f0f0; }
+  .footer { margin-top: 30px; text-align: center; font-size: 10px; }
+  .signature { margin-top: 50px; text-align: center; }
+  .signature-line { border-top: 1px solid #000; width: 250px; margin: 0 auto; padding-top: 5px; }
+  @media print { body { padding: 15px; } .no-print { display: none; } }
+</style></head><body>
+  <h1>DECLARAÇÃO DE CONTEÚDO</h1>
+  <div class="section">
+    <div class="section-title">REMETENTE</div>
+    <p>QRPet - Tag Tá Na Mão</p>
+    <p>Jaru - RO | CEP: 76890-000</p>
+    <p>contato@qrpet.com.br</p>
+  </div>
+  <div class="section">
+    <div class="section-title">DESTINATÁRIO</div>
+    <p>${order.shipping_name || "-"}</p>
+    <p>${order.shipping_address || ""}</p>
+    <p>${order.shipping_city || ""} - ${order.shipping_state || ""} | CEP: ${order.shipping_zip || ""}</p>
+    <p>Tel: ${order.shipping_phone || "-"}</p>
+  </div>
+  <div class="section">
+    <div class="section-title">CONTEÚDO</div>
+    <table>
+      <thead><tr><th>#</th><th>Descrição</th><th>Qtd</th><th>Valor Unit.</th><th>Total</th></tr></thead>
+      <tbody>${itemsRows}</tbody>
+      <tfoot><tr><td colspan="4"><strong>VALOR TOTAL</strong></td><td><strong>R$ ${totalValue.toFixed(2)}</strong></td></tr></tfoot>
+    </table>
+  </div>
+  <p><strong>DECLARO</strong> que não me enquadro no conceito de contribuinte previsto no art. 4° da Lei Complementar n° 87/1996,
+  uma vez que não realizo, com habitualidade ou em volume que caracterize intuito comercial, operações de circulação de mercadoria,
+  ainda que se iniciem no exterior, ou estou dispensado da emissão da nota fiscal por força da legislação tributária vigente,
+  responsabilizando-me, nos termos da lei e sob as penas da lei, por informações inverídicas.</p>
+  <div class="signature">
+    <p>Jaru - RO, ${new Date().toLocaleDateString("pt-BR")}</p>
+    <div class="signature-line">Assinatura do Declarante/Remetente</div>
+  </div>
+  <div class="no-print" style="text-align:center;margin-top:20px;">
+    <button onclick="window.print()" style="padding:10px 20px;font-size:14px;cursor:pointer;">🖨️ Imprimir</button>
+  </div>
+</body></html>`;
+
+    declWindow.document.write(content);
+    declWindow.document.close();
+  };
 
   const generateShippingLabel = (order: OrderWithItems) => {
     const labelWindow = window.open("", "_blank");
@@ -469,11 +586,44 @@ export default function OrdersManager() {
                         <Button variant="ghost" size="sm" onClick={() => handleViewOrder(order)} title="Ver detalhes">
                           <Eye className="w-4 h-4" />
                         </Button>
+                        {(order.status === "paid" || order.payment_status === "confirmed") && !order.melhor_envio_label_url && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleGenerateLabel(order.id)}
+                            title="Gerar Etiqueta Melhor Envio"
+                            disabled={generatingLabel === order.id}
+                          >
+                            {generatingLabel === order.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Truck className="w-4 h-4" />
+                            )}
+                          </Button>
+                        )}
+                        {order.melhor_envio_label_url && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => window.open(order.melhor_envio_label_url!, "_blank")}
+                            title="Baixar Etiqueta"
+                          >
+                            <Download className="w-4 h-4 text-primary" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => generateContentDeclaration(order)}
+                          title="Declaração de Conteúdo"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => generateShippingLabel(order)}
-                          title="Gerar etiqueta"
+                          title="Etiqueta simples"
                         >
                           <Printer className="w-4 h-4" />
                         </Button>
@@ -567,8 +717,35 @@ export default function OrdersManager() {
                     </Button>
                     <Button variant="outline" onClick={() => generateShippingLabel(selectedOrder)}>
                       <Printer className="w-4 h-4 mr-2" />
-                      Etiqueta
+                      Etiqueta Simples
                     </Button>
+                    <Button variant="outline" onClick={() => generateContentDeclaration(selectedOrder)}>
+                      <FileText className="w-4 h-4 mr-2" />
+                      Declaração
+                    </Button>
+                    {(selectedOrder.status === "paid" || selectedOrder.payment_status === "confirmed") && (
+                      <Button
+                        variant="default"
+                        onClick={() => handleGenerateLabel(selectedOrder.id)}
+                        disabled={generatingLabel === selectedOrder.id}
+                      >
+                        {generatingLabel === selectedOrder.id ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Truck className="w-4 h-4 mr-2" />
+                        )}
+                        Melhor Envio
+                      </Button>
+                    )}
+                    {selectedOrder.melhor_envio_label_url && (
+                      <Button
+                        variant="outline"
+                        onClick={() => window.open(selectedOrder.melhor_envio_label_url!, "_blank")}
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Baixar Etiqueta ME
+                      </Button>
+                    )}
                   </div>
                 </div>
 

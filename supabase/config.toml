@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.activate-product]
 verify_jwt = false
+
+[functions.melhor-envio]
+verify_jwt = false
