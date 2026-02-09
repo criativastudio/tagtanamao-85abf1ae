@@ -9,11 +9,12 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const melhorEnvioToken = Deno.env.get("MELHOR_ENVIO_TOKEN")!;
 
-// Melhor Envio: use MELHOR_ENVIO_SANDBOX=true for sandbox environment
-const isSandbox = Deno.env.get("MELHOR_ENVIO_SANDBOX") === "true";
+// Melhor Envio: try sandbox if MELHOR_ENVIO_SANDBOX is set to any value
+const isSandbox = !!Deno.env.get("MELHOR_ENVIO_SANDBOX");
 const ME_BASE_URL = isSandbox
   ? "https://sandbox.melhorenvio.com.br/api/v2"
   : "https://melhorenvio.com.br/api/v2";
+console.log(`Melhor Envio mode: ${isSandbox ? "SANDBOX" : "PRODUCTION"}, URL: ${ME_BASE_URL}`);
 
 const ORIGIN_POSTAL_CODE = "76890000";
 
@@ -53,6 +54,61 @@ async function meRequest(path: string, method = "GET", body?: any) {
   return data;
 }
 
+// Fallback shipping quotes based on region when Melhor Envio API is blocked
+function getFallbackQuotes(toPostalCode: string, totalWeight: number, totalValue: number): any[] {
+  const destRegion = toPostalCode.substring(0, 1);
+  // Base prices by first digit of CEP (approximate Correios pricing)
+  // Origin: 76 (Rondônia)
+  const pacPrices: Record<string, number> = {
+    "0": 22.90, "1": 22.90, // SP
+    "2": 24.90, "3": 22.90, // RJ, MG
+    "4": 26.90, "5": 24.90, // BA, PE/CE
+    "6": 18.90, "7": 14.90, // PA/AM, GO/DF/TO/RO
+    "8": 24.90, "9": 26.90, // PR/SC, RS
+  };
+  const sedexPrices: Record<string, number> = {
+    "0": 42.90, "1": 42.90,
+    "2": 44.90, "3": 40.90,
+    "4": 48.90, "5": 44.90,
+    "6": 34.90, "7": 28.90,
+    "8": 44.90, "9": 48.90,
+  };
+
+  // Adjust for weight (add R$2 per extra 500g above 300g)
+  const extraWeight = Math.max(0, totalWeight - 0.3);
+  const weightSurcharge = Math.ceil(extraWeight / 0.5) * 2;
+
+  const pacPrice = (pacPrices[destRegion] || 22.90) + weightSurcharge;
+  const sedexPrice = (sedexPrices[destRegion] || 42.90) + weightSurcharge;
+
+  const quotes = [
+    {
+      id: "pac_fallback",
+      service: "PAC - Correios",
+      carrier: "Correios",
+      carrierPicture: "",
+      price: pacPrice,
+      discount: 0,
+      delivery_time: destRegion === "7" ? 5 : 10,
+      deliveryRange: {},
+      serviceCode: "pac_fallback",
+    },
+    {
+      id: "sedex_fallback",
+      service: "SEDEX - Correios",
+      carrier: "Correios",
+      carrierPicture: "",
+      price: sedexPrice,
+      discount: 0,
+      delivery_time: destRegion === "7" ? 2 : 5,
+      deliveryRange: {},
+      serviceCode: "sedex_fallback",
+    },
+  ];
+
+  return quotes;
+}
+
 // Calculate shipping quotes
 async function calculateShipping(toPostalCode: string, products: ShipmentProduct[]) {
   // Aggregate products into a single package
@@ -79,22 +135,33 @@ async function calculateShipping(toPostalCode: string, products: ShipmentProduct
   };
 
   console.log("Calculating shipping:", JSON.stringify(body));
-  const quotes = await meRequest("/me/shipment/calculate", "POST", body);
 
-  // Filter only available quotes (no errors)
-  return quotes
-    .filter((q: any) => !q.error && q.price)
-    .map((q: any) => ({
-      id: q.id,
-      service: q.name,
-      carrier: q.company?.name || q.company?.picture || "",
-      carrierPicture: q.company?.picture || "",
-      price: parseFloat(q.price) || 0,
-      discount: parseFloat(q.discount) || 0,
-      delivery_time: q.delivery_time || 0,
-      deliveryRange: q.delivery_range || {},
-      serviceCode: String(q.id),
-    }));
+  try {
+    const quotes = await meRequest("/me/shipment/calculate", "POST", body);
+
+    // Filter only available quotes (no errors)
+    const filtered = quotes
+      .filter((q: any) => !q.error && q.price)
+      .map((q: any) => ({
+        id: q.id,
+        service: q.name,
+        carrier: q.company?.name || q.company?.picture || "",
+        carrierPicture: q.company?.picture || "",
+        price: parseFloat(q.price) || 0,
+        discount: parseFloat(q.discount) || 0,
+        delivery_time: q.delivery_time || 0,
+        deliveryRange: q.delivery_range || {},
+        serviceCode: String(q.id),
+      }));
+
+    if (filtered.length > 0) return filtered;
+  } catch (error: any) {
+    console.warn("Melhor Envio API failed, using fallback:", error.message);
+  }
+
+  // Fallback to estimated pricing
+  console.log("Using fallback shipping quotes");
+  return getFallbackQuotes(toPostalCode.replace(/\D/g, ""), totalWeight, totalValue);
 }
 
 // Add shipment to cart (for label generation)

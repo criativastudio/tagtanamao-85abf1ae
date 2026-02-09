@@ -244,9 +244,16 @@ export default function Checkout() {
         name: item.product.name,
       }));
 
-      const { data, error } = await supabase.functions.invoke("melhor-envio?action=quote", {
-        body: { postalCode: zip, products },
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/melhor-envio?action=quote`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ postalCode: zip, products }),
+        }
+      );
+      const data = await response.json();
+      const error = response.ok ? null : new Error(data?.error || "Erro ao calcular frete");
 
       if (error) throw error;
 
