@@ -757,21 +757,23 @@ export default function AdminDashboard() {
   <g id="CutLines">
 `;
 
-      // Add vector cut shapes for each QR code
+      // Add vector cut shapes for each QR code (individual type check)
       codesToExport.forEach((code, index) => {
         const col = index % cols;
         const row = Math.floor(index / cols);
         const x = col * cellSize + cellSize / 2;
         const y = row * cellSize + cellSize / 2;
 
-        if (isDisplay) {
+        const codeIsDisplay = code.type === 'business_display';
+        const codeItemSize = codeIsDisplay ? DISPLAY_SIZE_MM : QR_DIAMETER_MM;
+        if (codeIsDisplay) {
           // Square cut line for displays
-          const halfSize = itemSize / 2;
-          svgContent += `    <rect x="${x - halfSize}" y="${y - halfSize}" width="${itemSize}" height="${itemSize}" class="cut-line"/>
+          const halfSize = codeItemSize / 2;
+          svgContent += `    <rect x="${x - halfSize}" y="${y - halfSize}" width="${codeItemSize}" height="${codeItemSize}" class="cut-line"/>
 `;
         } else {
           // Circular cut line for pet tags
-          const r = itemSize / 2;
+          const r = codeItemSize / 2;
           svgContent += `    <circle cx="${x}" cy="${y}" r="${r}" class="cut-line"/>
 `;
         }
