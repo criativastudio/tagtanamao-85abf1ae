@@ -74,6 +74,23 @@ export const PetPagePreview = ({
         background: `linear-gradient(180deg, ${themeColor}15 0%, hsl(220 20% 4%) 50%)`,
       }}
     >
+      <style>{`
+        .qr-cut-mark,
+        .cut-mark,
+        rect.qr-cut-mark,
+        rect.cut-mark {
+          border-radius: 9999px !important;
+        }
+        .qr-cut-mark rect,
+        .cut-mark rect,
+        svg .qr-cut-mark rect,
+        svg .cut-mark rect,
+        rect.qr-cut-mark,
+        rect.cut-mark {
+          rx: 999px !important;
+          ry: 999px !important;
+        }
+      `}</style>
       {/* LED Background Glow */}
       <div 
         className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] h-[300px] rounded-full blur-3xl pointer-events-none"

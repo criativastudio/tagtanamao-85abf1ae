@@ -28,11 +28,17 @@ export const BioEditorPreview = ({ bioPage }: BioEditorPreviewProps) => {
     >
       <style>{`
         .qr-cut-mark,
-        .cut-mark {
+        .cut-mark,
+        rect.qr-cut-mark,
+        rect.cut-mark {
           border-radius: 9999px !important;
         }
         .qr-cut-mark rect,
-        .cut-mark rect {
+        .cut-mark rect,
+        svg .qr-cut-mark rect,
+        svg .cut-mark rect,
+        rect.qr-cut-mark,
+        rect.cut-mark {
           rx: 999px !important;
           ry: 999px !important;
         }
