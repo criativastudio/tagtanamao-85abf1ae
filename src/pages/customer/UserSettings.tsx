@@ -473,13 +473,15 @@ export default function UserSettings() {
         const x = col * cellSize + cellSize / 2;
         const y = row * cellSize + cellSize / 2;
         
-        if (isDisplay) {
+        const codeIsDisplay = code.type === 'business_display';
+        const codeItemSize = codeIsDisplay ? DISPLAY_SIZE_MM : QR_DIAMETER_MM;
+        if (codeIsDisplay) {
           // Square cut line for displays
-          const halfSize = itemSize / 2;
-          svgContent += `<rect x="${x - halfSize}" y="${y - halfSize}" width="${itemSize}" height="${itemSize}" fill="none" stroke="#FF00FF" stroke-width="0.1"/>`;
+          const halfSize = codeItemSize / 2;
+          svgContent += `<rect x="${x - halfSize}" y="${y - halfSize}" width="${codeItemSize}" height="${codeItemSize}" fill="none" stroke="#FF00FF" stroke-width="0.1"/>`;
         } else {
           // Circular cut line for pet tags
-          svgContent += `<circle cx="${x}" cy="${y}" r="${itemSize / 2}" fill="none" stroke="#FF00FF" stroke-width="0.1"/>`;
+          svgContent += `<circle cx="${x}" cy="${y}" r="${codeItemSize / 2}" fill="none" stroke="#FF00FF" stroke-width="0.1"/>`;
         }
       });
 
