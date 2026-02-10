@@ -295,11 +295,16 @@ export default function AdminDashboard() {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [exportCategory, setExportCategory] = useState<string>('');
-  
+
   // Manual QR Code creation
   const [manualCode, setManualCode] = useState('');
   const [manualType, setManualType] = useState<'pet_tag' | 'business_display'>('pet_tag');
   const [creatingManual, setCreatingManual] = useState(false);
+
+  // Logo upload (SVG) for print export
+  const [logoSvgContent, setLogoSvgContent] = useState('');
+  const [logoFileName, setLogoFileName] = useState('');
+  const logoInputRef = useRef<HTMLInputElement>(null);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -567,6 +572,24 @@ export default function AdminDashboard() {
     });
   };
 
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
+    if (!isSvg) {
+      toast({ title: 'Formato inválido', description: 'Envie um arquivo SVG.', variant: 'destructive' });
+      return;
+    }
+
+    const content = await file.text();
+    setLogoSvgContent(content);
+    setLogoFileName(file.name);
+    event.target.value = '';
+
+    toast({ title: 'Logo carregada', description: 'Logo SVG pronta para exportação.' });
+  };
+
   // Export QR codes as SVG grid for 1m² sheet (CorelDRAW compatible)
   const exportCategoryAsSVG = async (categoryId: string) => {
     const category = categories.find(c => c.id === categoryId);
@@ -588,8 +611,112 @@ export default function AdminDashboard() {
       // Determine type from first code in category (categories should contain same type)
       const codeType = category.codes[0]?.type || 'pet_tag';
       const isDisplay = codeType === 'business_display';
+
+      // Pet Tag print export with QR + logo (684 + 684)
+      if (!isDisplay) {
+        if (!logoSvgContent) {
+          toast({ title: 'Logo obrigatória', description: 'Faça upload da logo SVG para exportar.', variant: 'destructive' });
+          return;
+        }
+
+        if (category.codes.length < 684) {
+          toast({ title: 'Quantidade insuficiente', description: 'São necessários 684 QR Codes para a arte 1m².', variant: 'destructive' });
+          return;
+        }
+
+        const codesToExport = category.codes.slice(0, 684);
+        const qrImages: string[] = [];
+        for (const code of codesToExport) {
+          const canvas = await createQRCodeCanvas(code);
+          qrImages.push(canvas.toDataURL('image/png'));
+        }
+
+        const totalItems = 1368;
+        const cols = 38;
+        const rows = 36;
+        const cellSizeX = SHEET_SIZE_MM / cols;
+        const cellSizeY = SHEET_SIZE_MM / rows;
+        const itemSize = QR_DIAMETER_MM;
+
+        const logoDataUrl = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(logoSvgContent)))}`;
+
+        let svgContent = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
+     width="${SHEET_SIZE_MM}mm" height="${SHEET_SIZE_MM}mm" 
+     viewBox="0 0 ${SHEET_SIZE_MM} ${SHEET_SIZE_MM}">
+  <title>QR Codes + Logo - ${category.name}</title>
+  <desc>Categoria: ${category.name} - 684 QR Codes + 684 Logos - Pet Tag 23mm - Gerado para impressão em 1m²</desc>
+  
+  <!-- Styles -->
+  <defs>
+    <style>
+      .cut-line { fill: none; stroke: #FF00FF; stroke-width: 0.1; }
+    </style>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="white"/>
+  
+  <!-- Cut Lines Layer (Magenta - standard for die-cut) -->
+  <g id="CutLines">
+`;
+
+        for (let index = 0; index < totalItems; index++) {
+          const col = index % cols;
+          const row = Math.floor(index / cols);
+          const x = col * cellSizeX + cellSizeX / 2;
+          const y = row * cellSizeY + cellSizeY / 2;
+          const r = itemSize / 2;
+          svgContent += `    <circle cx="${x}" cy="${y}" r="${r}" class="cut-line"/>
+`;
+        }
+
+        svgContent += `  </g>
+  
+  <!-- QR Codes + Logos Layer -->
+  <g id="PrintItems">
+`;
+
+        for (let index = 0; index < totalItems; index++) {
+          const col = index % cols;
+          const row = Math.floor(index / cols);
+          const x = col * cellSizeX + cellSizeX / 2;
+          const y = row * cellSizeY + cellSizeY / 2;
+          const isQr = index % 2 === 0;
+          const imageSrc = isQr ? qrImages[Math.floor(index / 2)] : logoDataUrl;
+
+          svgContent += `    <g transform="translate(${x}, ${y})">
+      <image x="${-itemSize / 2}" y="${-itemSize / 2}" 
+             width="${itemSize}" height="${itemSize}"
+             xlink:href="${imageSrc}"
+             preserveAspectRatio="xMidYMid meet"/>
+    </g>
+`;
+        }
+
+        svgContent += `  </g>
+</svg>`;
+
+        const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = `qrcodes-${category.name}-1m2-qr-logo-1368.svg`;
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+
+        setShowExportDialog(false);
+
+        toast({
+          title: "Arquivo exportado!",
+          description: "Arte 1m² pronta com 684 QR Codes + 684 logos (23mm)."
+        });
+
+        return;
+      }
       
-      // Use appropriate size based on type
+      // Use appropriate size based on type (Display export)
       const itemSize = isDisplay ? DISPLAY_SIZE_MM : QR_DIAMETER_MM;
       const padding = 2; // 2mm padding between items
       const cellSize = itemSize + padding;
@@ -897,6 +1024,72 @@ export default function AdminDashboard() {
             {creatingManual ? 'Criando...' : 'Criar'}
           </Button>
         </div>
+      </motion.div>
+
+      {/* Exportação para Impressão */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        className="glass-card p-6 rounded-xl mb-8"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <Download className="w-6 h-6 text-primary" />
+          <h2 className="text-lg font-semibold text-foreground">Exportação para Impressão (1m²)</h2>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-end">
+          <div>
+            <Label>Categoria</Label>
+            <Select value={exportCategory} onValueChange={setExportCategory}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Selecione uma categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map(cat => (
+                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Logo Tag Tá na Mão (SVG)</Label>
+            <div className="flex items-center gap-3 mt-1">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => logoInputRef.current?.click()}
+              >
+                Upload Logo (SVG)
+              </Button>
+              {logoFileName && (
+                <span className="text-xs text-muted-foreground truncate max-w-[180px]">
+                  {logoFileName}
+                </span>
+              )}
+            </div>
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept=".svg,image/svg+xml"
+              onChange={handleLogoUpload}
+              className="hidden"
+            />
+          </div>
+
+          <Button
+            variant="hero"
+            onClick={() => exportCategoryAsSVG(exportCategory)}
+            disabled={!exportCategory}
+          >
+            Exportar 1m²
+          </Button>
+        </div>
+
+        <p className="text-xs text-muted-foreground mt-3">
+          Exporta 1m² com 684 QR Codes + 684 logos circulares (23mm) distribuídos automaticamente.
+        </p>
       </motion.div>
 
       {generatedCodes.length > 0 && (
