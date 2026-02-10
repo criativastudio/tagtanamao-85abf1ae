@@ -26,6 +26,17 @@ export const BioEditorPreview = ({ bioPage }: BioEditorPreviewProps) => {
         color: `hsl(${theme.textColor})`,
       }}
     >
+      <style>{`
+        .qr-cut-mark,
+        .cut-mark {
+          border-radius: 9999px !important;
+        }
+        .qr-cut-mark rect,
+        .cut-mark rect {
+          rx: 999px !important;
+          ry: 999px !important;
+        }
+      `}</style>
       {/* Background Effects */}
       <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
       <div 
