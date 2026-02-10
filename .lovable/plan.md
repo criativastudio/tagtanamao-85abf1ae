@@ -1,76 +1,145 @@
 
+# Correcao: CEP/Frete Dinamico no Checkout e Integracao Melhor Envio
 
-# Correcao: Marcacao de Corte Quadrada nos Ultimos 12 QR Codes
+## Problemas Identificados
 
-## Problema Identificado
+1. **CreditCardForm.tsx com frete duplicado**: O componente de cartao de credito tem campos de CEP e frete proprios, chamando uma Edge Function `calcular-frete` que nao existe. Isso duplica a logica que ja esta no `Checkout.tsx`.
 
-Na funcao `exportCategoryAsSVG` (tanto em `UserSettings.tsx` quanto em `AdminDashboard.tsx`), o tipo de marcacao de corte (circular vs quadrada) e determinado apenas pelo **primeiro codigo da categoria**:
+2. **CEP dispara multiplas chamadas**: No `Checkout.tsx`, o `handleZipChange` e chamado a cada tecla digitada (onChange), nao no onBlur como especificado. Isso gera chamadas desnecessarias.
 
-```
-const codeType = category.codes[0]?.type || 'pet_tag';
-const isDisplay = codeType === 'business_display';
-```
+3. **Frete local nao e exclusivo**: Para Porto Velho/Jaru, o sistema adiciona "Entrega Local" junto com as opcoes do Melhor Envio, em vez de mostrar apenas a opcao local.
 
-Se os ultimos codigos da categoria forem de tipo diferente (ex: `business_display` misturados com `pet_tag`), o SVG gera **todas** as marcas de corte como circulos (baseado no primeiro item), porem as imagens PNG geradas pelo canvas renderizam individualmente conforme o tipo de cada codigo -- criando conflito visual nos ultimos 12 itens.
-
-Alem disso, a renderizacao no canvas para `business_display` desenha um `strokeRect` (marca quadrada) embutido na imagem PNG, que aparece sobreposta a marca circular do SVG.
+4. **Frete do CreditCardForm nao persiste no pedido**: O frete selecionado dentro do CreditCardForm nao e utilizado na criacao do pedido.
 
 ## Solucao
 
-Alterar a logica de geracao de marcas de corte no SVG para verificar o tipo **individual** de cada codigo, em vez de usar o tipo do primeiro codigo para todos. Isso garante que cada QR Code receba a marca de corte correta (circulo para Pet Tag, quadrado para Display).
+### 1. Remover CEP/Frete do CreditCardForm.tsx
+
+Remover completamente os campos de CEP, calculo de frete e selecao de transportadora do `CreditCardForm.tsx`. Este componente deve conter apenas dados do cartao (nome, numero, validade, CVV). O frete ja e tratado no `Checkout.tsx`.
+
+- Remover estados: `cep`, `fretes`, `freteSelecionado`, `freteLoading`, `freteError`, `lastCepFetched`, `touchedFrete`
+- Remover funcoes: `handleCepBlur`, `buildFreteOptions`
+- Remover da interface `CardData`: campos `cep`, `frete`, `FreteOption`
+- Remover JSX dos campos CEP e opcoes de frete
+- Atualizar validacao: `isFormValid` nao depende mais de `freteSelecionado`
+
+### 2. Corrigir CEP com onBlur no Checkout.tsx
+
+Alterar o campo de CEP para usar `onBlur` em vez de `onChange` para disparar o calculo de frete:
+
+- Separar `handleZipChange` em duas funcoes:
+  - `handleZipInput`: apenas atualiza o estado (onChange)
+  - `handleZipBlur`: dispara busca de endereco via ViaCEP + calculo de frete (onBlur)
+- Adicionar `lastZipFetched` para evitar chamadas duplicadas quando o CEP nao mudou
+
+### 3. Frete Local Exclusivo
+
+Quando o CEP resolver para Porto Velho/RO ou Jaru/RO:
+- NAO chamar o Melhor Envio
+- Exibir apenas "Entrega Local" com valor fixo de R$ 5,00
+- Pre-selecionar automaticamente
+
+### 4. Filtrar 3 opcoes de frete
+
+Quando usar Melhor Envio, exibir exatamente 3 opcoes:
+- Correios PAC
+- Correios SEDEX
+- A opcao mais barata de outra transportadora
+
+### 5. Persistencia do frete no pedido
+
+Ja esta implementada no `handleCreateOrder` do Checkout.tsx (campos `shipping_carrier`, `shipping_service_name`, `shipping_delivery_time`, `shipping_cost`). Nenhuma alteracao necessaria.
 
 ## Detalhes Tecnicos
 
-### Arquivo 1: `src/pages/customer/UserSettings.tsx`
+### Arquivo 1: `src/components/checkout/CreditCardForm.tsx`
 
-**Funcao `exportCategoryAsSVG` (linhas 470-483):**
-- Alterar o loop de geracao de cut marks para verificar `codesToExport[index].type` individualmente
-- Cada codigo recebe `<circle>` ou `<rect>` conforme seu proprio tipo
+Simplificar o componente removendo toda logica de frete:
 
-**Antes:**
 ```typescript
-codesToExport.forEach((code, index) => {
-  // ...posicao calculada...
-  if (isDisplay) {  // <-- usa flag global do primeiro item
-    svgContent += `<rect .../>`;
-  } else {
-    svgContent += `<circle .../>`;
-  }
-});
+// REMOVER: interface FreteOption e campo frete da CardData
+// ANTES:
+export interface FreteOption { ... }
+export interface CardData {
+  ...
+  cep?: string;
+  frete?: FreteOption | null;
+}
+
+// DEPOIS:
+export interface CardData {
+  holderName: string;
+  number: string;
+  expiryMonth: string;
+  expiryYear: string;
+  cvv: string;
+  brand: string | null;
+}
 ```
 
-**Depois:**
+Remover ~100 linhas de logica de frete (estados, handlers, JSX).
+
+### Arquivo 2: `src/pages/customer/Checkout.tsx`
+
+**CEP com onBlur:**
 ```typescript
-codesToExport.forEach((code, index) => {
-  // ...posicao calculada...
-  const codeIsDisplay = code.type === 'business_display';
-  const codeItemSize = codeIsDisplay ? DISPLAY_SIZE_MM : QR_DIAMETER_MM;
-  if (codeIsDisplay) {
-    const halfSize = codeItemSize / 2;
-    svgContent += `<rect .../>`;
-  } else {
-    svgContent += `<circle .../>`;
-  }
-});
+// Campo CEP: onChange apenas atualiza estado, onBlur faz a busca
+<Input
+  id="zip"
+  value={shippingData.zip}
+  onChange={(e) => setShippingData(prev => ({ ...prev, zip: e.target.value }))}
+  onBlur={() => handleZipBlur(shippingData.zip)}
+  placeholder="00000-000"
+/>
 ```
 
-### Arquivo 2: `src/pages/AdminDashboard.tsx`
+**Frete local exclusivo:**
+```typescript
+const handleZipBlur = async (zip: string) => {
+  const digits = zip.replace(/\D/g, '');
+  if (digits.length !== 8 || digits === lastZipFetched) return;
+  setLastZipFetched(digits);
 
-**Exportacao 1m² (linhas 665-673):**
-- Este path forca todas as marcas como circulos para os 1368 itens (684 QR + 684 logos)
-- Manter circulos para todas as posicoes, pois a exportacao 1m² e exclusiva para Pet Tags
+  // Buscar endereco via ViaCEP
+  const cepData = await fetch(`https://viacep.com.br/ws/${digits}/json/`).then(r => r.json());
+  // ... atualizar campos de endereco ...
 
-**Exportacao por categoria (linhas 760-778):**
-- Mesma correcao do UserSettings: verificar o tipo de cada codigo individualmente em vez de usar `isDisplay` global
+  const city = (cepData.localidade || '').trim().toLowerCase();
+  const state = (cepData.uf || '').trim().toUpperCase();
+
+  // Frete local exclusivo
+  if (state === 'RO' && (city === 'porto velho' || city === 'jaru')) {
+    const local = { service: `Entrega Local - ${cepData.localidade}`, carrier: 'Entrega Local', price: 5.0, delivery_time: 2 };
+    setShippingQuotes([local]);
+    setSelectedShipping(local);
+    return;
+  }
+
+  // Melhor Envio para outros CEPs
+  await fetchShippingQuotesWithAddress(digits, cepData.localidade, cepData.uf);
+};
+```
+
+**Filtrar 3 opcoes:**
+```typescript
+// Dentro de fetchShippingQuotesWithAddress, apos receber quotes:
+const pac = quotes.find(q => /pac/i.test(q.service));
+const sedex = quotes.find(q => /sedex/i.test(q.service));
+const others = quotes.filter(q => q !== pac && q !== sedex);
+const cheapest = others.sort((a, b) => a.price - b.price)[0];
+const filtered = [pac, sedex, cheapest].filter(Boolean);
+setShippingQuotes(filtered);
+setSelectedShipping(filtered[0] || null);
+```
+
+### Nao ha alteracoes necessarias em:
+- Edge Functions (melhor-envio, asaas-payment, process-credit-card-payment)
+- Banco de dados (schema ja tem todos os campos necessarios)
+- OrdersManager.tsx (logistica admin ja funcional)
 
 ### Arquivos Modificados
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/pages/customer/UserSettings.tsx` | Cut marks individuais por tipo de codigo |
-| `src/pages/AdminDashboard.tsx` | Cut marks individuais na exportacao por categoria |
-
-### Sem alteracao no banco de dados
-
-Apenas logica de renderizacao SVG e ajustada.
-
+| `src/components/checkout/CreditCardForm.tsx` | Remover logica de CEP/frete duplicada |
+| `src/pages/customer/Checkout.tsx` | CEP onBlur, frete local exclusivo, filtro 3 opcoes |
