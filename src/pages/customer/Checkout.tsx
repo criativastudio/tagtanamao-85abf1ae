@@ -115,6 +115,7 @@ export default function Checkout() {
   // Shipping quotes
   const [shippingQuotes, setShippingQuotes] = useState<ShippingQuote[]>([]);
   const [selectedShipping, setSelectedShipping] = useState<ShippingQuote | null>(null);
+  const [lastZipFetched, setLastZipFetched] = useState("");
 
   // Coupon
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
@@ -197,33 +198,49 @@ export default function Checkout() {
     }).format(value);
   };
 
-  const handleZipChange = async (zip: string) => {
+  const handleZipInput = (zip: string) => {
     setShippingData((prev) => ({ ...prev, zip }));
+  };
 
-    // Auto-fill address from CEP
-    if (zip.replace(/\D/g, "").length === 8) {
-      try {
-        const response = await fetch(`https://viacep.com.br/ws/${zip.replace(/\D/g, "")}/json/`);
-        const data = await response.json();
+  const handleZipBlur = async () => {
+    const digits = shippingData.zip.replace(/\D/g, "");
+    if (digits.length !== 8 || digits === lastZipFetched) return;
+    setLastZipFetched(digits);
 
-        if (!data.erro) {
-          setShippingData((prev) => ({
-            ...prev,
-            address: data.logradouro || "",
-            neighborhood: data.bairro || "",
-            city: data.localidade || "",
-            state: data.uf || "",
-          }));
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+      const data = await response.json();
 
-          // Fetch shipping quotes
-          // Fetch shipping quotes after state update
-          const updatedCity = data.localidade || "";
-          const updatedState = data.uf || "";
-          fetchShippingQuotesWithAddress(zip.replace(/\D/g, ""), updatedCity, updatedState);
+      if (!data.erro) {
+        setShippingData((prev) => ({
+          ...prev,
+          address: data.logradouro || "",
+          neighborhood: data.bairro || "",
+          city: data.localidade || "",
+          state: data.uf || "",
+        }));
+
+        const city = (data.localidade || "").trim().toLowerCase();
+        const state = (data.uf || "").trim().toUpperCase();
+
+        // Frete local exclusivo para Porto Velho/RO e Jaru/RO
+        if (state === "RO" && (city === "porto velho" || city === "jaru")) {
+          const local: ShippingQuote = {
+            service: `Entrega Local - ${data.localidade}`,
+            carrier: "Entrega Local",
+            price: 5.0,
+            delivery_time: 2,
+          };
+          setShippingQuotes([local]);
+          setSelectedShipping(local);
+          return;
         }
-      } catch (error) {
-        console.error("Error fetching CEP:", error);
+
+        // Melhor Envio para outros CEPs
+        fetchShippingQuotesWithAddress(digits, data.localidade, data.uf);
       }
+    } catch (error) {
+      console.error("Error fetching CEP:", error);
     }
   };
 
@@ -258,7 +275,7 @@ export default function Checkout() {
       if (error) throw error;
 
       if (data?.success && data?.quotes?.length > 0) {
-        const quotes: ShippingQuote[] = data.quotes.map((q: any) => ({
+        const allQuotes: ShippingQuote[] = data.quotes.map((q: any) => ({
           service: q.service,
           carrier: q.carrier,
           price: q.price,
@@ -267,14 +284,14 @@ export default function Checkout() {
           carrierPicture: q.carrierPicture,
         }));
 
-        // Add local delivery options if applicable
-        const normalizedCity = city.trim().toLowerCase();
-        const normalizedState = state.trim().toUpperCase();
-        if (normalizedState === "RO" && normalizedCity === "porto velho") {
-          quotes.unshift({ service: "Entrega Local - Porto Velho", carrier: "Entrega Local", price: 5.0, delivery_time: 2 });
-        } else if (normalizedState === "RO" && normalizedCity === "jaru") {
-          quotes.unshift({ service: "Entrega Local - Jaru", carrier: "Entrega Local", price: 5.0, delivery_time: 2 });
-        }
+        // Filtrar exatamente 3 opções: PAC, SEDEX, mais barata de outra transportadora
+        const pac = allQuotes.find((q) => /pac/i.test(q.service));
+        const sedex = allQuotes.find((q) => /sedex/i.test(q.service));
+        const others = allQuotes.filter((q) => q !== pac && q !== sedex);
+        const cheapestOther = others.sort((a, b) => a.price - b.price)[0];
+        const filtered = [pac, sedex, cheapestOther].filter(Boolean) as ShippingQuote[];
+
+        const quotes = filtered.length > 0 ? filtered : allQuotes.slice(0, 3);
 
         setShippingQuotes(quotes);
         setSelectedShipping(quotes[0]);
@@ -716,7 +733,8 @@ export default function Checkout() {
                         <Input
                           id="zip"
                           value={shippingData.zip}
-                          onChange={(e) => handleZipChange(e.target.value)}
+                          onChange={(e) => handleZipInput(e.target.value)}
+                          onBlur={handleZipBlur}
                           placeholder="00000-000"
                           maxLength={9}
                         />
