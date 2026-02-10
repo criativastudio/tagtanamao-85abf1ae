@@ -6,6 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 interface DashboardAnalyticsProps {
   petTagIds?: string[];
@@ -30,11 +32,28 @@ interface AnalyticsData {
   topLocations: { name: string; count: number }[];
 }
 
+interface ShippingHistoryItem {
+  id: string;
+  order_id: string | null;
+  cep_origem: string | null;
+  cep_destino: string | null;
+  price: number | null;
+  days: number | null;
+  carrier: string | null;
+  service_name: string | null;
+  label_url: string | null;
+  declaration_url: string | null;
+  created_at: string;
+}
+
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
 export default function DashboardAnalytics({ petTagIds = [], displayIds = [], showAll = false }: DashboardAnalyticsProps) {
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [shippingHistory, setShippingHistory] = useState<ShippingHistoryItem[]>([]);
+  const [shippingLoading, setShippingLoading] = useState(false);
 
   useEffect(() => {
     if (showAll || petTagIds.length > 0 || displayIds.length > 0) {
@@ -43,6 +62,12 @@ export default function DashboardAnalytics({ petTagIds = [], displayIds = [], sh
       setLoading(false);
     }
   }, [petTagIds, displayIds, showAll]);
+
+  useEffect(() => {
+    if (showAll) {
+      fetchShippingHistory();
+    }
+  }, [showAll]);
 
   const fetchAnalytics = async () => {
     try {
@@ -112,6 +137,48 @@ export default function DashboardAnalytics({ petTagIds = [], displayIds = [], sh
       console.error('Error fetching analytics:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchShippingHistory = async () => {
+    try {
+      setShippingLoading(true);
+      const { data, error } = await supabase
+        .from('shipping_history')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      setShippingHistory((data || []) as ShippingHistoryItem[]);
+    } catch (error) {
+      console.error('Error fetching shipping history:', error);
+    } finally {
+      setShippingLoading(false);
+    }
+  };
+
+  const runShippingAction = async (action: 'generate_label' | 'generate_declaration', shippingId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('bright-handler', {
+        body: { action, shippingId },
+      });
+
+      if (error || !data?.success) {
+        throw new Error(data?.error || error?.message || 'Falha ao processar ação');
+      }
+
+      toast({
+        title: 'Ação executada',
+        description: action === 'generate_label' ? 'Etiqueta gerada com sucesso.' : 'Declaração gerada com sucesso.',
+      });
+      fetchShippingHistory();
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao processar',
+        description: error.message || 'Tente novamente.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -262,6 +329,73 @@ export default function DashboardAnalytics({ petTagIds = [], displayIds = [], sh
           )}
         </motion.div>
       </div>
+
+      {/* Shipping History - Admin */}
+      {showAll && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-card p-6 rounded-xl"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-foreground">Histórico de Fretes</h3>
+            <Button variant="outline" size="sm" onClick={fetchShippingHistory} disabled={shippingLoading}>
+              Atualizar
+            </Button>
+          </div>
+          {shippingLoading ? (
+            <Skeleton className="h-24 rounded-xl" />
+          ) : shippingHistory.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum frete registrado ainda.</p>
+          ) : (
+            <div className="space-y-3">
+              {shippingHistory.map((item) => (
+                <div key={item.id} className="p-4 rounded-lg border border-border bg-card/50 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Pedido</p>
+                      <p className="font-mono text-sm">#{item.order_id?.slice(0, 8) || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">CEP Origem → Destino</p>
+                      <p className="text-sm">{item.cep_origem || '—'} → {item.cep_destino || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Serviço</p>
+                      <p className="text-sm">{item.carrier || '—'} {item.service_name ? `• ${item.service_name}` : ''}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Valor/Prazo</p>
+                      <p className="text-sm">{item.price != null ? `R$ ${item.price.toFixed(2)}` : '—'} / {item.days != null ? `${item.days} dias` : '—'}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {item.label_url ? (
+                      <a className="text-sm text-primary underline" href={item.label_url} target="_blank" rel="noreferrer">
+                        Ver Etiqueta
+                      </a>
+                    ) : (
+                      <Button size="sm" variant="outline" onClick={() => runShippingAction('generate_label', item.id)}>
+                        Gerar Etiqueta
+                      </Button>
+                    )}
+
+                    {item.declaration_url ? (
+                      <a className="text-sm text-primary underline" href={item.declaration_url} target="_blank" rel="noreferrer">
+                        Ver Declaração
+                      </a>
+                    ) : (
+                      <Button size="sm" variant="outline" onClick={() => runShippingAction('generate_declaration', item.id)}>
+                        Gerar Declaração
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      )}
     </div>
   );
 }
