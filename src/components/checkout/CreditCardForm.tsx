@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { 
   formatCardNumber, 
   formatExpiry, 
@@ -18,13 +17,6 @@ interface CreditCardFormProps {
   disabled?: boolean;
 }
 
-export interface FreteOption {
-  transportadora: string;
-  servico: string;
-  preco: number;
-  prazo_dias: number;
-}
-
 export interface CardData {
   holderName: string;
   number: string;
@@ -32,8 +24,6 @@ export interface CardData {
   expiryYear: string;
   cvv: string;
   brand: string | null;
-  cep?: string;
-  frete?: FreteOption | null;
 }
 
 export default function CreditCardForm({
@@ -46,13 +36,6 @@ export default function CreditCardForm({
   const [expiry, setExpiry] = useState('');
   const [cvv, setCvv] = useState('');
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const [cep, setCep] = useState('');
-  const [fretes, setFretes] = useState<FreteOption[]>([]);
-  const [freteSelecionado, setFreteSelecionado] = useState<FreteOption | null>(null);
-  const [freteLoading, setFreteLoading] = useState(false);
-  const [freteError, setFreteError] = useState<string | null>(null);
-  const [lastCepFetched, setLastCepFetched] = useState('');
-  const [touchedFrete, setTouchedFrete] = useState(false);
   
   const brand = detectCardBrand(cardNumber);
   const cvvLength = getCVVLength(brand);
@@ -62,10 +45,8 @@ export default function CreditCardForm({
   const isExpiryValid = validateExpiry(expiryMonth, expiryYear);
   const isCvvValid = cvv.replace(/\D/g, '').length === cvvLength;
   const isHolderNameValid = holderName.trim().length >= 3;
-  const cepDigits = cep.replace(/\D/g, '');
-  const isCepValid = cepDigits.length === 8;
   
-  const isFormValid = isCardNumberValid && isExpiryValid && isCvvValid && isHolderNameValid && !!freteSelecionado;
+  const isFormValid = isCardNumberValid && isExpiryValid && isCvvValid && isHolderNameValid;
 
   useEffect(() => {
     onValidChange(isFormValid);
@@ -76,10 +57,8 @@ export default function CreditCardForm({
       expiryYear: expiryYear || '',
       cvv: cvv.replace(/\D/g, ''),
       brand,
-      cep: cepDigits,
-      frete: freteSelecionado,
     });
-  }, [holderName, cardNumber, expiry, cvv, brand, isFormValid, onCardDataChange, onValidChange, cepDigits, freteSelecionado]);
+  }, [holderName, cardNumber, expiry, cvv, brand, isFormValid, onCardDataChange, onValidChange]);
 
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCardNumber(formatCardNumber(e.target.value));
@@ -96,55 +75,6 @@ export default function CreditCardForm({
 
   const handleBlur = (field: string) => {
     setTouched(prev => ({ ...prev, [field]: true }));
-  };
-
-  const buildFreteOptions = (all: FreteOption[]) => {
-    const pac = all.find(f => /pac/i.test(f.servico));
-    const sedex = all.find(f => /sedex/i.test(f.servico));
-    const others = all.filter(f => f !== pac && f !== sedex);
-    const cheapestOther = others.sort((a, b) => a.preco - b.preco)[0];
-    return [pac, sedex, cheapestOther].filter(Boolean) as FreteOption[];
-  };
-
-  const handleCepBlur = async () => {
-    setTouched(prev => ({ ...prev, cep: true }));
-    setTouchedFrete(true);
-    const sanitized = cep.replace(/\D/g, '');
-    if (sanitized.length !== 8) {
-      setFreteError('CEP inválido');
-      setFretes([]);
-      setFreteSelecionado(null);
-      return;
-    }
-    if (sanitized === lastCepFetched) return;
-
-    setFreteLoading(true);
-    setFreteError(null);
-    setLastCepFetched(sanitized);
-    setFretes([]);
-    setFreteSelecionado(null);
-
-    try {
-      const baseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const response = await fetch(`${baseUrl}/functions/v1/calcular-frete`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ cepDestino: sanitized }),
-      });
-      const data = await response.json();
-      if (!data?.success || !Array.isArray(data.fretes)) {
-        throw new Error('Resposta inválida');
-      }
-      const options = buildFreteOptions(data.fretes);
-      setFretes(options);
-    } catch (error) {
-      setFreteError('Não foi possível calcular o frete');
-      setFretes([]);
-    } finally {
-      setFreteLoading(false);
-    }
   };
 
   const getBrandIcon = () => {
@@ -280,75 +210,6 @@ export default function CreditCardForm({
             <Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           </div>
         </div>
-      </div>
-
-      {/* CEP */}
-      <div className="space-y-2">
-        <Label htmlFor="cep">CEP *</Label>
-        <Input
-          id="cep"
-          type="text"
-          inputMode="numeric"
-          value={cep}
-          onChange={(e) => setCep(e.target.value)}
-          onBlur={handleCepBlur}
-          placeholder="00000-000"
-          disabled={disabled}
-          className={
-            touched.cep && !isCepValid
-              ? 'border-destructive'
-              : touched.cep && isCepValid
-              ? 'border-green-500'
-              : ''
-          }
-        />
-        {touched.cep && !isCepValid && (
-          <p className="text-sm text-destructive">CEP inválido</p>
-        )}
-        {freteError && (
-          <p className="text-sm text-destructive">{freteError}</p>
-        )}
-      </div>
-
-      {/* Frete */}
-      <div className="space-y-2">
-        <Label>Opções de frete *</Label>
-        {freteLoading && (
-          <p className="text-sm text-muted-foreground">Calculando frete...</p>
-        )}
-        {!freteLoading && fretes.length > 0 && (
-          <RadioGroup
-            value={freteSelecionado ? `${freteSelecionado.transportadora}-${freteSelecionado.servico}` : ''}
-            onValueChange={(value) => {
-              const selected = fretes.find(
-                (f) => `${f.transportadora}-${f.servico}` === value
-              ) || null;
-              setFreteSelecionado(selected);
-              setTouchedFrete(true);
-            }}
-            className="space-y-2"
-          >
-            {fretes.map((frete) => {
-              const value = `${frete.transportadora}-${frete.servico}`;
-              return (
-                <label key={value} className="flex items-center gap-3 rounded-md border border-border p-3">
-                  <RadioGroupItem value={value} id={value} />
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium">
-                      {frete.transportadora} {frete.servico}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      R$ {frete.preco.toFixed(2)} • {frete.prazo_dias} dias
-                    </span>
-                  </div>
-                </label>
-              );
-            })}
-          </RadioGroup>
-        )}
-        {touchedFrete && !freteSelecionado && fretes.length > 0 && (
-          <p className="text-sm text-destructive">Selecione um frete para continuar</p>
-        )}
       </div>
 
       {/* Security notice */}
