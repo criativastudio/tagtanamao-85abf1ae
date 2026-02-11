@@ -19,6 +19,8 @@ const buttonVariants = cva(
         heroOutline: "border-2 border-primary bg-transparent text-primary hover:bg-primary/10 hover:shadow-[0_0_30px_hsl(var(--primary)/0.3)]",
         glass: "bg-card/50 backdrop-blur-xl border border-border/50 text-foreground hover:bg-card/70 hover:border-primary/30",
         glow: "bg-primary text-primary-foreground shadow-[0_0_20px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_40px_hsl(var(--primary)/0.6)]",
+        select:
+          "border border-border bg-transparent text-foreground hover:bg-secondary data-[selected=true]:bg-primary data-[selected=true]:text-primary-foreground data-[selected=true]:border-primary/50",
       },
       size: {
         default: "h-10 px-4 py-2",
