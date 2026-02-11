@@ -46,16 +46,18 @@ export const LocationShareDialog = ({
     setError(null);
   };
 
-  const sendNotification = async (latitude?: number, longitude?: number) => {
-    const digits = finderPhone.replace(/\D/g, "");
-    
+  const sendNotification = async (
+    finderPhoneDigits: string,
+    latitude?: number,
+    longitude?: number
+  ) => {
     try {
       const { data, error: fnError } = await supabase.functions.invoke("send-pet-location-whatsapp", {
         body: {
           petTagId,
           petName,
           ownerWhatsapp,
-          finderPhone: digits,
+          finderPhone: finderPhoneDigits,
           latitude: latitude ?? null,
           longitude: longitude ?? null,
         },
@@ -97,13 +99,13 @@ export const LocationShareDialog = ({
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         // Location granted - send with coordinates
-        await sendNotification(position.coords.latitude, position.coords.longitude);
+        await sendNotification(digits, position.coords.latitude, position.coords.longitude);
       },
       async (geoError) => {
         console.error("Geolocation error:", geoError);
         // Location denied or failed - automatically continue sending without location
         setLocationDenied(true);
-        await sendNotification(); // Send without location, don't interrupt flow
+        await sendNotification(digits); // Send without location, don't interrupt flow
       },
       {
         enableHighAccuracy: false,
