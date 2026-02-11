@@ -1,9 +1,8 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Check, Loader2, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { ShoppingCart, Check, Loader2 } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -15,7 +14,6 @@ const Products = () => {
   const { addToCart, getCartCount } = useCart();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [lightboxData, setLightboxData] = useState<{ images: string[]; index: number; name: string } | null>(null);
 
   const { data: products, isLoading } = useQuery({
     queryKey: ["landing-products"],
@@ -120,23 +118,12 @@ const Products = () => {
                   <div className="relative z-10 flex flex-col h-full">
                     {/* Product Image */}
                     {product.image_url && (
-                      <div
-                        className="w-40 h-40 mb-4 mx-auto cursor-pointer transition-transform hover:scale-105"
-                        onClick={() => {
-                          const allImages = [product.image_url!, ...(product.gallery_images || [])];
-                          setLightboxData({ images: allImages, index: 0, name: product.name });
-                        }}
-                      >
+                      <div className="w-50 h-50 mb-4 mx-auto">
                         <img
                           src={product.image_url}
                           alt={product.name}
-                          className="w-full h-full object-cover drop-shadow-[0_0_200px_hsl(var(--primary)/0.4)]"
+                          className="w-full h-full object-cover drop-shadow-[0_0_20px_hsl(var(--primary)/0.4)]"
                         />
-                        {product.gallery_images && product.gallery_images.length > 0 && (
-                          <p className="text-xs text-muted-foreground text-center mt-1">
-                            +{product.gallery_images.length} fotos
-                          </p>
-                        )}
                       </div>
                     )}
 
@@ -210,66 +197,6 @@ const Products = () => {
           </div>
         </motion.div>
       </div>
-      {/* Lightbox */}
-      <AnimatePresence>
-        {lightboxData && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
-            onClick={() => setLightboxData(null)}
-          >
-            <button
-              onClick={(e) => { e.stopPropagation(); setLightboxData(null); }}
-              className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10"
-            >
-              <X className="w-6 h-6 text-white" />
-            </button>
-
-            {lightboxData.images.length > 1 && (
-              <>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setLightboxData(prev => prev ? { ...prev, index: (prev.index - 1 + prev.images.length) % prev.images.length } : null); }}
-                  className="absolute left-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10"
-                >
-                  <ChevronLeft className="w-6 h-6 text-white" />
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setLightboxData(prev => prev ? { ...prev, index: (prev.index + 1) % prev.images.length } : null); }}
-                  className="absolute right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10"
-                >
-                  <ChevronRight className="w-6 h-6 text-white" />
-                </button>
-              </>
-            )}
-
-            <motion.img
-              key={lightboxData.index}
-              src={lightboxData.images[lightboxData.index]}
-              alt={lightboxData.name}
-              className="max-w-full max-h-[85vh] rounded-xl object-contain"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              onClick={(e) => e.stopPropagation()}
-            />
-
-            {lightboxData.images.length > 1 && (
-              <div className="absolute bottom-6 flex gap-2">
-                {lightboxData.images.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={(e) => { e.stopPropagation(); setLightboxData(prev => prev ? { ...prev, index: i } : null); }}
-                    className={`w-2.5 h-2.5 rounded-full transition-colors ${i === lightboxData.index ? 'bg-white' : 'bg-white/40'}`}
-                  />
-                ))}
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
     </section>
   );
 };
