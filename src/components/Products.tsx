@@ -122,7 +122,7 @@ const Products = () => {
                         <img
                           src={product.image_url}
                           alt={product.name}
-                          className="w-full h-full object-cover drop-shadow-[0_0_20px_hsl(var(--primary)/0.4)]"
+                          className="w-full h-full object-cover drop-shadow-[0_0_200px_hsl(var(--primary)/0.4)]"
                         />
                       </div>
                     )}
