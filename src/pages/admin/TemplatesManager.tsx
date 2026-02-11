@@ -1,59 +1,28 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import {
-  ArrowLeft,
-  Plus,
-  Edit,
-  Trash2,
-  Upload,
-  Eye,
-  Palette,
-  Code,
-  Image,
-  Type,
-  Save
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { ArtTemplate, EditableField, ElementPositions } from '@/types/ecommerce';
-import { Json } from '@/integrations/supabase/types';
-import { prepareSvgForDisplay } from '@/lib/sanitize';
-import TemplatePositionControls from '@/components/admin/TemplatePositionControls';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { ArrowLeft, Plus, Edit, Trash2, Upload, Eye, Palette, Code, Image, Type, Save } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { ArtTemplate, EditableField, ElementPositions } from "@/types/ecommerce";
+import { Json } from "@/integrations/supabase/types";
+import { prepareSvgForDisplay } from "@/lib/sanitize";
+import TemplatePositionControls from "@/components/admin/TemplatePositionControls";
 
 export default function TemplatesManager() {
   const { profile, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   const [templates, setTemplates] = useState<ArtTemplate[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [showEditor, setShowEditor] = useState(false);
@@ -63,19 +32,20 @@ export default function TemplatesManager() {
 
   // Form state
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    product_type: 'display',
-    svg_content: '',
+    name: "",
+    description: "",
+    product_type: "display",
+    svg_content: "",
     is_active: true,
   });
   const [editableFields, setEditableFields] = useState<EditableField[]>([]);
   const [elementPositions, setElementPositions] = useState<ElementPositions>({});
+
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && profile && !profile.is_admin) {
-      navigate('/dashboard');
+      navigate("/dashboard");
     }
   }, [profile, loading, navigate]);
 
@@ -85,27 +55,24 @@ export default function TemplatesManager() {
 
   const fetchTemplates = async () => {
     setLoadingTemplates(true);
-    
-    const { data, error } = await supabase
-      .from('art_templates')
-      .select('*')
-      .order('created_at', { ascending: false });
+
+    const { data, error } = await supabase.from("art_templates").select("*").order("created_at", { ascending: false });
 
     if (error) {
       toast({
-        title: 'Erro ao carregar templates',
+        title: "Erro ao carregar templates",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } else {
-      const mappedTemplates = (data || []).map(t => ({
+      const mappedTemplates = (data || []).map((t) => ({
         ...t,
         editable_fields: (Array.isArray(t.editable_fields) ? t.editable_fields : []) as unknown as EditableField[],
-        element_positions: (t.element_positions || null) as any
+        element_positions: (t.element_positions || null) as any,
       }));
       setTemplates(mappedTemplates);
     }
-    
+
     setLoadingTemplates(false);
   };
 
@@ -114,7 +81,7 @@ export default function TemplatesManager() {
       setEditingTemplate(template);
       setFormData({
         name: template.name,
-        description: template.description || '',
+        description: template.description || "",
         product_type: template.product_type,
         svg_content: template.svg_content,
         is_active: template.is_active ?? true,
@@ -125,10 +92,10 @@ export default function TemplatesManager() {
     } else {
       setEditingTemplate(null);
       setFormData({
-        name: '',
-        description: '',
-        product_type: 'display',
-        svg_content: '',
+        name: "",
+        description: "",
+        product_type: "display",
+        svg_content: "",
         is_active: true,
       });
       setEditableFields([]);
@@ -141,20 +108,21 @@ export default function TemplatesManager() {
   const handleSaveTemplate = async () => {
     if (!formData.name || !formData.svg_content) {
       toast({
-        title: 'Campos obrigatórios',
-        description: 'Nome e conteúdo SVG são obrigatórios.',
-        variant: 'destructive',
+        title: "Campos obrigatórios",
+        description: "Nome e conteúdo SVG são obrigatórios.",
+        variant: "destructive",
       });
       return;
     }
 
+    const safeElementPositions = elementPositions ?? {};
     const templateData = {
       name: formData.name,
       description: formData.description || null,
       product_type: formData.product_type,
       svg_content: formData.svg_content,
       editable_fields: editableFields as unknown as Json,
-      element_positions: elementPositions as unknown as Json,
+      element_positions: safeElementPositions as unknown as Json,
       is_active: formData.is_active,
       preview_url: previewUrl,
     };
@@ -162,28 +130,23 @@ export default function TemplatesManager() {
     let error;
 
     if (editingTemplate) {
-      const result = await supabase
-        .from('art_templates')
-        .update(templateData)
-        .eq('id', editingTemplate.id);
+      const result = await supabase.from("art_templates").update(templateData).eq("id", editingTemplate.id);
       error = result.error;
     } else {
-      const result = await supabase
-        .from('art_templates')
-        .insert(templateData);
+      const result = await supabase.from("art_templates").insert(templateData);
       error = result.error;
     }
 
     if (error) {
       toast({
-        title: 'Erro ao salvar',
+        title: "Erro ao salvar",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } else {
       toast({
-        title: editingTemplate ? 'Template atualizado' : 'Template criado',
-        description: 'As alterações foram salvas com sucesso.',
+        title: editingTemplate ? "Template atualizado" : "Template criado",
+        description: "As alterações foram salvas com sucesso.",
       });
       setShowEditor(false);
       fetchTemplates();
@@ -191,23 +154,20 @@ export default function TemplatesManager() {
   };
 
   const handleDeleteTemplate = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este template?')) return;
+    if (!confirm("Tem certeza que deseja excluir este template?")) return;
 
-    const { error } = await supabase
-      .from('art_templates')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabase.from("art_templates").delete().eq("id", id);
 
     if (error) {
       toast({
-        title: 'Erro ao excluir',
+        title: "Erro ao excluir",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } else {
       toast({
-        title: 'Template excluído',
-        description: 'O template foi removido com sucesso.',
+        title: "Template excluído",
+        description: "O template foi removido com sucesso.",
       });
       fetchTemplates();
     }
@@ -217,14 +177,14 @@ export default function TemplatesManager() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const isSvg = file.name.toLowerCase().endsWith('.svg') || file.type === 'image/svg+xml';
-    const isImage = file.type === 'image/jpeg' || file.type === 'image/png';
+    const isSvg = file.name.toLowerCase().endsWith(".svg") || file.type === "image/svg+xml";
+    const isImage = file.type === "image/jpeg" || file.type === "image/png";
 
     if (!isSvg && !isImage) {
       toast({
-        title: 'Arquivo inválido',
-        description: 'Por favor, selecione um arquivo SVG, JPG ou PNG.',
-        variant: 'destructive',
+        title: "Arquivo inválido",
+        description: "Por favor, selecione um arquivo SVG, JPG ou PNG.",
+        variant: "destructive",
       });
       return;
     }
@@ -233,101 +193,97 @@ export default function TemplatesManager() {
       const reader = new FileReader();
       reader.onload = (event) => {
         const content = event.target?.result as string;
-        setFormData(prev => ({ ...prev, svg_content: content }));
+        setFormData((prev) => ({ ...prev, svg_content: content }));
         parseSVGForEditableFields(content);
       };
       reader.readAsText(file);
     } else {
       // Upload JPG/PNG to storage
       const fileName = `template-arts/${Date.now()}-${file.name}`;
-      const { error } = await supabase.storage
-        .from('bio-images')
-        .upload(fileName, file);
+      const { error } = await supabase.storage.from("bio-images").upload(fileName, file);
 
       if (error) {
         toast({
-          title: 'Erro no upload',
+          title: "Erro no upload",
           description: error.message,
-          variant: 'destructive',
+          variant: "destructive",
         });
         return;
       }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('bio-images')
-        .getPublicUrl(fileName);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("bio-images").getPublicUrl(fileName);
 
       // Generate SVG wrapper for compatibility
       const svgWrapper = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800"><image href="${publicUrl}" width="800" height="800" preserveAspectRatio="xMidYMid meet"/></svg>`;
-      
-      setFormData(prev => ({ ...prev, svg_content: svgWrapper }));
+
+      setFormData((prev) => ({ ...prev, svg_content: svgWrapper }));
       setPreviewUrl(publicUrl);
       setEditableFields([]);
-      
-      toast({ title: 'Arte carregada com sucesso' });
+
+      toast({ title: "Arte carregada com sucesso" });
     }
   };
 
   const parseSVGForEditableFields = (svgContent: string) => {
     const parser = new DOMParser();
-    const doc = parser.parseFromString(svgContent, 'image/svg+xml');
-    
+    const doc = parser.parseFromString(svgContent, "image/svg+xml");
+
     const fields: EditableField[] = [];
-    
+
     // Find text elements with data-editable attribute
-    const textElements = doc.querySelectorAll('text[data-editable], tspan[data-editable]');
+    const textElements = doc.querySelectorAll("text[data-editable], tspan[data-editable]");
     textElements.forEach((el, index) => {
-      const id = el.getAttribute('data-editable') || `text-${index}`;
+      const id = el.getAttribute("data-editable") || `text-${index}`;
       fields.push({
         id,
-        name: el.getAttribute('data-label') || `Texto ${index + 1}`,
-        type: 'text',
-        placeholder: el.textContent || '',
-        defaultValue: el.textContent || '',
+        name: el.getAttribute("data-label") || `Texto ${index + 1}`,
+        type: "text",
+        placeholder: el.textContent || "",
+        defaultValue: el.textContent || "",
       });
     });
-    
+
     // Find image elements with data-editable attribute
-    const imageElements = doc.querySelectorAll('image[data-editable], rect[data-editable-image]');
+    const imageElements = doc.querySelectorAll("image[data-editable], rect[data-editable-image]");
     imageElements.forEach((el, index) => {
-      const id = el.getAttribute('data-editable') || el.getAttribute('data-editable-image') || `image-${index}`;
+      const id = el.getAttribute("data-editable") || el.getAttribute("data-editable-image") || `image-${index}`;
       fields.push({
         id,
-        name: el.getAttribute('data-label') || `Imagem ${index + 1}`,
-        type: 'image',
-        placeholder: 'Fazer upload de imagem',
+        name: el.getAttribute("data-label") || `Imagem ${index + 1}`,
+        type: "image",
+        placeholder: "Fazer upload de imagem",
       });
     });
-    
+
     if (fields.length > 0) {
       setEditableFields(fields);
       toast({
-        title: 'Campos detectados',
+        title: "Campos detectados",
         description: `${fields.length} campo(s) editável(is) encontrado(s) no SVG.`,
       });
     }
   };
 
   const addEditableField = () => {
-    setEditableFields(prev => [
+    setEditableFields((prev) => [
       ...prev,
       {
         id: `field-${Date.now()}`,
-        name: 'Novo Campo',
-        type: 'text',
-        placeholder: '',
+        name: "Novo Campo",
+        type: "text",
+        placeholder: "",
       },
     ]);
   };
 
   const updateEditableField = (index: number, updates: Partial<EditableField>) => {
-    setEditableFields(prev => prev.map((field, i) => 
-      i === index ? { ...field, ...updates } : field
-    ));
+    setEditableFields((prev) => prev.map((field, i) => (i === index ? { ...field, ...updates } : field)));
   };
 
   const removeEditableField = (index: number) => {
-    setEditableFields(prev => prev.filter((_, i) => i !== index));
+    setEditableFields((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handlePreviewUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -335,23 +291,21 @@ export default function TemplatesManager() {
     if (!file) return;
 
     const fileName = `template-previews/${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage
-      .from('bio-images')
-      .upload(fileName, file);
+    const { error } = await supabase.storage.from("bio-images").upload(fileName, file);
 
     if (error) {
       toast({
-        title: 'Erro no upload',
+        title: "Erro no upload",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } else {
-      const { data: { publicUrl } } = supabase.storage
-        .from('bio-images')
-        .getPublicUrl(fileName);
-      
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("bio-images").getPublicUrl(fileName);
+
       setPreviewUrl(publicUrl);
-      toast({ title: 'Preview atualizado' });
+      toast({ title: "Preview atualizado" });
     }
   };
 
@@ -369,7 +323,7 @@ export default function TemplatesManager() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/admin')}>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/admin")}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
@@ -392,9 +346,7 @@ export default function TemplatesManager() {
           <div className="text-center py-20">
             <Palette className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
             <h2 className="text-xl font-semibold text-foreground mb-2">Nenhum template</h2>
-            <p className="text-muted-foreground mb-6">
-              Crie seu primeiro modelo de arte para os displays.
-            </p>
+            <p className="text-muted-foreground mb-6">Crie seu primeiro modelo de arte para os displays.</p>
             <Button onClick={() => handleOpenEditor()}>
               <Plus className="w-4 h-4 mr-2" />
               Criar Template
@@ -414,15 +366,12 @@ export default function TemplatesManager() {
                     <div className="flex items-start justify-between">
                       <div>
                         <CardTitle className="text-lg">{template.name}</CardTitle>
-                        <CardDescription>{template.description || 'Sem descrição'}</CardDescription>
+                        <CardDescription>{template.description || "Sem descrição"}</CardDescription>
                       </div>
                       <Switch
                         checked={template.is_active ?? true}
                         onCheckedChange={async (checked) => {
-                          await supabase
-                            .from('art_templates')
-                            .update({ is_active: checked })
-                            .eq('id', template.id);
+                          await supabase.from("art_templates").update({ is_active: checked }).eq("id", template.id);
                           fetchTemplates();
                         }}
                       />
@@ -436,17 +385,15 @@ export default function TemplatesManager() {
                         className="w-full h-40 object-cover rounded-lg bg-muted"
                       />
                     ) : (
-                      <div 
+                      <div
                         className="w-full h-40 rounded-lg bg-muted flex items-center justify-center"
-                        dangerouslySetInnerHTML={{ 
-                          __html: prepareSvgForDisplay(template.svg_content)
+                        dangerouslySetInnerHTML={{
+                          __html: prepareSvgForDisplay(template.svg_content),
                         }}
                       />
                     )}
                     <div className="flex items-center gap-2 mt-4">
-                      <span className="text-xs bg-muted px-2 py-1 rounded">
-                        {template.product_type}
-                      </span>
+                      <span className="text-xs bg-muted px-2 py-1 rounded">{template.product_type}</span>
                       <span className="text-xs bg-muted px-2 py-1 rounded">
                         {template.editable_fields?.length || 0} campos
                       </span>
@@ -465,20 +412,11 @@ export default function TemplatesManager() {
                       <Eye className="w-4 h-4 mr-1" />
                       Ver
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => handleOpenEditor(template)}
-                    >
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => handleOpenEditor(template)}>
                       <Edit className="w-4 h-4 mr-1" />
                       Editar
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteTemplate(template.id)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteTemplate(template.id)}>
                       <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
                   </CardFooter>
@@ -492,9 +430,7 @@ export default function TemplatesManager() {
         <Dialog open={showEditor} onOpenChange={setShowEditor}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>
-                {editingTemplate ? 'Editar Template' : 'Novo Template'}
-              </DialogTitle>
+              <DialogTitle>{editingTemplate ? "Editar Template" : "Novo Template"}</DialogTitle>
             </DialogHeader>
 
             <div className="space-y-6">
@@ -505,7 +441,7 @@ export default function TemplatesManager() {
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                     placeholder="Ex: Cardápio Premium"
                   />
                 </div>
@@ -513,7 +449,7 @@ export default function TemplatesManager() {
                   <Label htmlFor="product_type">Tipo de Produto</Label>
                   <Select
                     value={formData.product_type}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, product_type: value }))}
+                    onValueChange={(value) => setFormData((prev) => ({ ...prev, product_type: value }))}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -531,7 +467,7 @@ export default function TemplatesManager() {
                 <Textarea
                   id="description"
                   value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                   placeholder="Descrição do template..."
                   rows={2}
                 />
@@ -545,24 +481,14 @@ export default function TemplatesManager() {
                     <label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors">
                       <Upload className="w-5 h-5" />
                       <span>Upload Arte (SVG, JPG, PNG)</span>
-                      <input
-                        type="file"
-                        accept=".svg,.jpg,.jpeg,.png"
-                        onChange={handleArtUpload}
-                        className="hidden"
-                      />
+                      <input type="file" accept=".svg,.jpg,.jpeg,.png" onChange={handleArtUpload} className="hidden" />
                     </label>
                   </div>
                   <div className="flex-1">
                     <label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors">
                       <Image className="w-5 h-5" />
                       <span>Upload Preview</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handlePreviewUpload}
-                        className="hidden"
-                      />
+                      <input type="file" accept="image/*" onChange={handlePreviewUpload} className="hidden" />
                     </label>
                   </div>
                 </div>
@@ -572,17 +498,17 @@ export default function TemplatesManager() {
                       <Code className="w-4 h-4" />
                       <span className="text-sm font-medium">Arte Carregada</span>
                     </div>
-                    {formData.svg_content.includes('<image href=') && previewUrl ? (
-                      <img 
-                        src={previewUrl} 
+                    {formData.svg_content.includes("<image href=") && previewUrl ? (
+                      <img
+                        src={previewUrl}
                         alt="Preview da arte"
                         className="w-full h-48 object-contain bg-background rounded"
                       />
                     ) : (
-                      <div 
+                      <div
                         className="w-full h-48 flex items-center justify-center bg-background rounded"
-                        dangerouslySetInnerHTML={{ 
-                          __html: prepareSvgForDisplay(formData.svg_content, 'auto', '100%')
+                        dangerouslySetInnerHTML={{
+                          __html: prepareSvgForDisplay(formData.svg_content, "auto", "100%"),
                         }}
                       />
                     )}
@@ -591,11 +517,8 @@ export default function TemplatesManager() {
               </div>
 
               {/* Element Positions (for display templates) */}
-              {(formData.product_type === 'display' || formData.product_type === 'business_display') && (
-                <TemplatePositionControls
-                  positions={elementPositions}
-                  onChange={setElementPositions}
-                />
+              {(formData.product_type === "display" || formData.product_type === "business_display") && (
+                <TemplatePositionControls positions={elementPositions} onChange={setElementPositions} />
               )}
 
               {/* Editable Fields */}
@@ -607,9 +530,11 @@ export default function TemplatesManager() {
                     Adicionar Campo
                   </Button>
                 </div>
-                
+
                 <p className="text-sm text-muted-foreground">
-                  Dica: Adicione atributos <code className="bg-muted px-1 rounded">data-editable="id"</code> e <code className="bg-muted px-1 rounded">data-label="Nome"</code> aos elementos do SVG para detecção automática.
+                  Dica: Adicione atributos <code className="bg-muted px-1 rounded">data-editable="id"</code> e{" "}
+                  <code className="bg-muted px-1 rounded">data-label="Nome"</code> aos elementos do SVG para detecção
+                  automática.
                 </p>
 
                 <div className="space-y-3">
@@ -623,7 +548,7 @@ export default function TemplatesManager() {
                       />
                       <Select
                         value={field.type}
-                        onValueChange={(value: 'text' | 'image' | 'color') => 
+                        onValueChange={(value: "text" | "image" | "color") =>
                           updateEditableField(index, { type: value })
                         }
                       >
@@ -654,11 +579,7 @@ export default function TemplatesManager() {
                         placeholder="ID no SVG"
                         className="w-32"
                       />
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => removeEditableField(index)}
-                      >
+                      <Button size="icon" variant="ghost" onClick={() => removeEditableField(index)}>
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
                     </div>
@@ -672,7 +593,7 @@ export default function TemplatesManager() {
                 <Switch
                   id="is_active"
                   checked={formData.is_active}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
+                  onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, is_active: checked }))}
                 />
               </div>
             </div>
@@ -696,10 +617,10 @@ export default function TemplatesManager() {
               <DialogTitle>{previewTemplate?.name}</DialogTitle>
             </DialogHeader>
             {previewTemplate && (
-              <div 
+              <div
                 className="w-full aspect-square flex items-center justify-center bg-muted rounded-lg p-4"
-                dangerouslySetInnerHTML={{ 
-                  __html: prepareSvgForDisplay(previewTemplate.svg_content)
+                dangerouslySetInnerHTML={{
+                  __html: prepareSvgForDisplay(previewTemplate.svg_content),
                 }}
               />
             )}
