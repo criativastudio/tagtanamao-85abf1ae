@@ -1,38 +1,49 @@
 
 
-# Ajuste de Upload de Templates - Aceitar JPG e PNG
+# Galeria de Fotos e Imagem Maior nos Produtos
 
 ## Resumo
-Modificar o upload de arte no Templates Manager para aceitar arquivos JPG e PNG alem de SVG. Quando o usuario enviar uma imagem (JPG/PNG), o arquivo sera enviado ao storage e a URL publica sera armazenada como `preview_url` e tambem no campo `svg_content` (como tag `<img>` embutida em SVG wrapper). Isso permite que templates baseados em imagem funcionem no fluxo existente.
+Ampliar a area de imagem de capa do produto no admin e adicionar suporte para multiplas fotos (galeria) por produto. A imagem principal ficara maior no editor e na listagem, e o admin podera adicionar ate 5 fotos adicionais por produto.
 
-## Alteracoes em `src/pages/admin/TemplatesManager.tsx`
+## Alteracoes no Banco de Dados
 
-### 1. Funcao `handleSVGUpload` (linhas 210-232)
-Renomear para `handleArtUpload` e expandir a logica:
-- Alterar o `accept` do input de `.svg` para `.svg,.jpg,.jpeg,.png,image/svg+xml,image/jpeg,image/png`
-- Se o arquivo for SVG: manter comportamento atual (ler como texto, parsear campos editaveis)
-- Se o arquivo for JPG/PNG:
-  - Fazer upload para o bucket `bio-images` no path `template-arts/{timestamp}-{nome}`
-  - Obter a URL publica
-  - Gerar um SVG wrapper: `<svg xmlns="..." viewBox="0 0 800 800"><image href="{url}" width="800" height="800"/></svg>`
-  - Salvar esse SVG wrapper no `svg_content` para compatibilidade
-  - Tambem definir o `previewUrl` com a URL da imagem
+### Migracao: Adicionar coluna `gallery_images` na tabela `products`
+- Adicionar coluna `gallery_images text[] default '{}'` na tabela `products`
+- Array de URLs de imagens adicionais do produto
+- Nenhuma alteracao em RLS necessaria (politicas existentes ja cobrem a tabela)
 
-### 2. Input de upload (linhas 506-517)
-- Alterar `accept=".svg"` para `accept=".svg,.jpg,.jpeg,.png"`
-- Alterar label de "Upload SVG" para "Upload Arte"
+## Alteracoes no Codigo
 
-### 3. Validacao no `handleSaveTemplate` (linhas 136-144)
-- Manter a validacao de `svg_content` obrigatorio (sera preenchido automaticamente para imagens)
+### 1. Tipo `Product` em `src/types/ecommerce.ts`
+- Adicionar campo `gallery_images: string[] | null` ao interface `Product`
 
-### 4. Preview do arquivo carregado (linhas 532-545)
-- Adicionar condicao: se o `svg_content` contem `<image href=`, mostrar como `<img>` ao inves de `dangerouslySetInnerHTML`
-- Caso contrario, manter o comportamento SVG atual
+### 2. Admin `ProductsManager.tsx` - Editor de Produto
+**Imagem de capa maior:**
+- Aumentar preview da imagem principal de `h-32` para `h-48` no editor
+- Aumentar exibicao no card de `h-40` para `h-56`
+
+**Galeria de fotos adicionais:**
+- Adicionar state `galleryImages: string[]` ao formulario
+- Criar secao "Fotos Adicionais" abaixo da imagem principal com grid de thumbnails
+- Botao de upload para adicionar fotos (maximo 5)
+- Botao X para remover cada foto da galeria
+- Salvar array no campo `gallery_images` ao salvar produto
+- Carregar `gallery_images` ao editar produto existente
+
+### 3. Landing Page `Products.tsx` - Lightbox com Galeria
+- No lightbox existente, incluir as `gallery_images` do produto junto com a imagem principal
+- Adicionar navegacao (setas esquerda/direita) para percorrer as fotos no lightbox
+- Indicador de posicao (dots) abaixo da imagem
+
+### 4. Loja `Shop.tsx` - Exibicao na Loja
+- Se o produto tiver galeria, mostrar indicador de "mais fotos" no card
+- Ao clicar na imagem, abrir lightbox com todas as fotos
 
 ## Detalhes Tecnicos
 
-- O upload de JPG/PNG usara `supabase.storage.from('bio-images').upload()` seguindo o mesmo padrao ja usado no `handlePreviewUpload` (linha 296)
-- O SVG wrapper gerado garante compatibilidade com o fluxo de renderizacao existente (ArtCustomizer e previews)
-- Nenhuma migracao de banco necessaria - os campos `svg_content` e `preview_url` ja existem como `text`
-- A compressao de imagem existente (`imageCompression.ts`) nao sera aplicada aqui pois templates de arte precisam manter qualidade maxima
+- Upload de galeria usa o mesmo bucket `bio-images` com path `product-images/gallery/{timestamp}-{nome}`
+- O dialog do editor sera expandido para `max-w-2xl` para acomodar a galeria
+- As gallery_images serao carregadas no `handleOpenEditor` e salvas no `handleSaveProduct`
+- Lightbox com `framer-motion` AnimatePresence para transicoes suaves entre fotos
+- Thumbnails no grid com `w-20 h-20 object-cover rounded-lg`
 
