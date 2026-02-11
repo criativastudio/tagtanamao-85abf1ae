@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { sanitizeSvg } from '@/lib/sanitize';
+import { ElementPositions } from '@/types/ecommerce';
 
 interface DisplayArtData {
   id: string;
@@ -28,6 +29,7 @@ interface DisplayArtData {
     preview_url: string | null;
     svg_content: string;
     product_type: string;
+    element_positions: ElementPositions | null;
   };
 }
 
@@ -38,6 +40,102 @@ interface ArtTemplate {
   preview_url: string | null;
   svg_content: string;
   product_type: string;
+  element_positions: ElementPositions | null;
+}
+
+/**
+ * Build an SVG preview with logo and company name rendered as overlay elements
+ * using the position metadata from the template.
+ */
+function buildPreviewSvg(
+  svgContent: string,
+  positions: ElementPositions | null,
+  logoUrl: string | null,
+  companyName: string
+): string {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(svgContent, 'image/svg+xml');
+  const svgEl = doc.querySelector('svg');
+  if (!svgEl) return svgContent;
+
+  // Get viewBox dimensions
+  const viewBox = svgEl.getAttribute('viewBox');
+  let svgWidth = 800, svgHeight = 800;
+  if (viewBox) {
+    const parts = viewBox.split(/[\s,]+/).map(Number);
+    if (parts.length >= 4) {
+      svgWidth = parts[2];
+      svgHeight = parts[3];
+    }
+  }
+
+  const pos = positions || {};
+
+  // Add logo as image element
+  if (logoUrl) {
+    const logoPos = pos.logo || { x: 50, y: 50, width: 120, height: 120 };
+    const imgEl = doc.createElementNS('http://www.w3.org/2000/svg', 'image');
+    imgEl.setAttribute('href', logoUrl);
+    imgEl.setAttribute('x', String(logoPos.x));
+    imgEl.setAttribute('y', String(logoPos.y));
+    imgEl.setAttribute('width', String(logoPos.width));
+    imgEl.setAttribute('height', String(logoPos.height));
+    imgEl.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    // Clip to circle
+    const clipId = 'logo-clip-preview';
+    const defs = doc.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    const clipPath = doc.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+    clipPath.setAttribute('id', clipId);
+    const circle = doc.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', String(logoPos.x + logoPos.width / 2));
+    circle.setAttribute('cy', String(logoPos.y + logoPos.height / 2));
+    circle.setAttribute('r', String(Math.min(logoPos.width, logoPos.height) / 2));
+    clipPath.appendChild(circle);
+    defs.appendChild(clipPath);
+    svgEl.insertBefore(defs, svgEl.firstChild);
+    imgEl.setAttribute('clip-path', `url(#${clipId})`);
+    svgEl.appendChild(imgEl);
+  }
+
+  // Add company name as text element
+  if (companyName) {
+    const cnPos = pos.company_name || { x: svgWidth / 2, y: svgHeight - 80, fontSize: 24, textAnchor: 'middle' as const };
+    const textEl = doc.createElementNS('http://www.w3.org/2000/svg', 'text');
+    textEl.setAttribute('x', String(cnPos.x));
+    textEl.setAttribute('y', String(cnPos.y));
+    textEl.setAttribute('font-size', String(cnPos.fontSize));
+    textEl.setAttribute('font-family', 'Arial, sans-serif');
+    textEl.setAttribute('font-weight', 'bold');
+    textEl.setAttribute('text-anchor', cnPos.textAnchor || 'middle');
+    textEl.setAttribute('fill', '#000000');
+    textEl.textContent = companyName;
+    svgEl.appendChild(textEl);
+  }
+
+  // Add QR placeholder
+  const qrPos = pos.qr_code || { x: svgWidth / 2 - 100, y: svgHeight / 2 - 100, width: 200, height: 200 };
+  const qrRect = doc.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  qrRect.setAttribute('x', String(qrPos.x));
+  qrRect.setAttribute('y', String(qrPos.y));
+  qrRect.setAttribute('width', String(qrPos.width));
+  qrRect.setAttribute('height', String(qrPos.height));
+  qrRect.setAttribute('fill', 'none');
+  qrRect.setAttribute('stroke', '#999');
+  qrRect.setAttribute('stroke-width', '2');
+  qrRect.setAttribute('stroke-dasharray', '8,4');
+  qrRect.setAttribute('rx', '8');
+  svgEl.appendChild(qrRect);
+  const qrLabel = doc.createElementNS('http://www.w3.org/2000/svg', 'text');
+  qrLabel.setAttribute('x', String(qrPos.x + qrPos.width / 2));
+  qrLabel.setAttribute('y', String(qrPos.y + qrPos.height / 2 + 6));
+  qrLabel.setAttribute('text-anchor', 'middle');
+  qrLabel.setAttribute('font-size', '14');
+  qrLabel.setAttribute('fill', '#999');
+  qrLabel.textContent = 'QR Code';
+  svgEl.appendChild(qrLabel);
+
+  const serializer = new XMLSerializer();
+  return serializer.serializeToString(doc);
 }
 
 export default function DisplayArtCustomizer() {
@@ -66,7 +164,6 @@ export default function DisplayArtCustomizer() {
   const fetchData = async () => {
     setLoading(true);
 
-    // Fetch display art
     const { data: art, error: artError } = await supabase
       .from('display_arts')
       .select('*, template:art_templates(*)')
@@ -84,14 +181,16 @@ export default function DisplayArtCustomizer() {
     setCompanyName(art.company_name || '');
     setLogoUrl(art.logo_url);
 
-    // Fetch templates
     const { data: tmpl } = await supabase
       .from('art_templates')
       .select('*')
       .eq('is_active', true)
       .in('product_type', ['display', 'business_display']);
 
-    setTemplates(tmpl || []);
+    setTemplates((tmpl || []).map(t => ({
+      ...t,
+      element_positions: (t.element_positions || null) as any
+    })));
     setLoading(false);
   };
 
@@ -114,7 +213,6 @@ export default function DisplayArtCustomizer() {
     const { data: { publicUrl } } = supabase.storage.from('bio-images').getPublicUrl(fileName);
     setLogoUrl(publicUrl);
 
-    // Save to display_arts
     await supabase
       .from('display_arts')
       .update({ logo_url: publicUrl })
@@ -148,7 +246,6 @@ export default function DisplayArtCustomizer() {
       return;
     }
 
-    // Save company name first
     await handleSaveCompanyName();
 
     setFinalizing(true);
@@ -165,7 +262,7 @@ export default function DisplayArtCustomizer() {
 
       if (data?.success) {
         toast({ title: '✅ Arte finalizada!', description: `QR Code gerado: ${data.qrCode}` });
-        fetchData(); // Reload to show locked state
+        fetchData();
       } else {
         throw new Error(data?.error || 'Erro ao finalizar arte');
       }
@@ -187,6 +284,16 @@ export default function DisplayArtCustomizer() {
   }
 
   const isLocked = displayArt?.locked;
+
+  // Build live preview SVG
+  const previewHtml = currentTemplate
+    ? sanitizeSvg(buildPreviewSvg(
+        currentTemplate.svg_content,
+        currentTemplate.element_positions,
+        logoUrl,
+        companyName || 'Nome da Empresa'
+      ))
+    : '';
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6">
@@ -211,7 +318,6 @@ export default function DisplayArtCustomizer() {
         </div>
 
         {isLocked ? (
-          /* Locked state - show final art */
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <Card className="glass-card">
               <CardHeader>
@@ -222,7 +328,7 @@ export default function DisplayArtCustomizer() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-muted-foreground">
-                  Sua arte foi finalizada e está aguardando produção. Você receberá atualizações sobre o andamento do seu pedido.
+                  Sua arte foi finalizada e está aguardando produção.
                 </p>
                 {displayArt?.final_svg && (
                   <div
@@ -237,7 +343,6 @@ export default function DisplayArtCustomizer() {
             </Card>
           </motion.div>
         ) : (
-          /* Edit state */
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left: Form */}
             <div className="space-y-6">
@@ -366,22 +471,14 @@ export default function DisplayArtCustomizer() {
             <div className="lg:sticky lg:top-6">
               <Card className="glass-card">
                 <CardHeader>
-                  <CardTitle className="text-lg">Preview</CardTitle>
+                  <CardTitle className="text-lg">Preview em Tempo Real</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {currentTemplate ? (
                     <div className="space-y-4">
                       <div
                         className="w-full border border-border rounded-lg overflow-hidden bg-white p-4"
-                        dangerouslySetInnerHTML={{
-                          __html: sanitizeSvg(
-                            currentTemplate.svg_content
-                              .replace(/\{\{company_name\}\}/g, companyName || 'Nome da Empresa')
-                              .replace(/\{\{logo_url\}\}/g, logoUrl || '')
-                              .replace(/\{\{qr_code\}\}/g, 'QR-PREVIEW')
-                              .replace(/\{\{qr_url\}\}/g, '#')
-                          ),
-                        }}
+                        dangerouslySetInnerHTML={{ __html: previewHtml }}
                       />
                       {logoUrl && (
                         <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
@@ -390,7 +487,7 @@ export default function DisplayArtCustomizer() {
                           </div>
                           <div>
                             <p className="text-sm font-medium">{companyName || 'Nome da Empresa'}</p>
-                            <p className="text-xs text-muted-foreground">Logo aplicada</p>
+                            <p className="text-xs text-muted-foreground">Logo e nome aplicados na arte</p>
                           </div>
                         </div>
                       )}

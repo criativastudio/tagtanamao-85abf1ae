@@ -79,7 +79,8 @@ export default function ArtCustomizer() {
           custom_data: (art.custom_data as Record<string, string>) || {},
           template: art.template ? {
             ...art.template,
-            editable_fields: (Array.isArray(art.template.editable_fields) ? art.template.editable_fields : []) as unknown as EditableField[]
+            editable_fields: (Array.isArray(art.template.editable_fields) ? art.template.editable_fields : []) as unknown as EditableField[],
+            element_positions: (art.template.element_positions || null) as any
           } : undefined
         };
         
@@ -99,7 +100,8 @@ export default function ArtCustomizer() {
         
         const typedTemplate: ArtTemplate = {
           ...tmpl,
-          editable_fields: (Array.isArray(tmpl.editable_fields) ? tmpl.editable_fields : []) as unknown as EditableField[]
+          editable_fields: (Array.isArray(tmpl.editable_fields) ? tmpl.editable_fields : []) as unknown as EditableField[],
+          element_positions: (tmpl.element_positions || null) as any
         };
         
         setTemplate(typedTemplate);

@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch display art
+    // Fetch display art with template
     const { data: displayArt, error: artError } = await supabase
       .from("display_arts")
       .select("*, template:art_templates(*)")
@@ -104,15 +104,64 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Build final SVG with QR code embedded
+    // Build final SVG using element_positions from the template
     const template = displayArt.template;
-    let finalSvg = template?.svg_content || "";
+    const positions = template?.element_positions || {};
+    let baseSvg = template?.svg_content || '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800"></svg>';
+    
+    // Parse the SVG
+    // We'll build the final SVG by appending positioned elements
+    // First, get SVG dimensions from viewBox
+    const viewBoxMatch = baseSvg.match(/viewBox="([^"]+)"/);
+    let svgWidth = 800, svgHeight = 800;
+    if (viewBoxMatch) {
+      const parts = viewBoxMatch[1].split(/[\s,]+/).map(Number);
+      if (parts.length >= 4) {
+        svgWidth = parts[2];
+        svgHeight = parts[3];
+      }
+    }
 
-    // Replace placeholders in SVG
-    finalSvg = finalSvg.replace(/\{\{company_name\}\}/g, displayArt.company_name);
-    finalSvg = finalSvg.replace(/\{\{logo_url\}\}/g, displayArt.logo_url);
-    finalSvg = finalSvg.replace(/\{\{qr_code\}\}/g, qrCode);
-    finalSvg = finalSvg.replace(/\{\{qr_url\}\}/g, `${supabaseUrl.replace('.supabase.co', '.lovable.app')}/display/${qrCode}`);
+    // Remove closing </svg> tag to append elements
+    const closingTagIndex = baseSvg.lastIndexOf("</svg>");
+    let svgBody = baseSvg.substring(0, closingTagIndex);
+
+    // Add logo (circular clip)
+    const logoPos = positions.logo || { x: 50, y: 50, width: 120, height: 120 };
+    const clipId = "logo-clip-final";
+    svgBody += `
+      <defs>
+        <clipPath id="${clipId}">
+          <circle cx="${logoPos.x + logoPos.width / 2}" cy="${logoPos.y + logoPos.height / 2}" r="${Math.min(logoPos.width, logoPos.height) / 2}" />
+        </clipPath>
+      </defs>
+      <image href="${displayArt.logo_url}" x="${logoPos.x}" y="${logoPos.y}" width="${logoPos.width}" height="${logoPos.height}" preserveAspectRatio="xMidYMid meet" clip-path="url(#${clipId})" />
+    `;
+
+    // Add company name
+    const cnPos = positions.company_name || { x: svgWidth / 2, y: svgHeight - 80, fontSize: 24, textAnchor: "middle" };
+    svgBody += `
+      <text x="${cnPos.x}" y="${cnPos.y}" font-size="${cnPos.fontSize}" font-family="Arial, sans-serif" font-weight="bold" text-anchor="${cnPos.textAnchor || 'middle'}" fill="#000000">${displayArt.company_name}</text>
+    `;
+
+    // Add QR code placeholder text (will be replaced in production with actual QR image)
+    const qrPos = positions.qr_code || { x: svgWidth / 2 - 100, y: svgHeight / 2 - 100, width: 200, height: 200 };
+    const qrUrl = `${supabaseUrl.replace('.supabase.co', '.lovable.app')}/display/${qrCode}`;
+    svgBody += `
+      <rect x="${qrPos.x}" y="${qrPos.y}" width="${qrPos.width}" height="${qrPos.height}" fill="white" stroke="#ddd" stroke-width="1" rx="4" />
+      <text x="${qrPos.x + qrPos.width / 2}" y="${qrPos.y + qrPos.height / 2 - 10}" text-anchor="middle" font-size="12" fill="#666">${qrCode}</text>
+      <text x="${qrPos.x + qrPos.width / 2}" y="${qrPos.y + qrPos.height / 2 + 10}" text-anchor="middle" font-size="10" fill="#999">${qrUrl}</text>
+    `;
+
+    // Add order number (white, centered, bottom)
+    const orderNum = `#${displayArt.order_id.slice(0, 8)}`;
+    const onPos = positions.order_number || { x: svgWidth / 2, y: svgHeight - 15, fontSize: 14 };
+    svgBody += `
+      <text x="${onPos.x}" y="${onPos.y}" font-size="${onPos.fontSize}" font-family="monospace" font-weight="bold" text-anchor="middle" fill="white">${orderNum}</text>
+    `;
+
+    // Close SVG
+    const finalSvg = svgBody + "</svg>";
 
     // Update display art: lock it and save final SVG
     const { error: updateError } = await supabase

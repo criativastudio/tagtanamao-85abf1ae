@@ -46,6 +46,7 @@ export type Database = {
           created_at: string
           description: string | null
           editable_fields: Json | null
+          element_positions: Json | null
           id: string
           is_active: boolean | null
           name: string
@@ -58,6 +59,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           editable_fields?: Json | null
+          element_positions?: Json | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -70,6 +72,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           editable_fields?: Json | null
+          element_positions?: Json | null
           id?: string
           is_active?: boolean | null
           name?: string
