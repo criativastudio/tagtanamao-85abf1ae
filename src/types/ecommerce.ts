@@ -8,6 +8,7 @@ export interface Product {
   type: string;
   image_url: string | null;
   is_active: boolean | null;
+  gallery_images: string[] | null;
   created_at: string | null;
 }
 

@@ -75,6 +75,7 @@ const Pricing = () => {
       type: "pet_tag",
       image_url: null,
       is_active: true,
+      gallery_images: null,
       created_at: null,
     };
 
