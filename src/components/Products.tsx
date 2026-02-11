@@ -118,11 +118,11 @@ const Products = () => {
                   <div className="relative z-10 flex flex-col h-full">
                     {/* Product Image */}
                     {product.image_url && (
-                      <div className="w-32 h-32 mb-4 mx-auto">
+                      <div className="w-40 h-40 mb-4 mx-auto">
                         <img
                           src={product.image_url}
                           alt={product.name}
-                          className="w-full h-full object-contain drop-shadow-[0_0_20px_hsl(var(--primary)/0.4)]"
+                          className="w-full h-full object-cover drop-shadow-[0_0_20px_hsl(var(--primary)/0.4)]"
                         />
                       </div>
                     )}
