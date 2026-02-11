@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import QRCodeLib from 'qrcode';
@@ -13,8 +13,7 @@ import {
   Check,
   BarChart3
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { format, subDays, endOfDay } from 'date-fns';
+import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -45,13 +44,6 @@ interface Category {
   codes: GeneratedQRCode[];
 }
 
-interface SaleRecord {
-  id: string;
-  date: string;
-  product: string;
-  quantity: number;
-  total: number;
-}
 
 // Constants for QR code sizing at 300 DPI
 const MM_TO_PIXELS = 11.811; // 300 DPI conversion
@@ -68,28 +60,6 @@ const DISPLAY_SIZE_PX = Math.round(DISPLAY_SIZE_MM * MM_TO_PIXELS); // ~490 pixe
 const SHEET_SIZE_MM = 1000;
 const SHEET_SIZE_PX = Math.round(SHEET_SIZE_MM * MM_TO_PIXELS);
 
-const FINANCE_PRODUCTS = ['Tag Pet', 'Display', 'Coleira'] as const;
-const PRODUCT_PRICES: Record<(typeof FINANCE_PRODUCTS)[number], number> = {
-  'Tag Pet': 49,
-  'Display': 79,
-  'Coleira': 35,
-};
-const FINANCE_COLORS = ['hsl(var(--primary))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))'];
-
-const MOCK_SALES: SaleRecord[] = Array.from({ length: 18 }, (_, i) => {
-  const date = subDays(new Date(), i);
-  const product = FINANCE_PRODUCTS[i % FINANCE_PRODUCTS.length];
-  const quantity = (i % 4) + 1;
-  return {
-    id: `sale-${i + 1}`,
-    date: date.toISOString().slice(0, 10),
-    product,
-    quantity,
-    total: quantity * PRODUCT_PRICES[product],
-  };
-});
-
-// Generate a unique 6-digit numeric code
 const generateUniqueCode = async (): Promise<string> => {
   const generateCode = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
@@ -333,11 +303,6 @@ export default function AdminDashboard() {
   const [manualType, setManualType] = useState<'pet_tag' | 'business_display'>('pet_tag');
   const [creatingManual, setCreatingManual] = useState(false);
 
-  // Finance filters
-  const [financeProduct, setFinanceProduct] = useState('all');
-  const [financeStartDate, setFinanceStartDate] = useState(() => format(subDays(new Date(), 14), 'yyyy-MM-dd'));
-  const [financeEndDate, setFinanceEndDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
-
   // Logo upload (SVG) for print export
   const [logoSvgContent, setLogoSvgContent] = useState('');
   const [logoFileName, setLogoFileName] = useState('');
@@ -355,52 +320,6 @@ export default function AdminDashboard() {
       });
     }
   }, [profile, loading, navigate, toast]);
-
-  const filteredSales = useMemo(() => {
-    const start = financeStartDate ? new Date(financeStartDate) : null;
-    const end = financeEndDate ? endOfDay(new Date(financeEndDate)) : null;
-
-    return MOCK_SALES.filter((sale) => {
-      const saleDate = new Date(sale.date);
-      const productMatch = financeProduct === 'all' || sale.product === financeProduct;
-      const startMatch = !start || saleDate >= start;
-      const endMatch = !end || saleDate <= end;
-      return productMatch && startMatch && endMatch;
-    });
-  }, [financeProduct, financeStartDate, financeEndDate]);
-
-  const financeTotals = useMemo(() => {
-    const totalRevenue = filteredSales.reduce((acc, sale) => acc + sale.total, 0);
-    const totalQuantity = filteredSales.reduce((acc, sale) => acc + sale.quantity, 0);
-    const totalOrders = filteredSales.length;
-    const avgTicket = totalOrders ? totalRevenue / totalOrders : 0;
-
-    return { totalRevenue, totalQuantity, totalOrders, avgTicket };
-  }, [filteredSales]);
-
-  const financeByDay = useMemo(() => {
-    const map: Record<string, number> = {};
-    filteredSales.forEach((sale) => {
-      map[sale.date] = (map[sale.date] || 0) + sale.total;
-    });
-
-    return Object.entries(map)
-      .map(([date, total]) => ({ date, total }))
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .map((entry) => ({
-        date: format(new Date(entry.date), 'dd/MM'),
-        total: entry.total,
-      }));
-  }, [filteredSales]);
-
-  const financeByProduct = useMemo(() => {
-    const map: Record<string, number> = {};
-    filteredSales.forEach((sale) => {
-      map[sale.product] = (map[sale.product] || 0) + sale.total;
-    });
-
-    return Object.entries(map).map(([name, value]) => ({ name, value }));
-  }, [filteredSales]);
 
   const generateQRCodes = async (type: 'pet_tag' | 'business_display', count: number) => {
     setGenerating(true);
@@ -952,170 +871,21 @@ export default function AdminDashboard() {
         <DashboardAnalytics showAll />
       </motion.div>
 
-      {/* Financeiro Section */}
+      {/* Financeiro Link */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25 }}
-        className="glass-card p-6 rounded-xl mb-8"
+        className="mb-8"
       >
-        <div className="flex items-center gap-3 mb-4">
-          <BarChart3 className="w-6 h-6 text-primary" />
-          <h2 className="text-xl font-semibold text-foreground">Financeiro</h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <Label>Produto</Label>
-            <Select value={financeProduct} onValueChange={setFinanceProduct}>
-              <SelectTrigger className="mt-1">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os produtos</SelectItem>
-                {FINANCE_PRODUCTS.map((product) => (
-                  <SelectItem key={product} value={product}>{product}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Data inicial</Label>
-            <Input
-              type="date"
-              value={financeStartDate}
-              onChange={(e) => setFinanceStartDate(e.target.value)}
-              className="mt-1"
-            />
-          </div>
-          <div>
-            <Label>Data final</Label>
-            <Input
-              type="date"
-              value={financeEndDate}
-              onChange={(e) => setFinanceEndDate(e.target.value)}
-              className="mt-1"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
-          <div className="glass-card p-4 rounded-xl">
-            <p className="text-sm text-muted-foreground">Receita total</p>
-            <p className="text-2xl font-bold text-foreground">
-              {financeTotals.totalRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-            </p>
-          </div>
-          <div className="glass-card p-4 rounded-xl">
-            <p className="text-sm text-muted-foreground">Quantidade vendida</p>
-            <p className="text-2xl font-bold text-foreground">{financeTotals.totalQuantity}</p>
-          </div>
-          <div className="glass-card p-4 rounded-xl">
-            <p className="text-sm text-muted-foreground">Pedidos</p>
-            <p className="text-2xl font-bold text-foreground">{financeTotals.totalOrders}</p>
-          </div>
-          <div className="glass-card p-4 rounded-xl">
-            <p className="text-sm text-muted-foreground">Ticket médio</p>
-            <p className="text-2xl font-bold text-foreground">
-              {financeTotals.avgTicket.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-          <div className="glass-card p-4 rounded-xl">
-            <h3 className="text-lg font-semibold text-foreground mb-3">Receita por dia</h3>
-            <div className="h-64">
-              {financeByDay.length === 0 ? (
-                <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-                  Sem vendas no período selecionado.
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={financeByDay}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <Tooltip
-                      formatter={(value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                        color: 'hsl(var(--foreground))',
-                      }}
-                    />
-                    <Bar dataKey="total" name="Receita" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          </div>
-
-          <div className="glass-card p-4 rounded-xl">
-            <h3 className="text-lg font-semibold text-foreground mb-3">Participação por produto</h3>
-            <div className="h-64">
-              {financeByProduct.length === 0 ? (
-                <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-                  Sem dados de produtos.
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={financeByProduct} dataKey="value" nameKey="name" innerRadius={40} outerRadius={80}>
-                      {financeByProduct.map((entry, index) => (
-                        <Cell key={entry.name} fill={FINANCE_COLORS[index % FINANCE_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                        color: 'hsl(var(--foreground))',
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold text-foreground mb-3">Vendas consolidadas</h3>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Data</TableHead>
-                <TableHead>Produto</TableHead>
-                <TableHead>Quantidade</TableHead>
-                <TableHead>Total</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredSales.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
-                    Nenhuma venda encontrada no período.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredSales.map((sale) => (
-                  <TableRow key={sale.id}>
-                    <TableCell>{format(new Date(sale.date), 'dd/MM/yyyy')}</TableCell>
-                    <TableCell>{sale.product}</TableCell>
-                    <TableCell>{sale.quantity}</TableCell>
-                    <TableCell>
-                      {sale.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        <Button
+          variant="outline"
+          className="w-full sm:w-auto gap-2 h-12 text-base"
+          onClick={() => navigate('/admin/financeiro')}
+        >
+          <BarChart3 className="w-5 h-5 text-primary" />
+          Abrir Painel Financeiro
+        </Button>
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -1479,3 +1249,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
+
