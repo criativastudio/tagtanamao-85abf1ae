@@ -26,7 +26,8 @@ import {
   Download,
   Plus,
   Printer,
-  Trash2
+  Trash2,
+  DollarSign
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -136,6 +137,14 @@ const adminMenuItems: AdminMenuItem[] = [
     icon: Package,
     path: '/admin/produtos',
     color: 'text-orange-400'
+  },
+  {
+    id: 'financeiro',
+    title: 'Financeiro',
+    description: 'Controle de vendas e análises.',
+    icon: DollarSign,
+    path: '/admin/financeiro',
+    color: 'text-emerald-400'
   },
 ];
 
