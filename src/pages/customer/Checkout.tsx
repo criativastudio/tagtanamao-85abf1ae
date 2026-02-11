@@ -225,10 +225,11 @@ export default function Checkout() {
 
         // Frete local exclusivo para Porto Velho/RO e Jaru/RO
         if (state === "RO" && (city === "porto velho" || city === "jaru")) {
+          const isJaru = city === "jaru";
           const local: ShippingQuote = {
-            service: `Entrega Local - ${data.localidade}`,
+            service: isJaru ? `Frete Grátis - ${data.localidade}` : `Entrega Local - ${data.localidade}`,
             carrier: "Entrega Local",
-            price: 5.0,
+            price: isJaru ? 0 : 5.0,
             delivery_time: 2,
           };
           setShippingQuotes([local]);
