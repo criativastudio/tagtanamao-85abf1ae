@@ -1,45 +1,38 @@
 
 
-# Menu Financeiro - Dashboard Admin
+# Ajuste de Upload de Templates - Aceitar JPG e PNG
 
 ## Resumo
-Criar uma nova pagina `/admin/financeiro` com painel financeiro completo para o administrador, com controle de vendas, filtros por produto e periodo, graficos de analise e resultados consolidados.
+Modificar o upload de arte no Templates Manager para aceitar arquivos JPG e PNG alem de SVG. Quando o usuario enviar uma imagem (JPG/PNG), o arquivo sera enviado ao storage e a URL publica sera armazenada como `preview_url` e tambem no campo `svg_content` (como tag `<img>` embutida em SVG wrapper). Isso permite que templates baseados em imagem funcionem no fluxo existente.
 
-## Dados Utilizados
-A pagina consultara as tabelas `orders`, `order_items`, `products` e `payments` ja existentes no banco de dados. Nao sera necessario criar tabelas novas nem migracoes.
+## Alteracoes em `src/pages/admin/TemplatesManager.tsx`
 
-## Componentes a Criar
+### 1. Funcao `handleSVGUpload` (linhas 210-232)
+Renomear para `handleArtUpload` e expandir a logica:
+- Alterar o `accept` do input de `.svg` para `.svg,.jpg,.jpeg,.png,image/svg+xml,image/jpeg,image/png`
+- Se o arquivo for SVG: manter comportamento atual (ler como texto, parsear campos editaveis)
+- Se o arquivo for JPG/PNG:
+  - Fazer upload para o bucket `bio-images` no path `template-arts/{timestamp}-{nome}`
+  - Obter a URL publica
+  - Gerar um SVG wrapper: `<svg xmlns="..." viewBox="0 0 800 800"><image href="{url}" width="800" height="800"/></svg>`
+  - Salvar esse SVG wrapper no `svg_content` para compatibilidade
+  - Tambem definir o `previewUrl` com a URL da imagem
 
-### 1. Pagina `src/pages/admin/FinancialDashboard.tsx`
-Pagina principal com:
-- Header com botao de voltar ao admin
-- Cards de resumo (receita total, ticket medio, total de pedidos, pedidos pagos)
-- Filtros: seletor de produto (dropdown com todos os produtos) e seletor de periodo (data inicio e data fim) com presets rapidos (7 dias, 30 dias, 90 dias)
-- Grafico de barras: receita por dia no periodo selecionado (usando recharts, ja instalado)
-- Grafico de pizza: distribuicao de vendas por produto
-- Grafico de linha: evolucao de vendas ao longo do tempo
-- Tabela resumo com totais consolidados por produto no periodo
+### 2. Input de upload (linhas 506-517)
+- Alterar `accept=".svg"` para `accept=".svg,.jpg,.jpeg,.png"`
+- Alterar label de "Upload SVG" para "Upload Arte"
 
-### 2. Logica de Dados
-- Buscar pedidos com status `paid`, `processing`, `shipped` ou `delivered` (excluir `pending` e `cancelled`)
-- Cruzar `orders` com `order_items` e `products` para detalhar vendas por produto
-- Agrupar por dia para o grafico temporal
-- Calcular metricas: receita bruta, desconto total (campo `discount_amount`), receita liquida, frete total, ticket medio
+### 3. Validacao no `handleSaveTemplate` (linhas 136-144)
+- Manter a validacao de `svg_content` obrigatorio (sera preenchido automaticamente para imagens)
 
-## Integracao no Sistema
-
-### 3. Rota em `src/App.tsx`
-Adicionar rota `/admin/financeiro` apontando para `FinancialDashboard` dentro de `ProtectedRoute`.
-
-### 4. Link no Admin Hub
-Adicionar botao/card "Financeiro" no `AdminDashboard.tsx` (ou no `UserSettings.tsx` onde ficam os links admin), com icone `DollarSign` do lucide-react, direcionando para `/admin/financeiro`.
+### 4. Preview do arquivo carregado (linhas 532-545)
+- Adicionar condicao: se o `svg_content` contem `<image href=`, mostrar como `<img>` ao inves de `dangerouslySetInnerHTML`
+- Caso contrario, manter o comportamento SVG atual
 
 ## Detalhes Tecnicos
 
-- **Graficos**: `recharts` (BarChart, PieChart, LineChart) com `ResponsiveContainer`, seguindo o mesmo padrao visual de `DashboardAnalytics.tsx` (cores HSL do tema, glass-card, tooltips estilizados)
-- **Filtros**: `date-fns` para manipulacao de datas, componentes `Input type="date"` e `Select` do shadcn para produto
-- **Queries**: Supabase client com `.gte()` e `.lte()` no campo `created_at` dos pedidos para filtro de periodo
-- **Animacoes**: `framer-motion` com `initial/animate` seguindo o padrao existente
-- **Formatacao**: `Intl.NumberFormat` pt-BR para valores em BRL (mesmo padrao do `OrdersManager`)
-- **Responsividade**: Grid responsivo com `grid-cols-1 md:grid-cols-2 lg:grid-cols-4` para cards, graficos em `lg:grid-cols-2`
+- O upload de JPG/PNG usara `supabase.storage.from('bio-images').upload()` seguindo o mesmo padrao ja usado no `handlePreviewUpload` (linha 296)
+- O SVG wrapper gerado garante compatibilidade com o fluxo de renderizacao existente (ArtCustomizer e previews)
+- Nenhuma migracao de banco necessaria - os campos `svg_content` e `preview_url` ja existem como `text`
+- A compressao de imagem existente (`imageCompression.ts`) nao sera aplicada aqui pois templates de arte precisam manter qualidade maxima
 
