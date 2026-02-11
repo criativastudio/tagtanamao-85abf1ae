@@ -115,16 +115,13 @@ const Products = () => {
                   {/* Gradient overlay */}
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-glow-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-                  <div className="w-40 h-40 mb-4 mx-auto overflow-hidden">
-                    {/* Product Image */}
-                    {product.image_url && (
-                      <div className="w-40 h-40 mb-4 mx-auto">
-                        <img
-                          src={product.image_url}
-                          alt={product.name}
-                          className="w-full h-full object-cover drop-shadow-[0_0_200px_hsl(var(--primary)/0.4)]"
-                        />
-                      </div>
+                  <div className="relative w-40 h-40 mb-4 mx-auto overflow-hidden">
+  <img
+    src={product.image_url}
+    alt={product.name}
+    className="absolute inset-0 w-full h-full object-cover"
+  />
+</div>
                     )}
 
                     {/* Badge based on type */}
