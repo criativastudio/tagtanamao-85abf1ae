@@ -260,19 +260,14 @@ export default function Checkout() {
         unitPrice: item.product.price,
         name: item.product.name,
       }));
+      
+      const { data, error } = await supabase.functions.invoke("melhor-envio", {
+        body: { action: "quote", postalCode: zip, products },
+      });
+      
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || "Erro ao calcular frete");
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/melhor-envio?action=quote`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ postalCode: zip, products }),
-        }
-      );
-      const data = await response.json();
-      const error = response.ok ? null : new Error(data?.error || "Erro ao calcular frete");
-
-      if (error) throw error;
 
       if (data?.success && data?.quotes?.length > 0) {
         const allQuotes: ShippingQuote[] = data.quotes.map((q: any) => ({
