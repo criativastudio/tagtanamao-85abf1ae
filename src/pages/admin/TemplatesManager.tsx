@@ -207,28 +207,59 @@ export default function TemplatesManager() {
     }
   };
 
-  const handleSVGUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleArtUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.name.endsWith('.svg')) {
+    const isSvg = file.name.toLowerCase().endsWith('.svg') || file.type === 'image/svg+xml';
+    const isImage = file.type === 'image/jpeg' || file.type === 'image/png';
+
+    if (!isSvg && !isImage) {
       toast({
         title: 'Arquivo inválido',
-        description: 'Por favor, selecione um arquivo SVG.',
+        description: 'Por favor, selecione um arquivo SVG, JPG ou PNG.',
         variant: 'destructive',
       });
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      setFormData(prev => ({ ...prev, svg_content: content }));
+    if (isSvg) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result as string;
+        setFormData(prev => ({ ...prev, svg_content: content }));
+        parseSVGForEditableFields(content);
+      };
+      reader.readAsText(file);
+    } else {
+      // Upload JPG/PNG to storage
+      const fileName = `template-arts/${Date.now()}-${file.name}`;
+      const { error } = await supabase.storage
+        .from('bio-images')
+        .upload(fileName, file);
+
+      if (error) {
+        toast({
+          title: 'Erro no upload',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('bio-images')
+        .getPublicUrl(fileName);
+
+      // Generate SVG wrapper for compatibility
+      const svgWrapper = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800"><image href="${publicUrl}" width="800" height="800" preserveAspectRatio="xMidYMid meet"/></svg>`;
       
-      // Parse SVG to find editable elements
-      parseSVGForEditableFields(content);
-    };
-    reader.readAsText(file);
+      setFormData(prev => ({ ...prev, svg_content: svgWrapper }));
+      setPreviewUrl(publicUrl);
+      setEditableFields([]);
+      
+      toast({ title: 'Arte carregada com sucesso' });
+    }
   };
 
   const parseSVGForEditableFields = (svgContent: string) => {
@@ -507,11 +538,11 @@ export default function TemplatesManager() {
                   <div className="flex-1">
                     <label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors">
                       <Upload className="w-5 h-5" />
-                      <span>Upload SVG</span>
+                      <span>Upload Arte (SVG, JPG, PNG)</span>
                       <input
                         type="file"
-                        accept=".svg"
-                        onChange={handleSVGUpload}
+                        accept=".svg,.jpg,.jpeg,.png"
+                        onChange={handleArtUpload}
                         className="hidden"
                       />
                     </label>
@@ -533,14 +564,22 @@ export default function TemplatesManager() {
                   <div className="mt-4 p-4 bg-muted rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
                       <Code className="w-4 h-4" />
-                      <span className="text-sm font-medium">SVG Carregado</span>
+                      <span className="text-sm font-medium">Arte Carregada</span>
                     </div>
-                    <div 
-                      className="w-full h-48 flex items-center justify-center bg-background rounded"
-                      dangerouslySetInnerHTML={{ 
-                        __html: prepareSvgForDisplay(formData.svg_content, 'auto', '100%')
-                      }}
-                    />
+                    {formData.svg_content.includes('<image href=') && previewUrl ? (
+                      <img 
+                        src={previewUrl} 
+                        alt="Preview da arte"
+                        className="w-full h-48 object-contain bg-background rounded"
+                      />
+                    ) : (
+                      <div 
+                        className="w-full h-48 flex items-center justify-center bg-background rounded"
+                        dangerouslySetInnerHTML={{ 
+                          __html: prepareSvgForDisplay(formData.svg_content, 'auto', '100%')
+                        }}
+                      />
+                    )}
                   </div>
                 )}
               </div>
