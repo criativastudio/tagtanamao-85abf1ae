@@ -30,6 +30,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Order, OrderItem } from '@/types/ecommerce';
+import DisplayOrderStepper from '@/components/order/DisplayOrderStepper';
 
 interface OrderWithItems extends Order {
   items?: OrderItem[];
@@ -197,6 +198,11 @@ export default function MyOrders() {
                           </AccordionTrigger>
                           <AccordionContent>
                             <div className="space-y-4 pt-2">
+                              {/* Stepper for display orders */}
+                              {order.display_arts && order.display_arts.length > 0 && order.status !== 'cancelled' && (
+                                <DisplayOrderStepper order={order} />
+                              )}
+
                               {/* Items */}
                               <div className="space-y-2">
                                 {order.items?.map((item: any) => (
@@ -250,37 +256,30 @@ export default function MyOrders() {
                                 )}
                               </div>
 
-                              {/* Actions */}
-                              <div className="flex gap-2">
-                                {order.status === 'awaiting_customization' && order.display_arts?.[0] && (
-                                  <Button
-                                    size="sm"
-                                    onClick={() => navigate(`/personalizar-display/${order.display_arts![0].id}`)}
-                                  >
-                                    <Paintbrush className="w-4 h-4 mr-2" />
-                                    Personalizar Meu Display
-                                  </Button>
-                                )}
-                                {order.status === 'pending' && order.asaas_payment_link && (
-                                  <Button
-                                    size="sm"
-                                    onClick={() => window.open(order.asaas_payment_link!, '_blank')}
-                                  >
-                                    <ExternalLink className="w-4 h-4 mr-2" />
-                                    Pagar Agora
-                                  </Button>
-                                )}
-                                {order.tracking_code && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => window.open(`https://rastreamento.correios.com.br/app/index.php?objeto=${order.tracking_code}`, '_blank')}
-                                  >
-                                    <Truck className="w-4 h-4 mr-2" />
-                                    Rastrear
-                                  </Button>
-                                )}
-                              </div>
+                              {/* Actions — only for non-display orders */}
+                              {(!order.display_arts || order.display_arts.length === 0) && (
+                                <div className="flex gap-2">
+                                  {order.status === 'pending' && order.asaas_payment_link && (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => window.open(order.asaas_payment_link!, '_blank')}
+                                    >
+                                      <ExternalLink className="w-4 h-4 mr-2" />
+                                      Pagar Agora
+                                    </Button>
+                                  )}
+                                  {order.tracking_code && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => window.open(`https://rastreamento.correios.com.br/app/index.php?objeto=${order.tracking_code}`, '_blank')}
+                                    >
+                                      <Truck className="w-4 h-4 mr-2" />
+                                      Rastrear
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </AccordionContent>
                         </AccordionItem>
