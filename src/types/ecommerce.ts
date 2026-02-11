@@ -100,13 +100,43 @@ export interface ShippingQuote {
   carrierPicture?: string;
 }
 
+export interface DisplayArt {
+  id: string;
+  order_id: string;
+  order_item_id: string | null;
+  user_id: string;
+  template_id: string | null;
+  logo_url: string | null;
+  company_name: string | null;
+  qr_code_id: string | null;
+  final_svg: string | null;
+  final_pdf_url: string | null;
+  locked: boolean;
+  created_at: string;
+  updated_at: string;
+  template?: ArtTemplate;
+  qr_code?: QrCode;
+}
+
+export interface QrCode {
+  id: string;
+  code: string;
+  order_id: string | null;
+  display_art_id: string | null;
+  is_used: boolean;
+  created_at: string;
+}
+
 export type OrderStatus = 
   | 'pending'
   | 'paid'
   | 'processing'
   | 'shipped'
   | 'delivered'
-  | 'cancelled';
+  | 'cancelled'
+  | 'awaiting_customization'
+  | 'art_finalized'
+  | 'ready_to_ship';
 
 export type PaymentStatus = 
   | 'pending'

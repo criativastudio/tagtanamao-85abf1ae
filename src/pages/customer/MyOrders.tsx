@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Paintbrush } from 'lucide-react';
 import {
   ArrowLeft,
   Package,
@@ -32,12 +33,16 @@ import { Order, OrderItem } from '@/types/ecommerce';
 
 interface OrderWithItems extends Order {
   items?: OrderItem[];
+  display_arts?: { id: string; locked: boolean }[];
 }
 
 const statusConfig: Record<string, { icon: typeof Clock; color: string; label: string }> = {
   pending: { icon: Clock, color: 'bg-yellow-500/20 text-yellow-400', label: 'Aguardando Pagamento' },
   paid: { icon: CheckCircle, color: 'bg-blue-500/20 text-blue-400', label: 'Pago' },
+  awaiting_customization: { icon: Package, color: 'bg-orange-500/20 text-orange-400', label: 'Personalizar Arte' },
+  art_finalized: { icon: CheckCircle, color: 'bg-green-500/20 text-green-400', label: 'Arte Finalizada' },
   processing: { icon: Package, color: 'bg-purple-500/20 text-purple-400', label: 'Em Produção' },
+  ready_to_ship: { icon: Truck, color: 'bg-cyan-500/20 text-cyan-400', label: 'Pronto para Envio' },
   shipped: { icon: Truck, color: 'bg-cyan-500/20 text-cyan-400', label: 'Enviado' },
   delivered: { icon: CheckCircle, color: 'bg-green-500/20 text-green-400', label: 'Entregue' },
   cancelled: { icon: XCircle, color: 'bg-red-500/20 text-red-400', label: 'Cancelado' },
@@ -69,7 +74,8 @@ export default function MyOrders() {
         items:order_items(
           *,
           product:products(*)
-        )
+        ),
+        display_arts(id, locked)
       `)
       .eq('user_id', user?.id)
       .order('created_at', { ascending: false });
@@ -246,6 +252,15 @@ export default function MyOrders() {
 
                               {/* Actions */}
                               <div className="flex gap-2">
+                                {order.status === 'awaiting_customization' && order.display_arts?.[0] && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => navigate(`/personalizar-display/${order.display_arts![0].id}`)}
+                                  >
+                                    <Paintbrush className="w-4 h-4 mr-2" />
+                                    Personalizar Meu Display
+                                  </Button>
+                                )}
                                 {order.status === 'pending' && order.asaas_payment_link && (
                                   <Button
                                     size="sm"

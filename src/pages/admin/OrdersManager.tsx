@@ -50,7 +50,10 @@ interface OrderWithItems extends Order {
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
   paid: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  awaiting_customization: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+  art_finalized: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
   processing: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+  ready_to_ship: "bg-sky-500/20 text-sky-400 border-sky-500/30",
   shipped: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
   delivered: "bg-green-500/20 text-green-400 border-green-500/30",
   cancelled: "bg-red-500/20 text-red-400 border-red-500/30",
@@ -59,7 +62,10 @@ const statusColors: Record<string, string> = {
 const statusLabels: Record<string, string> = {
   pending: "Pendente",
   paid: "Pago",
+  awaiting_customization: "Aguard. Personalização",
+  art_finalized: "Arte Finalizada",
   processing: "Em Produção",
+  ready_to_ship: "Pronto p/ Envio",
   shipped: "Enviado",
   delivered: "Entregue",
   cancelled: "Cancelado",

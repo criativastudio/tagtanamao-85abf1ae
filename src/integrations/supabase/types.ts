@@ -365,6 +365,90 @@ export type Database = {
           },
         ]
       }
+      display_arts: {
+        Row: {
+          company_name: string | null
+          created_at: string
+          final_pdf_url: string | null
+          final_svg: string | null
+          id: string
+          locked: boolean
+          logo_url: string | null
+          order_id: string
+          order_item_id: string | null
+          qr_code_id: string | null
+          template_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_name?: string | null
+          created_at?: string
+          final_pdf_url?: string | null
+          final_svg?: string | null
+          id?: string
+          locked?: boolean
+          logo_url?: string | null
+          order_id: string
+          order_item_id?: string | null
+          qr_code_id?: string | null
+          template_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_name?: string | null
+          created_at?: string
+          final_pdf_url?: string | null
+          final_svg?: string | null
+          id?: string
+          locked?: boolean
+          logo_url?: string | null
+          order_id?: string
+          order_item_id?: string | null
+          qr_code_id?: string | null
+          template_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "display_arts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "display_arts_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "display_arts_qr_code_id_fkey"
+            columns: ["qr_code_id"]
+            isOneToOne: false
+            referencedRelation: "qr_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "display_arts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "art_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "display_arts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string | null
@@ -848,6 +932,48 @@ export type Database = {
           whatsapp?: string | null
         }
         Relationships: []
+      }
+      qr_codes: {
+        Row: {
+          code: string
+          created_at: string
+          display_art_id: string | null
+          id: string
+          is_used: boolean
+          order_id: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          display_art_id?: string | null
+          id?: string
+          is_used?: boolean
+          order_id?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          display_art_id?: string | null
+          id?: string
+          is_used?: boolean
+          order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qr_codes_display_art_id_fkey"
+            columns: ["display_art_id"]
+            isOneToOne: false
+            referencedRelation: "display_arts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qr_codes_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       qr_scans: {
         Row: {

@@ -439,9 +439,33 @@ export default function Checkout() {
         unit_price: item.product.price,
       }));
 
-      const { error: itemsError } = await supabase.from("order_items").insert(items);
+      const { data: insertedItems, error: itemsError } = await supabase.from("order_items").insert(items).select();
 
       if (itemsError) throw itemsError;
+
+      // Check if any item is a business_display product and create display_arts
+      const displayItems = cart.filter(
+        (item) => (item.product as any).type === "business_display" || (item.product as any).type === "display"
+      );
+
+      if (displayItems.length > 0 && insertedItems) {
+        for (const dItem of displayItems) {
+          const matchingOrderItem = insertedItems.find(
+            (oi: any) => oi.product_id === dItem.product.id || (!oi.product_id && !isValidUUID(dItem.product.id))
+          );
+          await supabase.from("display_arts").insert({
+            order_id: order.id,
+            order_item_id: matchingOrderItem?.id || null,
+            user_id: user?.id,
+          });
+        }
+
+        // Update order status to awaiting_customization
+        await supabase
+          .from("orders")
+          .update({ status: "awaiting_customization" })
+          .eq("id", order.id);
+      }
 
       // For PIX payment, generate dynamic PIX key
       if (paymentMethod === "pix") {
