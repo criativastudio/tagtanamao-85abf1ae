@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ShoppingCart, Plus, Minus, ArrowRight, Package, Truck, CreditCard, Check } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ShoppingCart, Plus, Minus, ArrowRight, Package, Truck, CreditCard, Check, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +24,7 @@ export default function Shop() {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCart, setShowCart] = useState(false);
+  const [lightboxData, setLightboxData] = useState<{ images: string[]; index: number; name: string } | null>(null);
 
   useEffect(() => {
     fetchProducts();
@@ -222,11 +223,24 @@ export default function Shop() {
                       </CardHeader>
                       <CardContent className="flex-1">
                         {product.image_url ? (
-                          <img
-                            src={product.image_url}
-                            alt={product.name}
-                            className="w-full h-48 object-cover rounded-lg bg-muted"
-                          />
+                          <div
+                            className="cursor-pointer"
+                            onClick={() => {
+                              const allImages = [product.image_url!, ...(product.gallery_images || [])];
+                              setLightboxData({ images: allImages, index: 0, name: product.name });
+                            }}
+                          >
+                            <img
+                              src={product.image_url}
+                              alt={product.name}
+                              className="w-full h-48 object-cover rounded-lg bg-muted hover:opacity-90 transition-opacity"
+                            />
+                            {product.gallery_images && product.gallery_images.length > 0 && (
+                              <p className="text-xs text-muted-foreground text-center mt-1">
+                                +{product.gallery_images.length} fotos
+                              </p>
+                            )}
+                          </div>
                         ) : (
                           <div className="w-full h-48 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
                             <Package className="w-16 h-16 text-primary/50" />
@@ -326,6 +340,63 @@ export default function Shop() {
           )}
         </div>
       </div>
+
+      {/* Lightbox */}
+      <AnimatePresence>
+        {lightboxData && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
+            onClick={() => setLightboxData(null)}
+          >
+            <button
+              onClick={(e) => { e.stopPropagation(); setLightboxData(null); }}
+              className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10"
+            >
+              <X className="w-6 h-6 text-white" />
+            </button>
+            {lightboxData.images.length > 1 && (
+              <>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setLightboxData(prev => prev ? { ...prev, index: (prev.index - 1 + prev.images.length) % prev.images.length } : null); }}
+                  className="absolute left-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10"
+                >
+                  <ChevronLeft className="w-6 h-6 text-white" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setLightboxData(prev => prev ? { ...prev, index: (prev.index + 1) % prev.images.length } : null); }}
+                  className="absolute right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10"
+                >
+                  <ChevronRight className="w-6 h-6 text-white" />
+                </button>
+              </>
+            )}
+            <motion.img
+              key={lightboxData.index}
+              src={lightboxData.images[lightboxData.index]}
+              alt={lightboxData.name}
+              className="max-w-full max-h-[85vh] rounded-xl object-contain"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              onClick={(e) => e.stopPropagation()}
+            />
+            {lightboxData.images.length > 1 && (
+              <div className="absolute bottom-6 flex gap-2">
+                {lightboxData.images.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={(e) => { e.stopPropagation(); setLightboxData(prev => prev ? { ...prev, index: i } : null); }}
+                    className={`w-2.5 h-2.5 rounded-full transition-colors ${i === lightboxData.index ? 'bg-white' : 'bg-white/40'}`}
+                  />
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

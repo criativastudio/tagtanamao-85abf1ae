@@ -62,6 +62,7 @@ export default function ProductsManager() {
     is_active: true,
   });
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
 
   useEffect(() => {
     if (!loading && profile && !profile.is_admin) {
@@ -105,6 +106,7 @@ export default function ProductsManager() {
         is_active: product.is_active ?? true,
       });
       setImageUrl(product.image_url);
+      setGalleryImages(product.gallery_images || []);
     } else {
       setEditingProduct(null);
       setFormData({
@@ -115,6 +117,7 @@ export default function ProductsManager() {
         is_active: true,
       });
       setImageUrl(null);
+      setGalleryImages([]);
     }
     setShowEditor(true);
   };
@@ -136,6 +139,7 @@ export default function ProductsManager() {
       type: formData.type,
       is_active: formData.is_active,
       image_url: imageUrl,
+      gallery_images: galleryImages,
     };
 
     let error;
@@ -215,6 +219,34 @@ export default function ProductsManager() {
       setImageUrl(publicUrl);
       toast({ title: 'Imagem atualizada' });
     }
+  };
+
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (galleryImages.length >= 5) {
+      toast({ title: 'Máximo de 5 fotos adicionais', variant: 'destructive' });
+      return;
+    }
+
+    const fileName = `product-images/gallery/${Date.now()}-${file.name}`;
+    const { error } = await supabase.storage
+      .from('bio-images')
+      .upload(fileName, file);
+
+    if (error) {
+      toast({ title: 'Erro no upload', description: error.message, variant: 'destructive' });
+    } else {
+      const { data: { publicUrl } } = supabase.storage
+        .from('bio-images')
+        .getPublicUrl(fileName);
+      setGalleryImages(prev => [...prev, publicUrl]);
+      toast({ title: 'Foto adicionada à galeria' });
+    }
+  };
+
+  const removeGalleryImage = (index: number) => {
+    setGalleryImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const formatCurrency = (value: number) => {
@@ -304,11 +336,23 @@ export default function ProductsManager() {
                       <img
                         src={product.image_url}
                         alt={product.name}
-                        className="w-full h-40 object-cover rounded-lg bg-muted"
+                        className="w-full h-56 object-cover rounded-lg bg-muted"
                       />
                     ) : (
-                      <div className="w-full h-40 rounded-lg bg-muted flex items-center justify-center">
+                      <div className="w-full h-56 rounded-lg bg-muted flex items-center justify-center">
                         <Package className="w-12 h-12 text-muted-foreground/50" />
+                      </div>
+                    )}
+                    {product.gallery_images && product.gallery_images.length > 0 && (
+                      <div className="flex gap-1 mt-2">
+                        {product.gallery_images.slice(0, 4).map((img, i) => (
+                          <img key={i} src={img} alt="" className="w-10 h-10 object-cover rounded bg-muted" />
+                        ))}
+                        {product.gallery_images.length > 4 && (
+                          <div className="w-10 h-10 rounded bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                            +{product.gallery_images.length - 4}
+                          </div>
+                        )}
                       </div>
                     )}
                     <div className="flex items-center justify-between mt-4">
@@ -348,7 +392,7 @@ export default function ProductsManager() {
 
         {/* Product Editor Dialog */}
         <Dialog open={showEditor} onOpenChange={setShowEditor}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingProduct ? 'Editar Produto' : 'Novo Produto'}
@@ -414,10 +458,10 @@ export default function ProductsManager() {
               </div>
 
               <div className="space-y-2">
-                <Label>Imagem do Produto</Label>
+                <Label>Imagem Principal</Label>
                 <label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors">
                   {imageUrl ? (
-                    <img src={imageUrl} alt="Preview" className="w-full h-32 object-cover rounded" />
+                    <img src={imageUrl} alt="Preview" className="w-full h-48 object-cover rounded" />
                   ) : (
                     <>
                       <Image className="w-5 h-5" />
@@ -431,6 +475,35 @@ export default function ProductsManager() {
                     className="hidden"
                   />
                 </label>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Fotos Adicionais ({galleryImages.length}/5)</Label>
+                <div className="grid grid-cols-5 gap-2">
+                  {galleryImages.map((img, index) => (
+                    <div key={index} className="relative group">
+                      <img src={img} alt="" className="w-full h-20 object-cover rounded-lg bg-muted" />
+                      <button
+                        type="button"
+                        onClick={() => removeGalleryImage(index)}
+                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  {galleryImages.length < 5 && (
+                    <label className="w-full h-20 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors flex items-center justify-center">
+                      <Plus className="w-5 h-5 text-muted-foreground" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleGalleryUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center justify-between">
