@@ -1,8 +1,9 @@
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Check, Loader2 } from "lucide-react";
+import { ShoppingCart, Check, Loader2, X } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +15,7 @@ const Products = () => {
   const { addToCart, getCartCount } = useCart();
   const { user } = useAuth();
   const { toast } = useToast();
+  const [lightboxImage, setLightboxImage] = useState<{ url: string; name: string } | null>(null);
 
   const { data: products, isLoading } = useQuery({
     queryKey: ["landing-products"],
@@ -118,7 +120,10 @@ const Products = () => {
                   <div className="relative z-10 flex flex-col h-full">
                     {/* Product Image */}
                     {product.image_url && (
-                      <div className="w-40 h-40 mb-4 mx-auto">
+                      <div
+                        className="w-40 h-40 mb-4 mx-auto cursor-pointer transition-transform hover:scale-105"
+                        onClick={() => setLightboxImage({ url: product.image_url!, name: product.name })}
+                      >
                         <img
                           src={product.image_url}
                           alt={product.name}
@@ -197,6 +202,35 @@ const Products = () => {
           </div>
         </motion.div>
       </div>
+      {/* Lightbox */}
+      <AnimatePresence>
+        {lightboxImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
+            onClick={() => setLightboxImage(null)}
+          >
+            <button
+              onClick={(e) => { e.stopPropagation(); setLightboxImage(null); }}
+              className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10"
+            >
+              <X className="w-6 h-6 text-white" />
+            </button>
+            <motion.img
+              src={lightboxImage.url}
+              alt={lightboxImage.name}
+              className="max-w-full max-h-[85vh] rounded-xl object-contain"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 };
