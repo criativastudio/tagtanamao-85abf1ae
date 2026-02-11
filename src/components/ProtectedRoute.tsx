@@ -2,6 +2,22 @@ import { ReactNode, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
+export const ROLE_DEFAULT_PERMISSIONS = {
+  Gestor: [
+    'Gerencia operações do dia a dia',
+    'Gerenciar pedidos',
+    'Gerenciar produtos',
+    'Ver analytics',
+    'Gerenciar tags e displays',
+  ],
+  Editor: [
+    'Edita conteúdo e templates',
+    'Editar templates de arte',
+    'Gerenciar cupons',
+    'Ver pedidos (somente leitura)',
+  ],
+};
+
 interface ProtectedRouteProps {
   children: ReactNode;
   requireAuth?: boolean;
