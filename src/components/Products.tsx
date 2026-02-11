@@ -116,17 +116,18 @@ const Products = () => {
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-glow-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
                   <div className="relative z-10 flex flex-col h-full">
-                    {/* Product Image */}
+                    {" "}
+                    {/* Product Image */}{" "}
                     {product.image_url && (
-                      <div className="w-50 h-50 mb-4 mx-auto">
+                      <div className="w-40 h-40 mb-4 mx-auto">
+                        {" "}
                         <img
                           src={product.image_url}
                           alt={product.name}
-                          className="w-full h-full object-cover drop-shadow-[0_0_20px_hsl(var(--primary)/0.4)]"
-                        />
+                          className="w-full h-full object-cover drop-shadow-[0_0_200px_hsl(var(--primary)/0.4)]"
+                        />{" "}
                       </div>
                     )}
-
                     {/* Badge based on type */}
                     <div
                       className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium mb-4 w-fit ${
@@ -137,10 +138,8 @@ const Products = () => {
                     >
                       {product.type === "pet_tag" ? "Para Pets" : "Para Empresas"}
                     </div>
-
                     <h3 className="text-xl font-display font-bold mb-2">{product.name}</h3>
                     <p className="text-muted-foreground text-sm mb-6 flex-grow">{product.description}</p>
-
                     <div className="flex items-center justify-between mt-auto">
                       <div>
                         <p className="text-2xl font-display font-bold text-gradient">{formatCurrency(product.price)}</p>
