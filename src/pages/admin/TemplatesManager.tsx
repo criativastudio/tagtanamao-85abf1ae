@@ -44,9 +44,10 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { ArtTemplate, EditableField } from '@/types/ecommerce';
+import { ArtTemplate, EditableField, ElementPositions } from '@/types/ecommerce';
 import { Json } from '@/integrations/supabase/types';
 import { prepareSvgForDisplay } from '@/lib/sanitize';
+import TemplatePositionControls from '@/components/admin/TemplatePositionControls';
 
 export default function TemplatesManager() {
   const { profile, loading } = useAuth();
@@ -69,6 +70,7 @@ export default function TemplatesManager() {
     is_active: true,
   });
   const [editableFields, setEditableFields] = useState<EditableField[]>([]);
+  const [elementPositions, setElementPositions] = useState<ElementPositions>({});
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -98,7 +100,8 @@ export default function TemplatesManager() {
     } else {
       const mappedTemplates = (data || []).map(t => ({
         ...t,
-        editable_fields: (Array.isArray(t.editable_fields) ? t.editable_fields : []) as unknown as EditableField[]
+        editable_fields: (Array.isArray(t.editable_fields) ? t.editable_fields : []) as unknown as EditableField[],
+        element_positions: (t.element_positions || null) as any
       }));
       setTemplates(mappedTemplates);
     }
@@ -117,6 +120,7 @@ export default function TemplatesManager() {
         is_active: template.is_active ?? true,
       });
       setEditableFields(template.editable_fields || []);
+      setElementPositions(template.element_positions || {});
       setPreviewUrl(template.preview_url);
     } else {
       setEditingTemplate(null);
@@ -128,6 +132,7 @@ export default function TemplatesManager() {
         is_active: true,
       });
       setEditableFields([]);
+      setElementPositions({});
       setPreviewUrl(null);
     }
     setShowEditor(true);
@@ -149,6 +154,7 @@ export default function TemplatesManager() {
       product_type: formData.product_type,
       svg_content: formData.svg_content,
       editable_fields: editableFields as unknown as Json,
+      element_positions: elementPositions as unknown as Json,
       is_active: formData.is_active,
       preview_url: previewUrl,
     };
@@ -583,6 +589,14 @@ export default function TemplatesManager() {
                   </div>
                 )}
               </div>
+
+              {/* Element Positions (for display templates) */}
+              {(formData.product_type === 'display' || formData.product_type === 'business_display') && (
+                <TemplatePositionControls
+                  positions={elementPositions}
+                  onChange={setElementPositions}
+                />
+              )}
 
               {/* Editable Fields */}
               <div className="space-y-4">

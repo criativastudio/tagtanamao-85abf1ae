@@ -49,6 +49,13 @@ export interface OrderItem {
   customer_art?: CustomerArt;
 }
 
+export interface ElementPositions {
+  qr_code?: { x: number; y: number; width: number; height: number };
+  logo?: { x: number; y: number; width: number; height: number };
+  company_name?: { x: number; y: number; fontSize: number; textAnchor?: 'start' | 'middle' | 'end' };
+  order_number?: { x: number; y: number; fontSize: number };
+}
+
 export interface ArtTemplate {
   id: string;
   name: string;
@@ -56,6 +63,7 @@ export interface ArtTemplate {
   preview_url: string | null;
   svg_content: string;
   editable_fields: EditableField[];
+  element_positions: ElementPositions | null;
   product_type: string;
   is_active: boolean | null;
   created_at: string;
