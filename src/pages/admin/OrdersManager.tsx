@@ -20,6 +20,7 @@ import {
   Mail,
   Phone,
   Loader2,
+  Image,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,6 +91,7 @@ export default function OrdersManager() {
   const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null);
   const [showOrderDialog, setShowOrderDialog] = useState(false);
   const [generatingLabel, setGeneratingLabel] = useState<string | null>(null);
+  const [downloadingArt, setDownloadingArt] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && profile && !profile.is_admin) {
@@ -458,6 +460,74 @@ export default function OrdersManager() {
     labelWindow.document.close();
   };
 
+  const handleDownloadDisplayArt = async (order: OrderWithItems) => {
+    setDownloadingArt(order.id);
+    try {
+      const { data: displayArt, error } = await supabase
+        .from("display_arts")
+        .select("final_svg")
+        .eq("order_id", order.id)
+        .eq("locked", true)
+        .maybeSingle();
+
+      if (error || !displayArt?.final_svg) {
+        toast({ title: "Arte não encontrada", description: "Nenhuma arte finalizada para este pedido.", variant: "destructive" });
+        return;
+      }
+
+      const orderLabel = `#${order.id.slice(0, 8)}`;
+      let svgContent = displayArt.final_svg;
+
+      // Parse SVG to inject order number at bottom-right
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(svgContent, "image/svg+xml");
+      const svgEl = doc.querySelector("svg");
+      if (svgEl) {
+        const viewBox = svgEl.getAttribute("viewBox");
+        let svgWidth = 800;
+        let svgHeight = 600;
+        if (viewBox) {
+          const parts = viewBox.split(/[\s,]+/).map(Number);
+          if (parts.length === 4) {
+            svgWidth = parts[2];
+            svgHeight = parts[3];
+          }
+        } else {
+          const w = parseFloat(svgEl.getAttribute("width") || "800");
+          const h = parseFloat(svgEl.getAttribute("height") || "600");
+          svgWidth = w;
+          svgHeight = h;
+        }
+
+        const textEl = doc.createElementNS("http://www.w3.org/2000/svg", "text");
+        textEl.setAttribute("x", String(svgWidth - 10));
+        textEl.setAttribute("y", String(svgHeight - 10));
+        textEl.setAttribute("text-anchor", "end");
+        textEl.setAttribute("font-size", "12");
+        textEl.setAttribute("font-family", "monospace");
+        textEl.setAttribute("fill", "#666666");
+        textEl.textContent = orderLabel;
+        svgEl.appendChild(textEl);
+
+        svgContent = new XMLSerializer().serializeToString(doc);
+      }
+
+      const blob = new Blob([svgContent], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `arte-display-${order.id.slice(0, 8)}.svg`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast({ title: "Arte baixada!", description: `Arquivo com pedido ${orderLabel} no rodapé.` });
+    } catch (err: any) {
+      toast({ title: "Erro ao baixar arte", description: err.message, variant: "destructive" });
+    } finally {
+      setDownloadingArt(null);
+    }
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -599,6 +669,21 @@ export default function OrdersManager() {
                         <Button variant="ghost" size="sm" onClick={() => handleViewOrder(order)} title="Ver detalhes">
                           <Eye className="w-4 h-4" />
                         </Button>
+                        {["art_finalized", "processing", "ready_to_ship"].includes(order.status || "") && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDownloadDisplayArt(order)}
+                            title="Baixar arte do display"
+                            disabled={downloadingArt === order.id}
+                          >
+                            {downloadingArt === order.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Image className="w-4 h-4 text-emerald-400" />
+                            )}
+                          </Button>
+                        )}
                         {(order.status === "paid" || order.payment_status === "confirmed") && !order.melhor_envio_label_url && (
                           <Button
                             variant="ghost"
