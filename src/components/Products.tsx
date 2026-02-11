@@ -111,20 +111,23 @@ const Products = () => {
                 transition={{ duration: 0.6, delay: index * 0.1 }}
                 className="group"
               >
-                <div className="relative h-full p-6 rounded-3xl bg-card border border-border/50 hover:border-primary/30 transition-all duration-500 hover:shadow-[0_0_60px_hsl(var(--primary)/0.15)] overflow-hidden flex flex-col">
+              <div className="relative h-full p-6 rounded-3xl bg-card border border-border/50 hover:border-primary/30 transition-all duration-500 hover:shadow-[0_0_60px_hsl(var(--primary)/0.15)] overflow-hidden flex flex-col">
                   {/* Gradient overlay */}
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-glow-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-                  <div className="w-40 h-40 mb-4 mx-auto overflow-hidden">
-                    {/* Product Image */}
-                    {product.image_url && (
-                      <div className="w-40 h-40 mb-4 mx-auto">
-                        <img
-                          src={product.image_url}
-                          alt={product.name}
-                          className="w-full h-full object-cover drop-shadow-[0_0_200px_hsl(var(--primary)/0.4)]"
-                        />
-                      </div>
+                 <div className="relative z-10 flex flex-col h-full">
+                  {/* Product Image */}
+                  {product.image_url && (
+                  <div className="relative w-40 h-40 mb-4 mx-auto overflow-hidden">
+                  <img
+                  src={product.image_url}
+                  alt={product.name}
+                  className="absolute inset-0 w-full h-full object-cover drop-shadow-[0_0_200px_hsl(var(--primary)/0.4)]"
+                  />
+                  </div>
+                    )}
+                </div>
+
                     )}
 
                     {/* Badge based on type */}
