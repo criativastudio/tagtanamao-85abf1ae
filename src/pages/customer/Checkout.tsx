@@ -97,7 +97,7 @@ export default function Checkout() {
   const [isCardValid, setIsCardValid] = useState(false);
 
   // Payment method
-  const [paymentMethod, setPaymentMethod] = useState<"pix" | "asaas">("pix");
+  const [paymentMethod, setPaymentMethod] = useState<"asaas">("asaas");
 
   // Shipping form
   const [shippingData, setShippingData] = useState({
@@ -910,31 +910,6 @@ export default function Checkout() {
                         value={paymentMethod}
                         onValueChange={(value) => setPaymentMethod(value as "pix" | "asaas")}
                       >
-                        <div
-                          className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-colors ${
-                            paymentMethod === "pix"
-                              ? "border-primary bg-primary/5"
-                              : "border-border hover:border-primary/50"
-                          }`}
-                          onClick={() => setPaymentMethod("pix")}
-                        >
-                          <div className="flex items-center gap-3">
-                            <RadioGroupItem value="pix" id="pix" />
-                            <div>
-                              <p className="font-medium flex items-center gap-2">
-                                <QrCode className="w-4 h-4 text-primary" />
-                                PIX
-                                <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded">
-                                  Recomendado
-                                </span>
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                Pagamento instantâneo • Confirmação automática
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
                         <div
                           className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-colors mt-2 ${
                             paymentMethod === "asaas"
