@@ -485,33 +485,7 @@ export default function Checkout() {
         await supabase.from("orders").update({ status: "awaiting_customization" }).eq("id", order.id);
       }
 
-      // For PIX payment, generate dynamic PIX key
-      if (paymentMethod === "pix") {
-        const { data: session } = await supabase.auth.getSession();
-
-        const { data: pixResult, error: pixError } = await supabase.functions.invoke("pix-payment", {
-          body: {
-            orderId: order.id,
-            amount: getTotalWithShipping(),
-            customerEmail: profile?.email || user?.email,
-            customerName: shippingData.name,
-            customerPhone: shippingData.phone,
-          },
-          headers: {
-            Authorization: `Bearer ${session?.session?.access_token}`,
-          },
-        });
-
-        if (pixError) throw pixError;
-
-        if (pixResult?.success && pixResult?.pixPayment) {
-          setPixPaymentData(pixResult.pixPayment);
-          sendAdminNotification(order.id, getTotalWithShipping());
-          clearCart();
-          setStep("awaiting_pix");
-        } else {
-          throw new Error("Erro ao gerar PIX");
-        }
+      
       } else if (paymentMethod === "asaas" && asaasBillingType === "CREDIT_CARD" && cardData) {
         // Credit card transparent checkout
         setStep("processing");
@@ -910,30 +884,7 @@ export default function Checkout() {
                         value={paymentMethod}
                         onValueChange={(value) => setPaymentMethod(value as "pix" | "asaas")}
                       >
-                        <div
-                          className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-colors ${
-                            paymentMethod === "pix"
-                              ? "border-primary bg-primary/5"
-                              : "border-border hover:border-primary/50"
-                          }`}
-                          onClick={() => setPaymentMethod("pix")}
-                        >
-                          <div className="flex items-center gap-3">
-                            <RadioGroupItem value="pix" id="pix" />
-                            <div>
-                              <p className="font-medium flex items-center gap-2">
-                                <QrCode className="w-4 h-4 text-primary" />
-                                PIX
-                                <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded">
-                                  Recomendado
-                                </span>
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                Pagamento instantâneo • Confirmação automática
-                              </p>
-                            </div>
-                          </div>
-                        </div>
+                        
 
                         <div
                           className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-colors mt-2 ${
