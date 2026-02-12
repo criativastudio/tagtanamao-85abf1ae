@@ -97,7 +97,7 @@ export default function Checkout() {
   const [isCardValid, setIsCardValid] = useState(false);
 
   // Payment method
-  const [paymentMethod, setPaymentMethod] = useState<"pix" | "asaas">("pix");
+  const [paymentMethod, setPaymentMethod] = useState<"asaas">("asaas");
 
   // Shipping form
   const [shippingData, setShippingData] = useState({
@@ -486,7 +486,7 @@ export default function Checkout() {
       }
 
       // For PIX payment, generate dynamic PIX key
-      if (paymentMethod === "asaas") {
+      if (paymentMethod === "pix") {
         const { data: session } = await supabase.auth.getSession();
 
         const { data: pixResult, error: pixError } = await supabase.functions.invoke("pix-payment", {
@@ -906,7 +906,10 @@ export default function Checkout() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as "asaas")}>
+                      <RadioGroup
+                        value={paymentMethod}
+                        onValueChange={(value) => setPaymentMethod(value as "pix" | "asaas")}
+                      >
                         <div
                           className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-colors ${
                             paymentMethod === "pix"
