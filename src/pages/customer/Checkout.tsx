@@ -198,8 +198,15 @@ export default function Checkout() {
     }).format(value);
   };
 
-  const handleZipInput = (zip: string) => {
-    setShippingData((prev) => ({ ...prev, zip }));
+  const handleZipInput = (value: string) => {
+    setShippingData((prev) => ({ ...prev, zip: value }));
+
+    const digits = value.replace(/\D/g, "");
+
+    // quando completar CEP, busca automaticamente
+    if (digits.length === 8) {
+      handleZipBlur();
+    }
   };
 
   const handleZipBlur = async () => {
