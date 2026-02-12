@@ -97,7 +97,7 @@ export default function Checkout() {
   const [isCardValid, setIsCardValid] = useState(false);
 
   // Payment method
-  const [paymentMethod, setPaymentMethod] = useState<"asaas">("asaas");
+  const [paymentMethod, setPaymentMethod] = useState<"pix" | "asaas">("asaas");
 
   // Shipping form
   const [shippingData, setShippingData] = useState({
@@ -485,7 +485,44 @@ export default function Checkout() {
         await supabase.from("orders").update({ status: "awaiting_customization" }).eq("id", order.id);
       }
 
-      
+      if (paymentMethod === "pix") {
+        // PIX payment flow
+        const { data: session } = await supabase.auth.getSession();
+
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pix-payment?action=create`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session?.session?.access_token}`,
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            },
+            body: JSON.stringify({
+              orderId: order.id,
+              amount: getTotalWithShipping(),
+              customerEmail: profile?.email || user?.email,
+              customerName: shippingData.name,
+              customerPhone: shippingData.phone,
+            }),
+          },
+        );
+
+        const pixResult = await response.json();
+
+        if (!response.ok) {
+          throw new Error(pixResult.error || "Erro ao criar pagamento PIX");
+        }
+
+        if (pixResult.success) {
+          setPixPaymentData(pixResult.pixPayment);
+          setCurrentOrderId(order.id);
+          clearCart();
+          sendAdminNotification(order.id, getTotalWithShipping());
+          setStep("awaiting_pix");
+        } else {
+          throw new Error("Erro ao gerar pagamento PIX");
+        }
       } else if (paymentMethod === "asaas" && asaasBillingType === "CREDIT_CARD" && cardData) {
         // Credit card transparent checkout
         setStep("processing");

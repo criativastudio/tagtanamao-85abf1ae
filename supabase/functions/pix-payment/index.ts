@@ -14,7 +14,7 @@ const VALID_SHIPPING: Record<string, { price: number; localOnly?: boolean }> = {
   PAC: { price: 12.9 },
   SEDEX: { price: 24.9 },
   LOCAL_PORTO_VELHO: { price: 5.0, localOnly: true },
-  LOCAL_JARU: { price: 5.0, localOnly: true },
+  LOCAL_JARU: { price: 0, localOnly: true },
 };
 
 function validateShippingMethod(
@@ -26,7 +26,7 @@ function validateShippingMethod(
   if (!method) return "Método de envio não informado";
 
   // normaliza nome do método recebido
-  let normalizedMethod = method || "";
+  let normalizedMethod = (method || "").toUpperCase();
 
   if (normalizedMethod.includes("PAC")) normalizedMethod = "PAC";
   if (normalizedMethod.includes("SEDEX")) normalizedMethod = "SEDEX";
