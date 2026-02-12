@@ -76,7 +76,7 @@ export default function Checkout() {
 
   // PIX config from database
   const [pixConfig, setPixConfig] = useState<PixConfig>({
-    pix_key: "",
+    pix_key: "70a8b01b-6607-440a-af9f-5f2f3fe81dbe",
     pix_key_type: "email",
     admin_whatsapp: "5569992213658",
     admin_notification_enabled: true,
