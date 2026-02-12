@@ -207,41 +207,57 @@ export default function Checkout() {
     if (digits.length !== 8 || digits === lastZipFetched) return;
     setLastZipFetched(digits);
 
+    let data: any = null;
+
     try {
+      // 1️⃣ tenta ViaCEP primeiro
       const response = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
-      const data = await response.json();
+      data = await response.json();
 
-      if (!data.erro) {
-        setShippingData((prev) => ({
-          ...prev,
-          address: data.logradouro || "",
-          neighborhood: data.bairro || "",
-          city: data.localidade || "",
-          state: data.uf || "",
-        }));
+      // se não encontrou, tenta BrasilAPI
+      if (data.erro) {
+        const backup = await fetch(`https://brasilapi.com.br/api/cep/v1/${digits}`);
+        const backupData = await backup.json();
 
-        const city = (data.localidade || "").trim().toLowerCase();
-        const state = (data.uf || "").trim().toUpperCase();
-
-        // Frete local exclusivo para Porto Velho/RO e Jaru/RO
-        if (state === "RO" && (city === "porto velho" || city === "jaru")) {
-          const isJaru = city === "jaru";
-          const local: ShippingQuote = {
-            service: isJaru ? `Frete Grátis - ${data.localidade}` : `Entrega Local - ${data.localidade}`,
-            carrier: "Entrega Local",
-            price: isJaru ? 0 : 5.0,
-            delivery_time: 2,
-          };
-          setShippingQuotes([local]);
-          setSelectedShipping(local);
-          return;
-        }
-
-        // Melhor Envio para outros CEPs
-        fetchShippingQuotesWithAddress(digits, data.localidade, data.uf);
+        data = {
+          logradouro: backupData.street,
+          bairro: backupData.neighborhood,
+          localidade: backupData.city,
+          uf: backupData.state,
+        };
       }
+
+      if (!data) return;
+
+      setShippingData((prev) => ({
+        ...prev,
+        address: data.logradouro || "",
+        neighborhood: data.bairro || "",
+        city: data.localidade || "",
+        state: data.uf || "",
+      }));
+
+      const city = (data.localidade || "").trim().toLowerCase();
+      const state = (data.uf || "").trim().toUpperCase();
+
+      // Frete local
+      if (state === "RO" && (city === "porto velho" || city === "jaru")) {
+        const isJaru = city === "jaru";
+        const local: ShippingQuote = {
+          service: isJaru ? `Frete Grátis - ${data.localidade}` : `Entrega Local - ${data.localidade}`,
+          carrier: "Entrega Local",
+          price: isJaru ? 0 : 5.0,
+          delivery_time: 2,
+        };
+
+        setShippingQuotes([local]);
+        setSelectedShipping(local);
+        return;
+      }
+
+      fetchShippingQuotesWithAddress(digits, data.localidade, data.uf);
     } catch (error) {
-      console.error("Error fetching CEP:", error);
+      console.error("Erro ao buscar CEP:", error);
     }
   };
 
@@ -261,14 +277,13 @@ export default function Checkout() {
         unitPrice: item.product.price,
         name: item.product.name,
       }));
-      
+
       const { data, error } = await supabase.functions.invoke("melhor-envio", {
         body: { action: "quote", postalCode: zip, products },
       });
-      
+
       if (error) throw new Error(error.message);
       if (!data?.success) throw new Error(data?.error || "Erro ao calcular frete");
-
 
       if (data?.success && data?.quotes?.length > 0) {
         const allQuotes: ShippingQuote[] = data.quotes.map((q: any) => ({
@@ -309,8 +324,6 @@ export default function Checkout() {
       setLoadingShipping(false);
     }
   };
-
-
 
   const validateShipping = () => {
     const required = ["name", "phone", "zip", "address", "number", "city", "state"];
@@ -446,13 +459,13 @@ export default function Checkout() {
 
       // Check if any item is a business_display product and create display_arts
       const displayItems = cart.filter(
-        (item) => (item.product as any).type === "business_display" || (item.product as any).type === "display"
+        (item) => (item.product as any).type === "business_display" || (item.product as any).type === "display",
       );
 
       if (displayItems.length > 0 && insertedItems) {
         for (const dItem of displayItems) {
           const matchingOrderItem = insertedItems.find(
-            (oi: any) => oi.product_id === dItem.product.id || (!oi.product_id && !isValidUUID(dItem.product.id))
+            (oi: any) => oi.product_id === dItem.product.id || (!oi.product_id && !isValidUUID(dItem.product.id)),
           );
           await supabase.from("display_arts").insert({
             order_id: order.id,
@@ -462,10 +475,7 @@ export default function Checkout() {
         }
 
         // Update order status to awaiting_customization
-        await supabase
-          .from("orders")
-          .update({ status: "awaiting_customization" })
-          .eq("id", order.id);
+        await supabase.from("orders").update({ status: "awaiting_customization" }).eq("id", order.id);
       }
 
       // For PIX payment, generate dynamic PIX key
@@ -859,10 +869,8 @@ export default function Checkout() {
                               <div className="flex items-center gap-3">
                                 <RadioGroupItem value={quote.service} id={quote.service} />
                                 <div>
-                                <p className="font-medium">
-                                    {quote.carrier === "Entrega Local" 
-                                      ? quote.service
-                                      : `${quote.service}`}
+                                  <p className="font-medium">
+                                    {quote.carrier === "Entrega Local" ? quote.service : `${quote.service}`}
                                   </p>
                                   <p className="text-xs text-muted-foreground/70">{quote.carrier}</p>
                                   <p className="text-sm text-muted-foreground">
