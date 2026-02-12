@@ -97,7 +97,7 @@ export default function Checkout() {
   const [isCardValid, setIsCardValid] = useState(false);
 
   // Payment method
-  const [paymentMethod, setPaymentMethod] = useState<"asaas">("asaas");
+  const [paymentMethod, setPaymentMethod] = useState<"pix" | "asaas">("pix");
 
   // Shipping form
   const [shippingData, setShippingData] = useState({
@@ -486,7 +486,7 @@ export default function Checkout() {
       }
 
       // For PIX payment, generate dynamic PIX key
-      if (paymentMethod === "pix") {
+      if (paymentMethod === "asaas") {
         const { data: session } = await supabase.auth.getSession();
 
         const { data: pixResult, error: pixError } = await supabase.functions.invoke("pix-payment", {
@@ -906,10 +906,32 @@ export default function Checkout() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <RadioGroup
-                        value={paymentMethod}
-                        onValueChange={(value) => setPaymentMethod(value as "pix" | "asaas")}
-                      >
+                      <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as "asaas")}>
+                        <div
+                          className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-colors ${
+                            paymentMethod === "pix"
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/50"
+                          }`}
+                          onClick={() => setPaymentMethod("pix")}
+                        >
+                          <div className="flex items-center gap-3">
+                            <RadioGroupItem value="pix" id="pix" />
+                            <div>
+                              <p className="font-medium flex items-center gap-2">
+                                <QrCode className="w-4 h-4 text-primary" />
+                                PIX
+                                <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded">
+                                  Recomendado
+                                </span>
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                Pagamento instantâneo • Confirmação automática
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
                         <div
                           className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-colors mt-2 ${
                             paymentMethod === "asaas"
