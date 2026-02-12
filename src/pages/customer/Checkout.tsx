@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import CouponInput from "@/components/checkout/CouponInput";
 import CPFInput from "@/components/checkout/CPFInput";
 import CreditCardForm, { CardData } from "@/components/checkout/CreditCardForm";
-import PixAwaitingPayment from "@/components/checkout/PixAwaitingPayment";
+
 import AsaasAwaitingPayment from "@/components/checkout/AsaasAwaitingPayment";
 import PaymentSuccessOverlay from "@/components/checkout/PaymentSuccessOverlay";
 
@@ -35,20 +35,6 @@ interface AppliedCoupon {
   is_active: boolean;
 }
 
-interface PixConfig {
-  pix_key: string;
-  pix_key_type: string;
-  admin_whatsapp: string;
-  admin_notification_enabled: boolean;
-}
-
-interface PixPaymentData {
-  id: string;
-  pixKey: string;
-  transactionId: string;
-  amount: number;
-  expiresAt: string;
-}
 
 interface AsaasPaymentData {
   id: string;
@@ -68,22 +54,12 @@ export default function Checkout() {
   const { user, profile } = useAuth();
   const { cart, getCartTotal, clearCart } = useCart();
 
-  const [step, setStep] = useState<"shipping" | "processing" | "awaiting_pix" | "awaiting_asaas" | "confirmation">(
+  const [step, setStep] = useState<"shipping" | "processing" | "awaiting_asaas" | "confirmation">(
     "shipping",
   );
   const [loading, setLoading] = useState(false);
   const [loadingShipping, setLoadingShipping] = useState(false);
 
-  // PIX config from database
-  const [pixConfig, setPixConfig] = useState<PixConfig>({
-    pix_key: "70a8b01b-6607-440a-af9f-5f2f3fe81dbe",
-    pix_key_type: "email",
-    admin_whatsapp: "5569992213658",
-    admin_notification_enabled: true,
-  });
-
-  // PIX payment data (after generation)
-  const [pixPaymentData, setPixPaymentData] = useState<PixPaymentData | null>(null);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
 
   // Asaas payment data
@@ -97,7 +73,7 @@ export default function Checkout() {
   const [isCardValid, setIsCardValid] = useState(false);
 
   // Payment method
-  const [paymentMethod, setPaymentMethod] = useState<"pix" | "asaas">("asaas");
+  const [paymentMethod] = useState<"asaas">("asaas");
 
   // Shipping form
   const [shippingData, setShippingData] = useState({
@@ -152,35 +128,6 @@ export default function Checkout() {
     }
   }, [profile]);
 
-  // Fetch PIX settings from database
-  useEffect(() => {
-    const fetchPixSettings = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("admin_settings")
-          .select("key, value")
-          .in("key", ["pix_key", "pix_key_type", "admin_whatsapp", "admin_notification_enabled"]);
-
-        if (error) throw error;
-
-        const settingsMap: Record<string, string> = {};
-        data?.forEach((item) => {
-          settingsMap[item.key] = item.value;
-        });
-
-        setPixConfig({
-          pix_key: settingsMap["pix_key"] || "",
-          pix_key_type: settingsMap["pix_key_type"] || "email",
-          admin_whatsapp: settingsMap["admin_whatsapp"] || "5569992213658",
-          admin_notification_enabled: settingsMap["admin_notification_enabled"] === "true",
-        });
-      } catch (error) {
-        console.error("Error fetching PIX settings:", error);
-      }
-    };
-
-    fetchPixSettings();
-  }, []);
 
   const getTotalWithShipping = () => {
     return getCartTotal() - discountAmount + (selectedShipping?.price || 0);
@@ -375,21 +322,6 @@ export default function Checkout() {
     return true;
   };
 
-  const sendAdminNotification = (orderId: string, total: number) => {
-    if (!pixConfig.admin_notification_enabled || !pixConfig.admin_whatsapp) return;
-
-    const message = `🛒 *NOVO PEDIDO PIX!*
-
-📦 Pedido: #${orderId.slice(0, 8)}
-💰 Valor: ${formatCurrency(total)}
-👤 Cliente: ${shippingData.name}
-📱 Telefone: ${shippingData.phone}
-📍 Cidade: ${shippingData.city}/${shippingData.state}
-
-⏳ Aguardando pagamento PIX.`;
-
-    window.open(`https://wa.me/${pixConfig.admin_whatsapp}?text=${encodeURIComponent(message)}`, "_blank");
-  };
 
   const handleCardDataChange = useCallback((data: CardData) => {
     setCardData(data);
@@ -413,7 +345,7 @@ export default function Checkout() {
           total_amount: getTotalWithShipping(),
           status: "pending",
           payment_status: "pending",
-          payment_method: paymentMethod === "pix" ? "pix" : asaasBillingType.toLowerCase(),
+          payment_method: asaasBillingType.toLowerCase(),
           shipping_name: shippingData.name,
           shipping_phone: shippingData.phone,
           shipping_address: `${shippingData.address}, ${shippingData.number}${shippingData.complement ? ` - ${shippingData.complement}` : ""} - ${shippingData.neighborhood}`,
@@ -427,7 +359,7 @@ export default function Checkout() {
           shipping_delivery_time: selectedShipping?.delivery_time || null,
           coupon_id: appliedCoupon?.id || null,
           discount_amount: discountAmount,
-          notes: paymentMethod === "pix" ? `Pagamento PIX - Aguardando confirmação` : null,
+          notes: null,
         })
         .select()
         .single();
@@ -485,45 +417,7 @@ export default function Checkout() {
         await supabase.from("orders").update({ status: "awaiting_customization" }).eq("id", order.id);
       }
 
-      if (paymentMethod === "pix") {
-        // PIX payment flow
-        const { data: session } = await supabase.auth.getSession();
-
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pix-payment?action=create`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${session?.session?.access_token}`,
-              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            },
-            body: JSON.stringify({
-              orderId: order.id,
-              amount: getTotalWithShipping(),
-              customerEmail: profile?.email || user?.email,
-              customerName: shippingData.name,
-              customerPhone: shippingData.phone,
-            }),
-          },
-        );
-
-        const pixResult = await response.json();
-
-        if (!response.ok) {
-          throw new Error(pixResult.error || "Erro ao criar pagamento PIX");
-        }
-
-        if (pixResult.success) {
-          setPixPaymentData(pixResult.pixPayment);
-          setCurrentOrderId(order.id);
-          clearCart();
-          sendAdminNotification(order.id, getTotalWithShipping());
-          setStep("awaiting_pix");
-        } else {
-          throw new Error("Erro ao gerar pagamento PIX");
-        }
-      } else if (paymentMethod === "asaas" && asaasBillingType === "CREDIT_CARD" && cardData) {
+      if (asaasBillingType === "CREDIT_CARD" && cardData) {
         // Credit card transparent checkout
         setStep("processing");
 
@@ -712,7 +606,7 @@ export default function Checkout() {
             <p className="text-sm text-muted-foreground">
               {step === "shipping" && "Endereço e pagamento"}
               {step === "processing" && "Processando pagamento..."}
-              {step === "awaiting_pix" && "Aguardando pagamento"}
+              
               {step === "awaiting_asaas" && "Aguardando pagamento"}
               {step === "confirmation" && "Pedido confirmado"}
             </p>
@@ -917,35 +811,10 @@ export default function Checkout() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <RadioGroup
-                        value={paymentMethod}
-                        onValueChange={(value) => setPaymentMethod(value as "pix" | "asaas")}
-                      >
-                        
-
-                        <div
-                          className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-colors mt-2 ${
-                            paymentMethod === "asaas"
-                              ? "border-primary bg-primary/5"
-                              : "border-border hover:border-primary/50"
-                          }`}
-                          onClick={() => setPaymentMethod("asaas")}
-                        >
-                          <div className="flex items-center gap-3">
-                            <RadioGroupItem value="asaas" id="asaas" />
-                            <div>
-                              <p className="font-medium flex items-center gap-2">
-                                <CreditCard className="w-4 h-4" />
-                                Cartão / Boleto / PIX Asaas
-                              </p>
-                              <p className="text-sm text-muted-foreground">Via plataforma de pagamento segura</p>
-                            </div>
-                          </div>
-                        </div>
-                      </RadioGroup>
+                      {/* Asaas payment - single option, no radio needed */}
 
                       {/* Asaas Options */}
-                      {paymentMethod === "asaas" && (
+                      {(
                         <div className="mt-4 space-y-4 pt-4 border-t border-border">
                           {/* CPF Input with validation */}
                           <CPFInput
@@ -1024,36 +893,24 @@ export default function Checkout() {
                   disabled={
                     loading ||
                     !selectedShipping ||
-                    (paymentMethod === "asaas" && !isCpfValid) ||
-                    (paymentMethod === "asaas" && asaasBillingType === "CREDIT_CARD" && !isCardValid)
+                    !isCpfValid ||
+                    (asaasBillingType === "CREDIT_CARD" && !isCardValid)
                   }
                 >
                   {loading ? (
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  ) : paymentMethod === "pix" ? (
-                    <QrCode className="w-4 h-4 mr-2" />
                   ) : asaasBillingType === "CREDIT_CARD" ? (
                     <CreditCard className="w-4 h-4 mr-2" />
                   ) : (
                     <CreditCard className="w-4 h-4 mr-2" />
                   )}
-                  {paymentMethod === "pix"
-                    ? "Gerar PIX e Pagar"
-                    : asaasBillingType === "CREDIT_CARD"
-                      ? "Pagar com Cartão"
-                      : "Ir para Pagamento"}
+                  {asaasBillingType === "CREDIT_CARD"
+                    ? "Pagar com Cartão"
+                    : "Ir para Pagamento"}
                 </Button>
               </motion.div>
             )}
 
-            {step === "awaiting_pix" && pixPaymentData && currentOrderId && (
-              <PixAwaitingPayment
-                pixPayment={pixPaymentData}
-                orderId={currentOrderId}
-                adminWhatsapp={pixConfig.admin_whatsapp}
-                onPaymentConfirmed={handlePaymentConfirmed}
-              />
-            )}
 
             {step === "awaiting_asaas" && asaasPaymentData && currentOrderId && (
               <AsaasAwaitingPayment
