@@ -20,8 +20,9 @@ const ASAAS_BASE_URL = asaasApiKey?.includes("_hmlg_")
 // Local delivery options are still validated by city/state.
 const LOCAL_SHIPPING: Record<string, { price: number; city: string; state: string }> = {
   "Entrega Local - Porto Velho": { price: 5.00, city: "porto velho", state: "RO" },
-  "Entrega Local - Jaru": { price: 5.00, city: "jaru", state: "RO" },
+  "Frete Grátis - Jaru": { price: 0, city: "jaru", state: "RO" },
 };
+const LOCAL_SHIPPING_KEYS = Object.keys(LOCAL_SHIPPING);
 
 function validateShippingMethod(method: string | null, cost: number | null, city: string | null, state: string | null): string | null {
   if (!method) return "Método de envio não informado";
