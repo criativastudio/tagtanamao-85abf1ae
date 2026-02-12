@@ -40,9 +40,9 @@ USING (key IN ('pix_key', 'pix_key_type', 'admin_whatsapp', 'admin_notification_
 
 -- Insert default values
 INSERT INTO public.admin_settings (key, value, description) VALUES
-('pix_key', '69992213658', 'Chave PIX para recebimento'),
+('pix_key', '70a8b01b-6607-440a-af9f-5f2f3fe81dbe', 'Chave PIX para recebimento'),
 ('pix_key_type', 'phone', 'Tipo da chave PIX (phone, email, cpf, cnpj, random)'),
-('admin_whatsapp', '5569992213658', 'WhatsApp do admin para notificações'),
+('admin_whatsapp', '5569993248849', 'WhatsApp do admin para notificações'),
 ('admin_notification_enabled', 'true', 'Habilitar notificações de novos pedidos');
 
 -- Create trigger for updated_at
