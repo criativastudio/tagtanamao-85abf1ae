@@ -170,7 +170,7 @@ const createQRCodeCanvas = async (code: GeneratedQRCode): Promise<HTMLCanvasElem
     ctx.font = `${Math.round(size * 0.06)}px Arial`; // Smaller font for display
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    const textY = size * 0.93 + 35; // Position text at 93% from top (bottom area)
+    const textY = size * 0.93; // Position text at 93% from top (bottom area)
     ctx.fillText(activationCode, centerX, textY);
   } else {
     // Pet Tag: Circular format 23mm diameter
@@ -238,7 +238,7 @@ const createQRCodeCanvas = async (code: GeneratedQRCode): Promise<HTMLCanvasElem
     await new Promise<void>((resolve) => {
       img.onload = () => {
         const qrX = (size - qrSize) / 2;
-        const qrY = Math.round(size * 0.18);
+        const qrY = Math.round(size * 0.18) + 35;
         ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
         resolve();
       };
