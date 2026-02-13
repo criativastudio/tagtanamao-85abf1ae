@@ -78,6 +78,9 @@ const generateUniqueCode = async (): Promise<string> => {
 const createQRCodeCanvas = async (code: GeneratedQRCode): Promise<HTMLCanvasElement> => {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "red";
+  ctx.fillRect(0, 0, 50, 50);
+
   if (!ctx) throw new Error("Canvas context not available");
 
   const isDisplay = code.type === "business_display";
@@ -95,49 +98,6 @@ const createQRCodeCanvas = async (code: GeneratedQRCode): Promise<HTMLCanvasElem
     // White square background
     ctx.fillStyle = "#FFFFFF";
     ctx.fillRect(0, 0, size, size);
-
-    // Cut line rectangle - magenta color standard for cut lines
-    // ctx.strokeStyle = '#FF00FF';
-    // ctx.lineWidth = 1;
-    // ctx.strokeRect(1, 1, size - 2, size - 2);
-
-    // Add corner registration marks
-    // const markLength = 12;
-    // const markOffset = 6;
-    // ctx.strokeStyle = '#FF00FF';
-    // ctx.lineWidth = 0.5;
-
-    // Top-left corner
-    // ctx.beginPath();
-    // ctx.moveTo(markOffset, markOffset);
-    // ctx.lineTo(markOffset + markLength, markOffset);
-    // ctx.moveTo(markOffset, markOffset);
-    // ctx.lineTo(markOffset, markOffset + markLength);
-    // ctx.stroke();
-
-    // Top-right corner
-    // ctx.beginPath();
-    // ctx.moveTo(size - markOffset, markOffset);
-    // ctx.lineTo(size - markOffset - markLength, markOffset);
-    // ctx.moveTo(size - markOffset, markOffset);
-    // ctx.lineTo(size - markOffset, markOffset + markLength);
-    // ctx.stroke();
-
-    // Bottom-left corner
-    // ctx.beginPath();
-    // ctx.moveTo(markOffset, size - markOffset);
-    // ctx.lineTo(markOffset + markLength, size - markOffset);
-    // ctx.moveTo(markOffset, size - markOffset);
-    // ctx.lineTo(markOffset, size - markOffset - markLength);
-    // ctx.stroke();
-
-    // Bottom-right corner
-    // ctx.beginPath();
-    // ctx.moveTo(size - markOffset, size - markOffset);
-    // ctx.lineTo(size - markOffset - markLength, size - markOffset);
-    // ctx.moveTo(size - markOffset, size - markOffset);
-    // ctx.lineTo(size - markOffset, size - markOffset - markLength);
-    // ctx.stroke();
 
     // QR code size - larger for square format (80% of width)
     const qrSize = Math.round(size * 0.75);
@@ -182,43 +142,6 @@ const createQRCodeCanvas = async (code: GeneratedQRCode): Promise<HTMLCanvasElem
     ctx.fillStyle = "#FFFFFF";
     ctx.fill();
 
-    // Cut line circle - magenta color standard for cut lines
-    // ctx.beginPath();
-    // ctx.arc(centerX, centerY, radius - 1, 0, Math.PI * 2);
-    // ctx.strokeStyle = '#FF00FF';
-    // ctx.lineWidth = 0.5;
-    // ctx.stroke();
-
-    // Add registration marks (cross marks at cardinal points)
-    // const markLength = 8;
-    // const markOffset = 4;
-    // ctx.strokeStyle = '#FF00FF';
-    // ctx.lineWidth = 0.5;
-
-    // Top mark
-    // ctx.beginPath();
-    // ctx.moveTo(centerX, markOffset);
-    // ctx.lineTo(centerX, markOffset + markLength);
-    // ctx.stroke();
-
-    // Bottom mark
-    // ctx.beginPath();
-    // ctx.moveTo(centerX, size - markOffset);
-    // ctx.lineTo(centerX, size - markOffset - markLength);
-    // ctx.stroke();
-
-    // Left mark
-    // ctx.beginPath();
-    // ctx.moveTo(markOffset, centerY);
-    // ctx.lineTo(markOffset + markLength, centerY);
-    // ctx.stroke();
-
-    // Right mark
-    // ctx.beginPath();
-    // ctx.moveTo(size - markOffset, centerY);
-    // ctx.lineTo(size - markOffset - markLength, centerY);
-    // ctx.stroke();
-
     // QR code size for pet tag
     const qrSize = Math.round(size * 0.68);
 
@@ -250,7 +173,7 @@ const createQRCodeCanvas = async (code: GeneratedQRCode): Promise<HTMLCanvasElem
     ctx.font = `${Math.round(size * 0.08)}px Arial`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    const textY = size * 0.12 + 35;
+    const textY = size * 0.12;
     ctx.fillText(activationCode, centerX, textY);
   }
 
