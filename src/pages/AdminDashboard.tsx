@@ -710,7 +710,7 @@ export default function AdminDashboard() {
         const col = index % cols;
         const row = Math.floor(index / cols);
         const x = col * cellSize + cellSize / 2;
-        const y = row * cellSize + cellSize / 2;
+        const y = row * cellSize + cellSize / 2 - 3;
 
         const codeIsDisplay = code.type === "business_display";
         const codeItemSize = codeIsDisplay ? DISPLAY_SIZE_MM : QR_DIAMETER_MM;
