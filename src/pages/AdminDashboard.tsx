@@ -688,7 +688,7 @@ export default function AdminDashboard() {
   <!-- Styles -->
   <defs>
     <style>
-      .cut-line { fill: none; stroke: #FF00FF; stroke-width: 0.1; }
+      .cut-line { fill: none; stroke: #5aff00; stroke-width: 0.1; }
       .reg-mark { fill: none; stroke: #FF00FF; stroke-width: 0.1; }
     </style>
   </defs>
