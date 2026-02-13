@@ -614,7 +614,7 @@ export default function AdminDashboard() {
           const col = index % cols;
           const row = Math.floor(index / cols);
           const x = col * cellSizeX + cellSizeX / 2;
-          const y = row * cellSizeY + cellSizeY / 2;
+          const y = row * cellSizeY + cellSizeY / 2 - 3; // sobe 3mm
           const r = itemSize / 2;
           svgContent += `    <circle cx="${x}" cy="${y}" r="${r}" class="cut-line"/>
 `;
