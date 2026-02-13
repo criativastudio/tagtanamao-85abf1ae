@@ -715,7 +715,7 @@ export default function PetTagsManager() {
                             value={formData.whatsapp}
                             onChange={(e) => setFormData((prev) => ({ ...prev, whatsapp: e.target.value }))}
                             disabled={!editMode}
-                            placeholder="Ex: 5569992213658"
+                            placeholder="Ex: 5569993248849"
                           />
                         </div>
                       </div>
