@@ -78,10 +78,11 @@ const generateUniqueCode = async (): Promise<string> => {
 const createQRCodeCanvas = async (code: GeneratedQRCode): Promise<HTMLCanvasElement> => {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "red";
-  ctx.fillRect(0, 0, 50, 50);
 
   if (!ctx) throw new Error("Canvas context not available");
+
+  // Desativa suavização que causa halo/borda colorida
+  ctx.imageSmoothingEnabled = false;
 
   const isDisplay = code.type === "business_display";
   const size = isDisplay ? DISPLAY_SIZE_PX : QR_DIAMETER_PX;
