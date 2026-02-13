@@ -250,7 +250,7 @@ const createQRCodeCanvas = async (code: GeneratedQRCode): Promise<HTMLCanvasElem
     ctx.font = `${Math.round(size * 0.08)}px Arial`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    const textY = size * 0.12;
+    const textY = size * 0.12) + 10;
     ctx.fillText(activationCode, centerX, textY);
   }
 
