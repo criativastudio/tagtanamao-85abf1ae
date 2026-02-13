@@ -136,11 +136,15 @@ const createQRCodeCanvas = async (code: GeneratedQRCode): Promise<HTMLCanvasElem
     // Pet Tag: Circular format 23mm diameter
     const radius = size / 2;
 
-    // White circular background
+    // Recorta o canvas em formato circular
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+
+    // Fundo branco dentro do círculo
     ctx.fillStyle = "#FFFFFF";
-    ctx.fill();
+    ctx.fillRect(0, 0, size, size);
 
     // QR code size for pet tag
     const qrSize = Math.round(size * 0.68);
