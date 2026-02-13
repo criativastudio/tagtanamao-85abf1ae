@@ -3,7 +3,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 // Melhor Envio shipping integration v2
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -12,9 +13,7 @@ const melhorEnvioToken = Deno.env.get("MELHOR_ENVIO_TOKEN")!;
 
 // Melhor Envio: try sandbox if MELHOR_ENVIO_SANDBOX is set to any value
 const isSandbox = !!Deno.env.get("MELHOR_ENVIO_SANDBOX");
-const ME_BASE_URL = isSandbox
-  ? "https://sandbox.melhorenvio.com.br/api/v2"
-  : "https://melhorenvio.com.br/api/v2";
+const ME_BASE_URL = isSandbox ? "https://sandbox.melhorenvio.com.br/api/v2" : "https://melhorenvio.com.br/api/v2";
 console.log(`Melhor Envio mode: ${isSandbox ? "SANDBOX" : "PRODUCTION"}, URL: ${ME_BASE_URL}`);
 
 const ORIGIN_POSTAL_CODE = "76890000";
@@ -36,15 +35,19 @@ async function meRequest(path: string, method = "GET", body?: any) {
     method,
     headers: {
       "Content-Type": "application/json",
-      "Accept": "application/json",
-      "Authorization": `Bearer ${melhorEnvioToken}`,
+      Accept: "application/json",
+      Authorization: `Bearer ${melhorEnvioToken}`,
       "User-Agent": "TagTaNaMao contato@qrpet.com.br",
     },
     body: body ? JSON.stringify(body) : undefined,
   });
   const text = await res.text();
   let data;
-  try { data = JSON.parse(text); } catch { data = { raw: text }; }
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = { raw: text };
+  }
   if (!res.ok) {
     console.error(`Melhor Envio API error (${res.status}):`, text);
     if (res.status === 403) {
@@ -61,26 +64,36 @@ function getFallbackQuotes(toPostalCode: string, totalWeight: number, totalValue
   // Base prices by first digit of CEP (approximate Correios pricing)
   // Origin: 76 (Rondônia)
   const pacPrices: Record<string, number> = {
-    "0": 22.90, "1": 22.90, // SP
-    "2": 24.90, "3": 22.90, // RJ, MG
-    "4": 26.90, "5": 24.90, // BA, PE/CE
-    "6": 18.90, "7": 14.90, // PA/AM, GO/DF/TO/RO
-    "8": 24.90, "9": 26.90, // PR/SC, RS
+    "0": 22.9,
+    "1": 22.9, // SP
+    "2": 24.9,
+    "3": 22.9, // RJ, MG
+    "4": 26.9,
+    "5": 24.9, // BA, PE/CE
+    "6": 18.9,
+    "7": 14.9, // PA/AM, GO/DF/TO/RO
+    "8": 24.9,
+    "9": 26.9, // PR/SC, RS
   };
   const sedexPrices: Record<string, number> = {
-    "0": 42.90, "1": 42.90,
-    "2": 44.90, "3": 40.90,
-    "4": 48.90, "5": 44.90,
-    "6": 34.90, "7": 28.90,
-    "8": 44.90, "9": 48.90,
+    "0": 42.9,
+    "1": 42.9,
+    "2": 44.9,
+    "3": 40.9,
+    "4": 48.9,
+    "5": 44.9,
+    "6": 34.9,
+    "7": 28.9,
+    "8": 44.9,
+    "9": 48.9,
   };
 
   // Adjust for weight (add R$2 per extra 500g above 300g)
   const extraWeight = Math.max(0, totalWeight - 0.3);
   const weightSurcharge = Math.ceil(extraWeight / 0.5) * 2;
 
-  const pacPrice = (pacPrices[destRegion] || 22.90) + weightSurcharge;
-  const sedexPrice = (sedexPrices[destRegion] || 42.90) + weightSurcharge;
+  const pacPrice = (pacPrices[destRegion] || 22.9) + weightSurcharge;
+  const sedexPrice = (sedexPrices[destRegion] || 42.9) + weightSurcharge;
 
   const quotes = [
     {
@@ -114,9 +127,9 @@ function getFallbackQuotes(toPostalCode: string, totalWeight: number, totalValue
 async function calculateShipping(toPostalCode: string, products: ShipmentProduct[]) {
   // Aggregate products into a single package
   const totalWeight = products.reduce((s, p) => s + p.weight * p.quantity, 0);
-  const maxWidth = Math.max(...products.map(p => p.width));
+  const maxWidth = Math.max(...products.map((p) => p.width));
   const maxHeight = products.reduce((s, p) => s + p.height * p.quantity, 0);
-  const maxLength = Math.max(...products.map(p => p.length));
+  const maxLength = Math.max(...products.map((p) => p.length));
   const totalValue = products.reduce((s, p) => s + p.unitPrice * p.quantity, 0);
 
   const body = {
@@ -187,7 +200,7 @@ async function addToCart(order: any, items: any[], serviceId: number) {
     agency: null,
     from: {
       name: "QRPet - Tag Tá Na Mão",
-      phone: "69992213658",
+      phone: "69993248849",
       email: "contato@qrpet.com.br",
       document: "",
       company_document: "",
@@ -289,13 +302,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
       if (!postalCode || !products?.length) {
         return new Response(JSON.stringify({ error: "CEP e produtos são obrigatórios" }), {
-          status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
         });
       }
 
       const quotes = await calculateShipping(postalCode, products);
       return new Response(JSON.stringify({ success: true, quotes }), {
-        status: 200, headers: { "Content-Type": "application/json", ...corsHeaders },
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
@@ -303,14 +318,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 401, headers: { "Content-Type": "application/json", ...corsHeaders },
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabase.auth.getUser(token);
     if (userError || !userData.user) {
       return new Response(JSON.stringify({ error: "Token inválido" }), {
-        status: 401, headers: { "Content-Type": "application/json", ...corsHeaders },
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
@@ -321,7 +338,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (action === "generate-label") {
       if (!isAdmin) {
         return new Response(JSON.stringify({ error: "Acesso negado" }), {
-          status: 403, headers: { "Content-Type": "application/json", ...corsHeaders },
+          status: 403,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
         });
       }
 
@@ -337,13 +355,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
       if (orderErr || !order) {
         return new Response(JSON.stringify({ error: "Pedido não encontrado" }), {
-          status: 404, headers: { "Content-Type": "application/json", ...corsHeaders },
+          status: 404,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
         });
       }
 
       if (order.status !== "paid" && order.payment_status !== "confirmed") {
         return new Response(JSON.stringify({ error: "Apenas pedidos pagos podem gerar etiqueta" }), {
-          status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
         });
       }
 
@@ -355,7 +375,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
       if (!items?.length) {
         return new Response(JSON.stringify({ error: "Itens do pedido não encontrados" }), {
-          status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
         });
       }
 
@@ -371,18 +392,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
           quantity: i.quantity,
           unitPrice: i.unit_price,
           name: i.product?.name || "Produto",
-        }))
+        })),
       );
 
       // Match service by name or carrier
-      const matchingQuote = quotes.find((q: any) =>
-        q.service === order.shipping_service_name ||
-        q.carrier === order.shipping_carrier
-      ) || quotes[0];
+      const matchingQuote =
+        quotes.find((q: any) => q.service === order.shipping_service_name || q.carrier === order.shipping_carrier) ||
+        quotes[0];
 
       if (!matchingQuote) {
         return new Response(JSON.stringify({ error: "Serviço de frete não disponível para este destino" }), {
-          status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
         });
       }
 
@@ -396,13 +417,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
           customer_cpf: profileData?.cpf || "",
         },
         items,
-        parseInt(matchingQuote.serviceCode)
+        parseInt(matchingQuote.serviceCode),
       );
 
       const shipmentId = cartResult?.id;
       if (!shipmentId) {
         return new Response(JSON.stringify({ error: "Falha ao adicionar envio ao carrinho", details: cartResult }), {
-          status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
         });
       }
 
@@ -419,25 +441,32 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const labelUrl = printResult?.url || "";
 
       // Update order
-      await supabase.from("orders").update({
-        melhor_envio_shipment_id: shipmentId,
-        melhor_envio_label_url: labelUrl,
-        shipping_status: "label_generated",
-        status: "processing",
-      }).eq("id", orderId);
+      await supabase
+        .from("orders")
+        .update({
+          melhor_envio_shipment_id: shipmentId,
+          melhor_envio_label_url: labelUrl,
+          shipping_status: "label_generated",
+          status: "processing",
+        })
+        .eq("id", orderId);
 
-      return new Response(JSON.stringify({
-        success: true,
-        shipmentId,
-        labelUrl,
-        checkoutResult,
-      }), { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } });
+      return new Response(
+        JSON.stringify({
+          success: true,
+          shipmentId,
+          labelUrl,
+          checkoutResult,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
     }
 
     if (action === "print-label") {
       if (!isAdmin) {
         return new Response(JSON.stringify({ error: "Acesso negado" }), {
-          status: 403, headers: { "Content-Type": "application/json", ...corsHeaders },
+          status: 403,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
         });
       }
 
@@ -452,14 +481,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
       if (!order?.melhor_envio_shipment_id) {
         return new Response(JSON.stringify({ error: "Etiqueta ainda não foi gerada para este pedido" }), {
-          status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
         });
       }
 
       // If we already have the label URL, return it
       if (order.melhor_envio_label_url) {
         return new Response(JSON.stringify({ success: true, labelUrl: order.melhor_envio_label_url }), {
-          status: 200, headers: { "Content-Type": "application/json", ...corsHeaders },
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
         });
       }
 
@@ -471,14 +502,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
 
       return new Response(JSON.stringify({ success: true, labelUrl }), {
-        status: 200, headers: { "Content-Type": "application/json", ...corsHeaders },
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
     if (action === "tracking") {
       if (!isAdmin) {
         return new Response(JSON.stringify({ error: "Acesso negado" }), {
-          status: 403, headers: { "Content-Type": "application/json", ...corsHeaders },
+          status: 403,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
         });
       }
 
@@ -493,7 +526,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
       if (!order?.melhor_envio_shipment_id) {
         return new Response(JSON.stringify({ error: "Envio não encontrado" }), {
-          status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
         });
       }
 
@@ -502,25 +536,30 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
       // Update tracking code if available
       if (trackingData?.tracking) {
-        await supabase.from("orders").update({
-          tracking_code: trackingData.tracking,
-          shipping_status: trackingData.status || "posted",
-        }).eq("id", orderId);
+        await supabase
+          .from("orders")
+          .update({
+            tracking_code: trackingData.tracking,
+            shipping_status: trackingData.status || "posted",
+          })
+          .eq("id", orderId);
       }
 
       return new Response(JSON.stringify({ success: true, tracking: trackingData }), {
-        status: 200, headers: { "Content-Type": "application/json", ...corsHeaders },
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
     return new Response(JSON.stringify({ error: "Ação inválida" }), {
-      status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
+      status: 400,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
     });
-
   } catch (error: any) {
     console.error("Error in melhor-envio:", error);
     return new Response(JSON.stringify({ error: error.message || "Erro no Melhor Envio" }), {
-      status: 500, headers: { "Content-Type": "application/json", ...corsHeaders },
+      status: 500,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   }
 });
