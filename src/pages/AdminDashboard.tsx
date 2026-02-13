@@ -238,7 +238,7 @@ const createQRCodeCanvas = async (code: GeneratedQRCode): Promise<HTMLCanvasElem
     await new Promise<void>((resolve) => {
       img.onload = () => {
         const qrX = (size - qrSize) / 2;
-        const qrY = Math.round(size * 0.12);
+        const qrY = Math.round(size * 0.18);
         ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
         resolve();
       };
@@ -250,7 +250,7 @@ const createQRCodeCanvas = async (code: GeneratedQRCode): Promise<HTMLCanvasElem
     ctx.font = `${Math.round(size * 0.08)}px Arial`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    const textY = size * 0.9;
+    const textY = size * 0.12;
     ctx.fillText(activationCode, centerX, textY);
   }
 
