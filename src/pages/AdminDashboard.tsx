@@ -789,7 +789,7 @@ export default function AdminDashboard() {
         if (codeIsDisplay) {
           // Square cut line for displays
           const halfSize = codeItemSize / 2;
-          svgContent += `    <rect x="${x - halfSize}" y="${y - halfSize - 2}" width="${codeItemSize}" height="${codeItemSize}" class="cut-line"/>
+          svgContent += `    <rect x="${x - halfSize}" y="${y - halfSize - 20}" width="${codeItemSize}" height="${codeItemSize}" class="cut-line"/>
 `;
         } else {
           // Circular cut line for pet tags
