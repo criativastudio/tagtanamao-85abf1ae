@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { MessageCircle } from "lucide-react";
 
 const WhatsAppButton = () => {
-  const whatsappNumber = "5569992213658"; // Replace with actual number
+  const whatsappNumber = "556993248849"; // Replace with actual number
   const message = "Olá! Gostaria de saber mais sobre as Tags Pet QR Code.";
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
 
