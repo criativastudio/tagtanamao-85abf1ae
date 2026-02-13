@@ -290,8 +290,13 @@ export default function AdminDashboard() {
   const [generating, setGenerating] = useState(false);
   const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
   
-  // Categories state
-  const [categories, setCategories] = useState<Category[]>([]);
+  // Categories state - persisted in localStorage
+  const [categories, setCategories] = useState<Category[]>(() => {
+    try {
+      const saved = localStorage.getItem('admin_qr_categories');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -309,6 +314,11 @@ export default function AdminDashboard() {
   const logoInputRef = useRef<HTMLInputElement>(null);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Persist categories to localStorage
+  useEffect(() => {
+    localStorage.setItem('admin_qr_categories', JSON.stringify(categories));
+  }, [categories]);
 
   useEffect(() => {
     if (!loading && profile && !profile.is_admin) {

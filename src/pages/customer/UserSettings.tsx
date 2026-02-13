@@ -340,7 +340,12 @@ export default function UserSettings() {
   // QR Export states
   const [petTags, setPetTags] = useState<QRCode[]>([]);
   const [displays, setDisplays] = useState<QRCode[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Category[]>(() => {
+    try {
+      const saved = localStorage.getItem('user_qr_categories');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showExportDialog, setShowExportDialog] = useState(false);
@@ -351,6 +356,11 @@ export default function UserSettings() {
   const [deletingTags, setDeletingTags] = useState(false);
 
   const allCodes = [...petTags, ...displays];
+
+  // Persist categories to localStorage
+  useEffect(() => {
+    localStorage.setItem('user_qr_categories', JSON.stringify(categories));
+  }, [categories]);
 
   useEffect(() => {
     if (profile?.is_admin) {
