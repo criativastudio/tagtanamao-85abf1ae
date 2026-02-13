@@ -94,7 +94,7 @@ const Products = () => {
             Soluções <span className="text-gradient">inteligentes</span>
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Para pets e empresas. Tecnologia QR Code que conecta.
+            Display empresarial. Tecnologia QR Code que conecta.
           </p>
         </motion.div>
 
@@ -218,11 +218,14 @@ const Products = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
+            style={{ backgroundColor: "rgba(0, 0, 0, 0.9)" }}
             onClick={() => setLightboxData(null)}
           >
             <button
-              onClick={(e) => { e.stopPropagation(); setLightboxData(null); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxData(null);
+              }}
               className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10"
             >
               <X className="w-6 h-6 text-white" />
@@ -231,13 +234,23 @@ const Products = () => {
             {lightboxData.images.length > 1 && (
               <>
                 <button
-                  onClick={(e) => { e.stopPropagation(); setLightboxData(prev => prev ? { ...prev, index: (prev.index - 1 + prev.images.length) % prev.images.length } : null); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLightboxData((prev) =>
+                      prev ? { ...prev, index: (prev.index - 1 + prev.images.length) % prev.images.length } : null,
+                    );
+                  }}
                   className="absolute left-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10"
                 >
                   <ChevronLeft className="w-6 h-6 text-white" />
                 </button>
                 <button
-                  onClick={(e) => { e.stopPropagation(); setLightboxData(prev => prev ? { ...prev, index: (prev.index + 1) % prev.images.length } : null); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLightboxData((prev) =>
+                      prev ? { ...prev, index: (prev.index + 1) % prev.images.length } : null,
+                    );
+                  }}
                   className="absolute right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10"
                 >
                   <ChevronRight className="w-6 h-6 text-white" />
@@ -261,8 +274,11 @@ const Products = () => {
                 {lightboxData.images.map((_, i) => (
                   <button
                     key={i}
-                    onClick={(e) => { e.stopPropagation(); setLightboxData(prev => prev ? { ...prev, index: i } : null); }}
-                    className={`w-2.5 h-2.5 rounded-full transition-colors ${i === lightboxData.index ? 'bg-white' : 'bg-white/40'}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLightboxData((prev) => (prev ? { ...prev, index: i } : null));
+                    }}
+                    className={`w-2.5 h-2.5 rounded-full transition-colors ${i === lightboxData.index ? "bg-white" : "bg-white/40"}`}
                   />
                 ))}
               </div>
