@@ -20,7 +20,7 @@ const Footer = () => {
               <img src={logoHorizontal} alt="Tag Tá Na Mão" className="h-8" />
             </div>
             <p className="text-muted-foreground text-sm mb-4">
-              Tecnologia que protege quem você ama. Tags inteligentes com QR Code para pets.
+              Tecnologia que protege quem você ama. Tags e Displays inteligentes com QR Code.
             </p>
             <div className="flex gap-3">
               <a
