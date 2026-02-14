@@ -36,6 +36,14 @@ const CTA = () => {
               Comprar com Desconto
               <ArrowRight className="w-5 h-5" />
             </Button>
+            <Button
+              variant="hero"
+              size="xl"
+              onClick={() => document.getElementById("precos")?.scrollIntoView({ behavior: "smooth" })}
+            >
+              {" "}
+              Comprar com Desconto <ArrowRight className="w-5 h-5" />{" "}
+            </Button>
             <Button variant="heroOutline" size="xl">
               Falar no WhatsApp
             </Button>
