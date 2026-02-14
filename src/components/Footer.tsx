@@ -119,7 +119,7 @@ const Footer = () => {
               </li>
               <li>
                 <a
-                  href="https://docs.google.com/document/d/1bzHRh9K4rfDSOAvJJY4gU5YCcOL3o__7zjswGjFIdEs/edit?usp=sharing"
+                  href="https://drive.google.com/file/d/1tBOyUBoOb3a0V6ongVd_vFO_tSjIuLpx/view?usp=sharing"
                   className="hover:text-primary transition-colors"
                 >
                   Termos de Uso
@@ -127,7 +127,7 @@ const Footer = () => {
               </li>
               <li>
                 <a
-                  href="https://docs.google.com/document/d/1NL4yi0EuPbdHbhW24OsFqYFQ-Ahza8ILJKhtJMQrVfk/edit?usp=sharing"
+                  href="https://drive.google.com/file/d/1UhZL50E0Mfrjyyi_KuvkyICJXof5Y1bX/view?usp=sharing"
                   className="hover:text-primary transition-colors"
                 >
                   Política de Privacidade
