@@ -12,62 +12,62 @@ interface BioThemeEditorProps {
 
 const COLOR_PRESETS = {
   backgrounds: [
-    { label: 'Escuro', value: '220 20% 4%' },
-    { label: 'Cinza Escuro', value: '220 15% 10%' },
-    { label: 'Azul Escuro', value: '220 30% 8%' },
-    { label: 'Verde Escuro', value: '160 30% 8%' },
-    { label: 'Roxo Escuro', value: '270 30% 10%' },
+    { label: "Escuro", value: "220 10% 4%" },
+    { label: "Cinza Escuro", value: "220 15% 10%" },
+    { label: "Azul Escuro", value: "220 30% 8%" },
+    { label: "Verde Escuro", value: "160 30% 8%" },
+    { label: "Roxo Escuro", value: "270 30% 10%" },
   ],
   primary: [
-    { label: 'Verde Tech', value: '160 84% 45%' },
-    { label: 'Ciano', value: '180 100% 50%' },
-    { label: 'Roxo', value: '270 84% 55%' },
-    { label: 'Rosa', value: '330 70% 55%' },
-    { label: 'Laranja', value: '25 95% 55%' },
-    { label: 'Azul', value: '220 84% 55%' },
+    { label: "Verde Tech", value: "160 84% 45%" },
+    { label: "Ciano", value: "180 100% 50%" },
+    { label: "Roxo", value: "270 84% 55%" },
+    { label: "Rosa", value: "330 70% 55%" },
+    { label: "Laranja", value: "25 95% 55%" },
+    { label: "Azul", value: "220 84% 55%" },
   ],
 };
 
 const THEME_PRESETS = [
   {
-    name: 'Tech Verde',
+    name: "Tech Verde",
     theme: {
-      backgroundColor: '220 20% 4%',
-      cardColor: '220 20% 7%',
-      primaryColor: '160 84% 45%',
-      textColor: '0 0% 98%',
-      ledColor: '160 84% 45%',
-    }
+      backgroundColor: "220 20% 4%",
+      cardColor: "220 20% 7%",
+      primaryColor: "160 84% 45%",
+      textColor: "0 0% 98%",
+      ledColor: "160 84% 45%",
+    },
   },
   {
-    name: 'Neon Ciano',
+    name: "Neon Ciano",
     theme: {
-      backgroundColor: '200 30% 6%',
-      cardColor: '200 25% 10%',
-      primaryColor: '180 100% 50%',
-      textColor: '0 0% 98%',
-      ledColor: '180 100% 50%',
-    }
+      backgroundColor: "200 30% 6%",
+      cardColor: "200 25% 10%",
+      primaryColor: "180 100% 50%",
+      textColor: "0 0% 98%",
+      ledColor: "180 100% 50%",
+    },
   },
   {
-    name: 'Roxo Místico',
+    name: "Roxo Místico",
     theme: {
-      backgroundColor: '270 30% 6%',
-      cardColor: '270 25% 12%',
-      primaryColor: '270 84% 60%',
-      textColor: '0 0% 98%',
-      ledColor: '270 84% 60%',
-    }
+      backgroundColor: "270 30% 6%",
+      cardColor: "270 25% 12%",
+      primaryColor: "270 84% 60%",
+      textColor: "0 0% 98%",
+      ledColor: "270 84% 60%",
+    },
   },
   {
-    name: 'Rosa Quente',
+    name: "Rosa Quente",
     theme: {
-      backgroundColor: '330 20% 6%',
-      cardColor: '330 20% 10%',
-      primaryColor: '330 70% 55%',
-      textColor: '0 0% 98%',
-      ledColor: '330 70% 55%',
-    }
+      backgroundColor: "330 20% 6%",
+      cardColor: "330 20% 10%",
+      primaryColor: "330 70% 55%",
+      textColor: "0 0% 98%",
+      ledColor: "330 70% 55%",
+    },
   },
 ];
 
@@ -86,19 +86,16 @@ export const BioThemeEditor = ({ theme, onUpdateTheme }: BioThemeEditorProps) =>
                 key={preset.name}
                 onClick={() => onUpdateTheme(preset.theme)}
                 className="p-3 rounded-lg border-2 border-transparent hover:border-primary transition-all text-left"
-                style={{ 
+                style={{
                   backgroundColor: `hsl(${preset.theme.backgroundColor})`,
                 }}
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <div 
+                  <div
                     className="w-4 h-4 rounded-full"
                     style={{ backgroundColor: `hsl(${preset.theme.primaryColor})` }}
                   />
-                  <span 
-                    className="text-sm font-medium"
-                    style={{ color: `hsl(${preset.theme.textColor})` }}
-                  >
+                  <span className="text-sm font-medium" style={{ color: `hsl(${preset.theme.textColor})` }}>
                     {preset.name}
                   </span>
                 </div>
@@ -107,7 +104,7 @@ export const BioThemeEditor = ({ theme, onUpdateTheme }: BioThemeEditorProps) =>
                     <div
                       key={i}
                       className="h-2 flex-1 rounded"
-                      style={{ 
+                      style={{
                         backgroundColor: `hsl(${preset.theme.cardColor})`,
                         boxShadow: `0 0 8px hsl(${preset.theme.ledColor} / 0.5)`,
                       }}
@@ -134,7 +131,7 @@ export const BioThemeEditor = ({ theme, onUpdateTheme }: BioThemeEditorProps) =>
                   key={color.value}
                   onClick={() => onUpdateTheme({ backgroundColor: color.value })}
                   className={`w-10 h-10 rounded-lg border-2 transition-all ${
-                    theme.backgroundColor === color.value ? 'border-white scale-110' : 'border-transparent'
+                    theme.backgroundColor === color.value ? "border-white scale-110" : "border-transparent"
                   }`}
                   style={{ backgroundColor: `hsl(${color.value})` }}
                   title={color.label}
@@ -151,7 +148,7 @@ export const BioThemeEditor = ({ theme, onUpdateTheme }: BioThemeEditorProps) =>
                   key={color.value}
                   onClick={() => onUpdateTheme({ primaryColor: color.value, ledColor: color.value })}
                   className={`w-10 h-10 rounded-lg border-2 transition-all ${
-                    theme.primaryColor === color.value ? 'border-white scale-110' : 'border-transparent'
+                    theme.primaryColor === color.value ? "border-white scale-110" : "border-transparent"
                   }`}
                   style={{ backgroundColor: `hsl(${color.value})` }}
                   title={color.label}
@@ -170,7 +167,7 @@ export const BioThemeEditor = ({ theme, onUpdateTheme }: BioThemeEditorProps) =>
         <CardContent className="space-y-4">
           <Select
             value={theme.buttonStyle}
-            onValueChange={(value) => onUpdateTheme({ buttonStyle: value as BioTheme['buttonStyle'] })}
+            onValueChange={(value) => onUpdateTheme({ buttonStyle: value as BioTheme["buttonStyle"] })}
           >
             <SelectTrigger>
               <SelectValue />
@@ -196,10 +193,7 @@ export const BioThemeEditor = ({ theme, onUpdateTheme }: BioThemeEditorProps) =>
               <Label>Efeito LED / Glow</Label>
               <p className="text-xs text-muted-foreground">Brilho animado nos elementos</p>
             </div>
-            <Switch
-              checked={theme.ledEnabled}
-              onCheckedChange={(checked) => onUpdateTheme({ ledEnabled: checked })}
-            />
+            <Switch checked={theme.ledEnabled} onCheckedChange={(checked) => onUpdateTheme({ ledEnabled: checked })} />
           </div>
 
           <div className="flex items-center justify-between">
