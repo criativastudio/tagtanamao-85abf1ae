@@ -16,7 +16,7 @@ const COLOR_PRESETS = {
     { label: "Cinza Escuro", value: "220 15% 10%" },
     { label: "Azul Escuro", value: "220 30% 8%" },
     { label: "Verde Escuro", value: "160 30% 8%" },
-    { label: "Roxo Escuro", value: "270 30% 10%" },
+    { label: "Roxo Escuro", value: "270 85% 20%" },
   ],
   primary: [
     { label: "Verde Tech", value: "160 84% 45%" },
