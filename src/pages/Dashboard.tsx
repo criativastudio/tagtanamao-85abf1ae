@@ -124,7 +124,7 @@ export default function Dashboard() {
     },
     {
       icon: ShoppingBag,
-      label: "Pedidos",
+      label: "Minhas Compras",
       path: "/meus-pedidos",
       active: false,
     },
