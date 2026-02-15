@@ -1,65 +1,80 @@
 
-## Tracker de Etapas para Pedidos de Display Empresarial
 
-### Objetivo
-Substituir o badge simples de status por um tracker visual de etapas (stepper) dentro do card expansivel do pedido, mostrando claramente em qual fase o pedido se encontra. Aplicavel apenas a pedidos que contenham display empresarial (`display_arts` presente).
+# Gerenciamento de Usuarios no Admin
 
-### Como funciona
+## Resumo
+Criar uma nova pagina `/admin/usuarios` acessivel pelo menu Admin em Configuracoes, que lista todos os usuarios cadastrados com busca, status de compra, e ao clicar em um usuario exibe detalhes completos: produtos, links das paginas, e metricas de acesso.
 
-O pedido continua sendo unico. Ao expandir o accordion, alem dos itens e endereco, aparece um stepper vertical com as etapas:
+## O que sera feito
 
-1. **Pendente** - Aguardando pagamento
-2. **Pago** - Pagamento aprovado
-3. **Personalizar Arte** - Arte em aberto (com botao de acao)
-4. **Arte Finalizada / Em Producao** - Arte aprovada, em producao
-5. **Enviado** - Pedido despachado
-6. **Entregue** - Pedido recebido
+### 1. Nova pagina `UsersManager.tsx`
+- Lista todos os perfis do banco de dados (tabela `profiles`)
+- Exibe para cada usuario: nome, e-mail, status (comprou / nao comprou)
+- Campo de busca por nome, e-mail ou codigo unico (QR code)
+- Ao clicar em um usuario, abre painel de detalhes
 
-Cada etapa mostra:
-- Icone circular: verde preenchido (concluida), azul pulsante (atual), cinza (futura)
-- Linha conectora entre etapas (verde para concluidas, cinza para futuras)
-- Label e descricao curta
-- Botao de acao na etapa atual quando aplicavel (ex: "Personalizar Meu Display", "Pagar Agora", "Rastrear")
+### 2. Painel de detalhes do usuario
+Ao selecionar um usuario:
+- **Produtos comprados**: lista pedidos da tabela `orders` + `order_items` + `products`
+- **Links das paginas**: busca `pet_tags` e `business_displays` do usuario, exibe links publicos (`/pet/:qr` e `/display/:qr`)
+- **Bio pages**: lista `bio_pages` do usuario com links (`/bio/:slug`)
+- **Metricas da pagina**:
+  - Total de cliques (da tabela `bio_page_analytics` + `qr_scans`)
+  - Botoes mais clicados
+  - Horarios de maior acesso (agrupando eventos por hora do dia)
 
-### Detalhes Tecnicos
+### 3. Rota e navegacao
+- Nova rota `/admin/usuarios` no `App.tsx` (protegida)
+- Novo item no `adminMenuItems` em `UserSettings.tsx` com icone `Users`
 
-**Arquivo modificado:** `src/pages/customer/MyOrders.tsx`
+## Detalhes tecnicos
 
-**Logica de deteccao:** Um pedido e de display empresarial se `order.display_arts` existe e tem pelo menos 1 item. Para esses pedidos, o stepper e exibido. Para pedidos comuns (pet tags), o layout atual e mantido.
+### Consultas ao banco
+- Perfis: `supabase.from('profiles').select('*')` - admin ja tem policy ALL
+- Pedidos do usuario: `supabase.from('orders').select('*, order_items(*, products(*))').eq('user_id', userId)` - admin policy existe
+- Pet tags: `supabase.from('pet_tags').select('*').eq('user_id', userId)` - admin policy existe
+- Displays: `supabase.from('business_displays').select('*').eq('user_id', userId)` - admin policy existe
+- Bio pages: `supabase.from('bio_pages').select('*').eq('user_id', userId)` - admin policy existe
+- Analytics: `supabase.from('bio_page_analytics').select('*')` filtrado pelos bio_page_ids do usuario
+- Scans: `supabase.from('qr_scans').select('*')` filtrado pelos pet_tag_ids e display_ids do usuario
 
-**Mapeamento de status para etapas:**
+Todas essas tabelas ja possuem RLS policies que permitem acesso admin (`is_admin()` ou similar), entao nenhuma migracao de banco e necessaria.
+
+### Arquivos a criar/editar
+1. **Criar** `src/pages/admin/UsersManager.tsx` - pagina principal com lista, busca e painel de detalhes
+2. **Editar** `src/App.tsx` - adicionar rota `/admin/usuarios`
+3. **Editar** `src/pages/customer/UserSettings.tsx` - adicionar item "Usuarios" no `adminMenuItems`
+
+### Estrutura da pagina
 
 ```text
-Status do pedido    ->  Etapa ativa (indice)
-pending             ->  0 (Pendente)
-paid                ->  1 (Pago)
-awaiting_customization -> 2 (Personalizar Arte)
-art_finalized       ->  3 (Arte Finalizada)
-processing          ->  3 (Em Producao)
-ready_to_ship       ->  4 (Enviado)
-shipped             ->  4 (Enviado)
-delivered           ->  5 (Entregue)
-cancelled           ->  exibe badge vermelho separado
++------------------------------------------+
+| <- Voltar    Gestao de Usuarios          |
++------------------------------------------+
+| [Busca por nome, e-mail ou codigo]       |
++------------------------------------------+
+| Nome        | E-mail     | Status       |
+|-------------|------------|--------------|
+| Joao Silva  | joao@...   | Comprou      |
+| Maria       | maria@...  | Nao comprou  |
++------------------------------------------+
+
+Ao clicar em um usuario:
++------------------------------------------+
+| Detalhes: Joao Silva                     |
+|------------------------------------------|
+| Produtos Comprados:                      |
+|   - Tag Pet x2 (Pedido #abc)            |
+|------------------------------------------|
+| Paginas:                                 |
+|   - Pet: /pet/123456 (Rex)              |
+|   - Display: /display/789 (Loja X)      |
+|   - Bio: /bio/joao-silva               |
+|------------------------------------------|
+| Metricas (ultimos 30 dias):             |
+|   Total visualizacoes: 450              |
+|   Total cliques: 89                     |
+|   Botoes mais clicados: Instagram (32)  |
+|   Horario pico: 18h-20h                |
++------------------------------------------+
 ```
-
-**Componente `DisplayOrderStepper`** (inline no mesmo arquivo):
-- Recebe `order: OrderWithItems` e `navigate` como props
-- Define array de etapas com `label`, `icon`, `description`
-- Calcula `currentStepIndex` a partir do status do pedido
-- Renderiza lista vertical com circulos, linhas e labels
-- Inclui botoes de acao contextuais na etapa atual
-
-**Mudancas no layout do card:**
-- O badge de status no header permanece para referencia rapida
-- Dentro do `AccordionContent`, antes dos itens, renderiza `<DisplayOrderStepper>` se for pedido de display
-- Os botoes de acao atuais (Personalizar, Pagar, Rastrear) migram para dentro do stepper na etapa correspondente
-- Para pedidos nao-display, tudo continua como esta
-
-### Estilo visual
-
-- Circulos: `w-8 h-8 rounded-full` com `bg-primary` (concluida), `bg-primary animate-pulse ring-4 ring-primary/20` (atual), `bg-muted` (futura)
-- Icone dentro: `CheckCircle` (concluida), icone especifico (atual/futura)
-- Linha vertical: `w-0.5 h-6` com `bg-primary` ou `bg-muted`
-- Labels: `font-medium text-sm` (ativa), `text-muted-foreground text-sm` (outras)
-
-Nenhuma alteracao de banco de dados e necessaria. Tudo e derivado do status existente do pedido.
