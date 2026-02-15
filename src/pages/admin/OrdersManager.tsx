@@ -110,10 +110,32 @@ export default function OrdersManager() {
       .from("orders")
       .select(
         `
-        *,
+        id,
+        created_at,
+        updated_at,
+        status,
+        payment_status,
+        total_amount,
+        shipping_cost,
+        shipping_method,
+        shipping_name,
+        shipping_phone,
+        shipping_address,
+        shipping_city,
+        shipping_state,
+        shipping_zip,
+        tracking_code,
+        melhor_envio_shipment_id,
+        melhor_envio_label_url,
+        shipping_carrier,
+        shipping_service_name,
+        shipping_delivery_time,
+        shipping_status,
+        asaas_payment_link,
         profile:profiles(email, full_name, phone)
       `,
       )
+
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -232,7 +254,7 @@ export default function OrdersManager() {
             Authorization: `Bearer ${session?.session?.access_token}`,
           },
           body: JSON.stringify({ orderId }),
-        }
+        },
       );
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || "Erro ao gerar etiqueta");
@@ -268,7 +290,9 @@ export default function OrdersManager() {
     }
 
     const items = order.items || [];
-    const itemsRows = items.map((item, i) => `
+    const itemsRows = items
+      .map(
+        (item, i) => `
       <tr>
         <td>${i + 1}</td>
         <td>${item.product?.name || "Produto"}</td>
@@ -276,7 +300,9 @@ export default function OrdersManager() {
         <td>R$ ${item.unit_price.toFixed(2)}</td>
         <td>R$ ${(item.unit_price * item.quantity).toFixed(2)}</td>
       </tr>
-    `).join("");
+    `,
+      )
+      .join("");
 
     const totalValue = items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
 
@@ -471,7 +497,11 @@ export default function OrdersManager() {
         .maybeSingle();
 
       if (error || !displayArt?.final_svg) {
-        toast({ title: "Arte não encontrada", description: "Nenhuma arte finalizada para este pedido.", variant: "destructive" });
+        toast({
+          title: "Arte não encontrada",
+          description: "Nenhuma arte finalizada para este pedido.",
+          variant: "destructive",
+        });
         return;
       }
 
@@ -684,21 +714,22 @@ export default function OrdersManager() {
                             )}
                           </Button>
                         )}
-                        {(order.status === "paid" || order.payment_status === "confirmed") && !order.melhor_envio_label_url && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleGenerateLabel(order.id)}
-                            title="Gerar Etiqueta Melhor Envio"
-                            disabled={generatingLabel === order.id}
-                          >
-                            {generatingLabel === order.id ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Truck className="w-4 h-4" />
-                            )}
-                          </Button>
-                        )}
+                        {(order.status === "paid" || order.payment_status === "confirmed") &&
+                          !order.melhor_envio_label_url && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleGenerateLabel(order.id)}
+                              title="Gerar Etiqueta Melhor Envio"
+                              disabled={generatingLabel === order.id}
+                            >
+                              {generatingLabel === order.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Truck className="w-4 h-4" />
+                              )}
+                            </Button>
+                          )}
                         {order.melhor_envio_label_url && (
                           <Button
                             variant="ghost"
