@@ -27,7 +27,8 @@ import {
   Plus,
   Printer,
   Trash2,
-  DollarSign
+  DollarSign,
+  Users
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -172,6 +173,14 @@ const adminSettingsItems: AdminMenuItem[] = [
     icon: Ticket,
     path: '/admin/cupons',
     color: 'text-primary'
+  },
+  {
+    id: 'users',
+    title: 'Usuários',
+    description: 'Gerencie usuários cadastrados.',
+    icon: Users,
+    path: '/admin/usuarios',
+    color: 'text-cyan-400'
   },
 ];
 
