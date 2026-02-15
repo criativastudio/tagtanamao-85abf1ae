@@ -110,32 +110,10 @@ export default function OrdersManager() {
       .from("orders")
       .select(
         `
-        id,
-        created_at,
-        updated_at,
-        status,
-        payment_status,
-        total_amount,
-        shipping_cost,
-        shipping_method,
-        shipping_name,
-        shipping_phone,
-        shipping_address,
-        shipping_city,
-        shipping_state,
-        shipping_zip,
-        tracking_code,
-        melhor_envio_shipment_id,
-        melhor_envio_label_url,
-        shipping_carrier,
-        shipping_service_name,
-        shipping_delivery_time,
-        shipping_status,
-        asaas_payment_link,
+        *,
         profile:profiles(email, full_name, phone)
       `,
       )
-
       .order("created_at", { ascending: false });
 
     if (error) {
