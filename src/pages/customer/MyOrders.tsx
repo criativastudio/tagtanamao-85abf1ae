@@ -54,7 +54,7 @@ export default function MyOrders() {
       .select(
         `
         *,
-        items:order_items!order_items_order_id_fkey(
+        items:orders(
           *,
           product:products(*)
         ),
