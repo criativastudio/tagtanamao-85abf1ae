@@ -53,6 +53,14 @@ export default function PaymentSuccessOverlay({
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    if (!showContent) return;
+    const redirectTimer = setTimeout(() => {
+      onNavigateDashboard();
+    }, 3500);
+    return () => clearTimeout(redirectTimer);
+  }, [showContent, onNavigateDashboard]);
+
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
@@ -249,7 +257,7 @@ export default function PaymentSuccessOverlay({
                 onClick={onNavigateDashboard}
               >
                 <LayoutDashboard className="w-5 h-5 mr-2" />
-                Acessar Dashboard
+                Ir para Minhas Compras
               </Button>
               
               <Button
@@ -270,7 +278,7 @@ export default function PaymentSuccessOverlay({
               transition={{ delay: 1.1 }}
               className="text-xs text-muted-foreground mt-6"
             >
-              Acompanhe seu pedido em <strong className="text-primary">Meus Pedidos</strong>
+              Redirecionando para <strong className="text-primary">Minhas Compras</strong>
             </motion.p>
           </div>
         </motion.div>
