@@ -64,6 +64,8 @@ export default function MyOrders() {
       .eq("user_id", user?.id)
       .order("created_at", { ascending: false });
 
+    console.log("Pedidos recebidos:", data, error);
+
     if (error) {
       toast({
         title: "Erro ao carregar pedidos",
