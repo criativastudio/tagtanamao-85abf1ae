@@ -1,51 +1,75 @@
 
+# Redirecionamento pos-compra para Minhas Compras
 
-# Corrigir PIX ficando em carregamento infinito
+## Resumo
+Ajustar o fluxo pos-checkout para redirecionar o usuario para a pagina "Minhas Compras" (`/meus-pedidos`) ao inves de `/obrigado` ou `/dashboard`. Na pagina de pedidos, cada pedido ja expande para mostrar status e itens — basta garantir que pedidos de display exibam o botao "Personalizar Arte" de forma clara.
 
-## Problema identificado
-O componente `AsaasAwaitingPayment` escuta mudancas em tempo real na tabela `orders`, mas essa tabela **nao esta habilitada para Realtime**. Apenas `pix_payments` e `payments` estao no Realtime. Por isso, o pagamento nunca e detectado como confirmado.
+## Alteracoes
 
-Alem disso, nao ha fallback de polling — se o Realtime falhar, o usuario fica preso na tela de carregamento.
+### 1. Redirecionar para `/meus-pedidos` apos pagamento confirmado
 
-## Solucao
+**Arquivo:** `src/pages/customer/Checkout.tsx`
 
-### 1. Habilitar Realtime na tabela `orders`
-Criar uma migracao SQL para adicionar a tabela `orders` a publicacao Realtime:
-```sql
-ALTER PUBLICATION supabase_realtime ADD TABLE public.orders;
-```
+- Alterar `handlePaymentConfirmed` (linha 590): redirecionar para `/meus-pedidos` ao inves de `/obrigado`
+- Alterar redirect apos cartao de credito aprovado (linha 470): trocar `navigate('/obrigado?pedido=...')` por `navigate('/meus-pedidos')`
+- Alterar redirect no polling de cartao (linha 570): trocar `navigate('/obrigado?pedido=...')` por `navigate('/meus-pedidos')`
 
-### 2. Adicionar polling como fallback
-No componente `AsaasAwaitingPayment`, alem da subscription Realtime, adicionar um polling que verifica o status do pedido a cada 5 segundos. Isso garante que mesmo se o Realtime falhar, o pagamento sera detectado.
+- Alterar `PaymentSuccessOverlay` `onNavigateDashboard` (linha 932): trocar `navigate('/dashboard')` por `navigate('/meus-pedidos')`
 
-### 3. Escutar tambem a tabela `payments`
-Como a tabela `payments` ja esta no Realtime, adicionar uma subscription secundaria nela (filtrada pelo `order_id`) para maior confiabilidade.
+### 2. Atualizar PaymentSuccessOverlay para redirecionar automaticamente para Minhas Compras
 
-## Arquivos a editar
-1. **Migracao SQL** — habilitar Realtime para `orders`
-2. **`src/components/checkout/AsaasAwaitingPayment.tsx`** — adicionar polling fallback + subscription na tabela `payments`
+**Arquivo:** `src/components/checkout/PaymentSuccessOverlay.tsx`
+
+- O overlay ja faz redirect automatico apos 3.5s via `onNavigateDashboard()` — com a mudanca acima, ira para `/meus-pedidos` automaticamente
+- Atualizar o texto do botao principal de "Ir para Minhas Compras" ja esta correto, manter
+- Atualizar texto do rodape para indicar "Redirecionando para Minhas Compras"
+
+### 3. Garantir botao de personalizar display nos pedidos
+
+**Arquivo:** `src/pages/customer/MyOrders.tsx`
+
+- Na secao de acoes do pedido (dentro do AccordionContent), adicionar botao "Personalizar Arte" quando o pedido tiver `display_arts` com `locked === false`
+- O botao navega para `/personalizar-display/:displayArtId`
+- Exibir botao com icone de Paintbrush e texto "Personalizar Arte do Display"
 
 ## Detalhes tecnicos
 
-### Polling fallback (a cada 5s)
+### Checkout.tsx — mudancas de redirect
+
 ```typescript
-useEffect(() => {
-  const interval = setInterval(async () => {
-    const { data } = await supabase
-      .from('orders')
-      .select('payment_status, status')
-      .eq('id', orderId)
-      .maybeSingle();
-    
-    if (data?.payment_status === 'confirmed' || data?.status === 'paid') {
-      setStatus('confirmed');
-      // trigger callback
-    }
-  }, 5000);
-  return () => clearInterval(interval);
-}, [orderId]);
+// handlePaymentConfirmed (linha 590)
+const handlePaymentConfirmed = () => {
+  navigate('/meus-pedidos');
+};
+
+// Cartao aprovado (linha 470)
+navigate('/meus-pedidos');
+
+// Polling aprovado (linha 570)
+navigate('/meus-pedidos');
+
+// PaymentSuccessOverlay onNavigateDashboard (linha 932)
+onNavigateDashboard={() => navigate("/meus-pedidos")}
 ```
 
-### Subscription dupla (orders + payments)
-Manter a subscription existente em `orders` (que passara a funcionar apos a migracao) e adicionar uma em `payments` filtrada por `order_id`.
+### MyOrders.tsx — botao personalizar display
 
+Dentro do AccordionContent, apos a secao de itens, verificar se o pedido tem `display_arts` com pelo menos uma arte nao travada (`locked === false`) e exibir botao:
+
+```typescript
+{order.items?.map((item: any) => {
+  const openArts = item.display_arts?.filter((a: any) => !a.locked) || [];
+  return openArts.map((art: any) => (
+    <Button key={art.id} size="sm" variant="outline"
+      onClick={() => navigate(`/personalizar-display/${art.id}`)}>
+      <Paintbrush className="w-4 h-4 mr-2" />
+      Personalizar Arte do Display
+    </Button>
+  ));
+})}
+```
+
+### Arquivos afetados
+1. `src/pages/customer/Checkout.tsx` — trocar todos os redirects para `/meus-pedidos`
+2. `src/components/checkout/PaymentSuccessOverlay.tsx` — ajustar texto de redirect
+3. `src/pages/customer/MyOrders.tsx` — adicionar botao de personalizar arte do display
