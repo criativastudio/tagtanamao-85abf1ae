@@ -77,7 +77,10 @@ export default function TemplatePositionPreview({ svgContent, positions, preview
     body += "</svg>";
 
     // Adjust dimensions for responsive display
-    return body.replace(/width="[^"]*"/, 'width="100%"').replace(/height="[^"]*"/, 'height="100%"');
+    return body
+      .replace(/width="[^"]*"/, 'width="100%"')
+      .replace(/height="[^"]*"/, 'height="100%"')
+      .replace(/<svg/, '<svg preserveAspectRatio="xMidYMid meet"');
   }, [svgContent, positions, logo, qr, cn, on]);
 
   if (!svgContent) return null;
