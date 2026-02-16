@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Clock,
@@ -7,8 +8,21 @@ import {
   Package,
   Truck,
   PackageCheck,
+  Building2,
+  ImagePlus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface OrderWithDisplayArts {
   id: string;
@@ -69,10 +83,89 @@ export default function DisplayOrderStepper({ order }: { order: OrderWithDisplay
   const navigate = useNavigate();
   const currentStep = getStepIndex(order);
   const openArt = order.display_arts?.find((art) => !art.locked) ?? order.display_arts?.[0];
+  const [companyName, setCompanyName] = useState('');
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (logoPreview) {
+        URL.revokeObjectURL(logoPreview);
+      }
+    };
+  }, [logoPreview]);
+
+  const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (logoPreview) {
+      URL.revokeObjectURL(logoPreview);
+    }
+    if (file) {
+      setLogoPreview(URL.createObjectURL(file));
+    } else {
+      setLogoPreview(null);
+    }
+  };
 
   return (
     <div className="py-4 space-y-0">
       <p className="text-xs text-muted-foreground mb-3">Status interno: {order.status ?? '—'}</p>
+
+      <div className="flex justify-end mb-4">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button size="sm" variant="outline">
+              <Building2 className="w-4 h-4 mr-2" />
+              Painel da Empresa
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Painel da Empresa</DialogTitle>
+              <DialogDescription>Adicione a logo e o nome para visualizar o preview.</DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="companyName">Nome da empresa</Label>
+                <Input
+                  id="companyName"
+                  placeholder="Digite o nome da empresa"
+                  value={companyName}
+                  onChange={(event) => setCompanyName(event.target.value)}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="companyLogo">Logo da empresa</Label>
+                <Input id="companyLogo" type="file" accept="image/*" onChange={handleLogoChange} />
+              </div>
+
+              <Card className="bg-muted/30">
+                <CardHeader>
+                  <CardTitle className="text-base">Preview</CardTitle>
+                  <CardDescription>Veja como ficará no display.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full border bg-background">
+                      {logoPreview ? (
+                        <img src={logoPreview} alt="Logo preview" className="h-14 w-14 rounded-full object-contain" />
+                      ) : (
+                        <ImagePlus className="h-6 w-6 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{companyName || 'Nome da empresa'}</p>
+                      <p className="text-xs text-muted-foreground">Pré-visualização do display</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
       {steps.map((step, i) => {
         const isCompleted = i < currentStep;
         const isCurrent = i === currentStep;
