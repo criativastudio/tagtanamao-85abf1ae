@@ -103,19 +103,6 @@ export default function OrdersManager() {
     fetchOrders();
   }, []);
 
-  // Realtime subscription for order updates (admin sees all)
-  useEffect(() => {
-    const channel = supabase
-      .channel('admin-orders-realtime')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'orders',
-      }, () => fetchOrders())
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, []);
-
   const fetchOrders = async () => {
     setLoadingOrders(true);
 

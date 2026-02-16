@@ -20,8 +20,8 @@ interface OrderWithItems extends Order {
 
 const statusConfig: Record<string, { icon: typeof Clock; color: string; label: string }> = {
   pending: { icon: Clock, color: "bg-yellow-500/20 text-yellow-400", label: "Aguardando Pagamento" },
-  paid: { icon: CheckCircle, color: "bg-blue-500/20 text-blue-400", label: "Pedido Pago" },
-  awaiting_customization: { icon: Package, color: "bg-orange-500/20 text-orange-400", label: "Aguardando Personalização" },
+  paid: { icon: CheckCircle, color: "bg-blue-500/20 text-blue-400", label: "Pago" },
+  awaiting_customization: { icon: Package, color: "bg-orange-500/20 text-orange-400", label: "Personalizar Arte" },
   art_finalized: { icon: CheckCircle, color: "bg-green-500/20 text-green-400", label: "Arte Finalizada" },
   processing: { icon: Package, color: "bg-purple-500/20 text-purple-400", label: "Em Produção" },
   ready_to_ship: { icon: Truck, color: "bg-cyan-500/20 text-cyan-400", label: "Pronto para Envio" },
@@ -44,21 +44,6 @@ export default function MyOrders() {
       return;
     }
     fetchOrders();
-  }, [user]);
-
-  // Realtime subscription for order updates
-  useEffect(() => {
-    if (!user) return;
-    const channel = supabase
-      .channel('my-orders-realtime')
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'orders',
-        filter: `user_id=eq.${user.id}`,
-      }, () => fetchOrders())
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
   }, [user]);
 
   const fetchOrders = async () => {

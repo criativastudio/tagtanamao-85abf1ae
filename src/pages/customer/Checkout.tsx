@@ -19,7 +19,6 @@ import CreditCardForm, { CardData } from "@/components/checkout/CreditCardForm";
 
 import AsaasAwaitingPayment from "@/components/checkout/AsaasAwaitingPayment";
 import PaymentSuccessOverlay from "@/components/checkout/PaymentSuccessOverlay";
-import SessionOrdersModal from "@/components/checkout/SessionOrdersModal";
 
 interface AppliedCoupon {
   id: string;
@@ -108,9 +107,6 @@ export default function Checkout() {
   // Polling state
   const [pollingCount, setPollingCount] = useState(0);
   const MAX_POLLING = 30;
-
-  // Session orders modal
-  const [showSessionModal, setShowSessionModal] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -372,13 +368,6 @@ export default function Checkout() {
 
       setCurrentOrderId(order.id);
 
-      // Track order in session
-      const sessionOrders = JSON.parse(sessionStorage.getItem("session_orders") || "[]");
-      if (!sessionOrders.includes(order.id)) {
-        sessionOrders.push(order.id);
-        sessionStorage.setItem("session_orders", JSON.stringify(sessionOrders));
-      }
-
       // Increment coupon usage atomically if applied
       if (appliedCoupon) {
         const { data: couponResult, error: couponError } = await supabase.rpc("increment_coupon_usage", {
@@ -478,7 +467,7 @@ export default function Checkout() {
               title: "Pagamento aprovado!",
               description: "Seu pedido foi confirmado com sucesso.",
             });
-            setShowSessionModal(true);
+            navigate(`/obrigado?pedido=${order.id}`);
           } else if (isPending) {
             pollPaymentStatus(cardResult.payment?.id, order.id);
           } else {
@@ -578,7 +567,7 @@ export default function Checkout() {
           title: "Pagamento confirmado!",
           description: "Seu pedido foi processado com sucesso.",
         });
-        setShowSessionModal(true);
+        navigate(`/obrigado?pedido=${orderId}`);
       } else if (result.status === "PENDING") {
         setPollingCount((prev) => prev + 1);
         setTimeout(() => pollPaymentStatus(paymentId, orderId), 2000);
@@ -599,7 +588,9 @@ export default function Checkout() {
   };
 
   const handlePaymentConfirmed = () => {
-    setShowSessionModal(true);
+    if (currentOrderId) {
+      navigate(`/obrigado?pedido=${currentOrderId}`);
+    }
   };
 
   return (
@@ -1021,7 +1012,6 @@ export default function Checkout() {
           )}
         </div>
       </div>
-      <SessionOrdersModal open={showSessionModal} onOpenChange={setShowSessionModal} />
     </div>
   );
 }

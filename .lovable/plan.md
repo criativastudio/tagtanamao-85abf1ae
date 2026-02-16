@@ -1,117 +1,51 @@
 
-# Correcao de Status e Agrupamento de Pedidos
 
-## Problemas identificados
+# Corrigir PIX ficando em carregamento infinito
 
-### 1. Status nao atualiza em tempo real
-As paginas `MyOrders` (usuario) e `OrdersManager` (admin) fazem apenas uma busca inicial ao banco e nunca mais atualizam. Nao ha nenhuma subscription Realtime nem polling nessas paginas. Quando o pagamento e confirmado no backend, o status muda no banco mas as telas continuam mostrando o status antigo.
+## Problema identificado
+O componente `AsaasAwaitingPayment` escuta mudancas em tempo real na tabela `orders`, mas essa tabela **nao esta habilitada para Realtime**. Apenas `pix_payments` e `payments` estao no Realtime. Por isso, o pagamento nunca e detectado como confirmado.
 
-### 2. Multiplas compras na mesma sessao
-Atualmente, cada compra redireciona para a pagina de "Obrigado" mostrando apenas 1 pedido. Se o usuario voltar e comprar novamente, nao ha agrupamento. O pedido anterior "desaparece" da visao.
+Alem disso, nao ha fallback de polling — se o Realtime falhar, o usuario fica preso na tela de carregamento.
 
 ## Solucao
 
-### Parte 1: Realtime em MyOrders (usuario)
-Adicionar subscription Realtime na tabela `orders` filtrada por `user_id` no componente `MyOrders.tsx`. Quando qualquer pedido do usuario for atualizado, a lista sera re-carregada automaticamente.
-
-```text
-MyOrders.tsx
-  useEffect -> subscribe to orders table (filter user_id)
-    on UPDATE -> fetchOrders() (reload all)
-  return -> unsubscribe
+### 1. Habilitar Realtime na tabela `orders`
+Criar uma migracao SQL para adicionar a tabela `orders` a publicacao Realtime:
+```sql
+ALTER PUBLICATION supabase_realtime ADD TABLE public.orders;
 ```
 
-### Parte 2: Realtime em OrdersManager (admin)
-Adicionar subscription Realtime na tabela `orders` (sem filtro, admin ve tudo) no `OrdersManager.tsx`. Quando qualquer pedido mudar de status, a tabela atualiza automaticamente.
+### 2. Adicionar polling como fallback
+No componente `AsaasAwaitingPayment`, alem da subscription Realtime, adicionar um polling que verifica o status do pedido a cada 5 segundos. Isso garante que mesmo se o Realtime falhar, o pagamento sera detectado.
 
-```text
-OrdersManager.tsx
-  useEffect -> subscribe to orders table (all)
-    on UPDATE/INSERT -> fetchOrders() (reload all)
-  return -> unsubscribe
-```
+### 3. Escutar tambem a tabela `payments`
+Como a tabela `payments` ja esta no Realtime, adicionar uma subscription secundaria nela (filtrada pelo `order_id`) para maior confiabilidade.
 
-### Parte 3: Modal de pedidos recentes na sessao
-Criar um componente `RecentOrdersModal` que:
-- Armazena IDs dos pedidos feitos na sessao atual (via state no Checkout ou sessionStorage)
-- Ao finalizar uma compra, ao inves de redirecionar para `/obrigado`, mostra um modal resumido
-- O modal lista todos os pedidos da sessao com seus status
-- Cada pedido e expansivel (accordion) mostrando itens e status detalhado
-- Os status atualizam em tempo real via subscription
-
-### Parte 4: Labels de status conforme solicitado
-Atualizar os labels de status para corresponder ao pedido:
-- `paid` -> "Pedido Pago"
-- `processing` -> "Em Producao"  
-- `awaiting_customization` -> "Aguardando Personalizacao"
-- `shipped` -> "Enviado"
-- `delivered` -> "Entregue"
-- `pending` -> "Aguardando Pagamento"
-
-## Arquivos a criar/editar
-
-1. **Editar** `src/pages/customer/MyOrders.tsx`
-   - Adicionar subscription Realtime para `orders` filtrado por user_id
-   - Atualizar labels de status
-
-2. **Editar** `src/pages/admin/OrdersManager.tsx`
-   - Adicionar subscription Realtime para `orders` (todos)
-
-3. **Criar** `src/components/checkout/SessionOrdersModal.tsx`
-   - Modal com lista expansivel de pedidos da sessao
-   - Subscription Realtime por pedido para atualizar status dinamicamente
-   - Accordion com detalhes de cada pedido (itens, valor, status)
-
-4. **Editar** `src/pages/customer/Checkout.tsx`
-   - Usar sessionStorage para acumular IDs de pedidos feitos na sessao
-   - Ao confirmar pagamento, abrir o `SessionOrdersModal` ao inves de redirecionar
-   - Manter opcao de ir para dashboard ou continuar comprando
+## Arquivos a editar
+1. **Migracao SQL** — habilitar Realtime para `orders`
+2. **`src/components/checkout/AsaasAwaitingPayment.tsx`** — adicionar polling fallback + subscription na tabela `payments`
 
 ## Detalhes tecnicos
 
-### Realtime subscription (MyOrders)
+### Polling fallback (a cada 5s)
 ```typescript
 useEffect(() => {
-  if (!user) return;
-  const channel = supabase
-    .channel('my-orders-realtime')
-    .on('postgres_changes', {
-      event: 'UPDATE',
-      schema: 'public',
-      table: 'orders',
-      filter: `user_id=eq.${user.id}`,
-    }, () => fetchOrders())
-    .subscribe();
-  return () => { supabase.removeChannel(channel); };
-}, [user]);
+  const interval = setInterval(async () => {
+    const { data } = await supabase
+      .from('orders')
+      .select('payment_status, status')
+      .eq('id', orderId)
+      .maybeSingle();
+    
+    if (data?.payment_status === 'confirmed' || data?.status === 'paid') {
+      setStatus('confirmed');
+      // trigger callback
+    }
+  }, 5000);
+  return () => clearInterval(interval);
+}, [orderId]);
 ```
 
-### SessionStorage para pedidos da sessao
-```typescript
-// Ao criar pedido com sucesso:
-const sessionOrders = JSON.parse(sessionStorage.getItem('session_orders') || '[]');
-sessionOrders.push(order.id);
-sessionStorage.setItem('session_orders', JSON.stringify(sessionOrders));
-```
+### Subscription dupla (orders + payments)
+Manter a subscription existente em `orders` (que passara a funcionar apos a migracao) e adicionar uma em `payments` filtrada por `order_id`.
 
-### Modal com status dinamico
-O modal busca todos os pedidos da sessao e escuta mudancas em tempo real. Cada pedido mostra:
-- Numero do pedido
-- Status com badge colorido
-- Valor total
-- Ao expandir: lista de itens comprados
-
-```text
-+------------------------------------------+
-| Seus Pedidos desta Sessao          [X]   |
-+------------------------------------------+
-| Pedido #abc12345  [Pedido Pago]    R$89  |
-|   > Tag Pet x1                           |
-|   > Tag Pet x1                           |
-|------------------------------------------|
-| Pedido #def67890  [Aguardando]     R$149 |
-|   > Display Empresarial x1              |
-+------------------------------------------+
-| [Continuar Comprando]  [Ir ao Dashboard] |
-+------------------------------------------+
-```
