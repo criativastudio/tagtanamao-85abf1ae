@@ -141,7 +141,9 @@ export default function MyOrders() {
         ) : (
           <div className="space-y-4">
             {orders.map((order, index) => {
-              const status = statusConfig[order.status || "pending"];
+              const normalizedStatus = order.status?.toLowerCase() || "pending";
+              const status = statusConfig[normalizedStatus] || statusConfig["pending"];
+
               const StatusIcon = status.icon;
 
               return (
@@ -228,7 +230,7 @@ export default function MyOrders() {
                               {/* Actions — only for non-display orders */}
                               {(!order.display_arts || order.display_arts.length === 0) && (
                                 <div className="flex gap-2">
-                                  {order.status === "paid" && order.asaas_payment_link && (
+                                  {order.status?.toLowerCase() === "pending" && order.asaas_payment_link && (
                                     <Button size="sm" onClick={() => window.open(order.asaas_payment_link!, "_blank")}>
                                       <ExternalLink className="w-4 h-4 mr-2" />
                                       Pagar Agora
