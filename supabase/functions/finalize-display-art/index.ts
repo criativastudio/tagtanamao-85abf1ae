@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
     // Add company name
     const cnPos = positions.company_name || { x: svgWidth / 2, y: svgHeight - 80, fontSize: 24, textAnchor: "middle" };
     svgBody += `
-      <text x="${cnPos.x}" y="${cnPos.y}" font-size="${cnPos.fontSize}" font-family="Arial, sans-serif" font-weight="bold" text-anchor="${cnPos.textAnchor || 'middle'}" fill="#000000">${displayArt.company_name}</text>
+      <text x="${cnPos.x}" y="${cnPos.y}" font-size="${cnPos.fontSize}" font-family="Arial, sans-serif" font-weight="bold" text-anchor="${cnPos.textAnchor || 'middle'}" fill="${displayArt.text_color || '#000000'}">${displayArt.company_name}</text>
     `;
 
     // Add QR code placeholder text (will be replaced in production with actual QR image)

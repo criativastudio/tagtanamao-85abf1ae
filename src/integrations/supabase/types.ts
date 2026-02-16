@@ -381,6 +381,7 @@ export type Database = {
           order_item_id: string | null
           qr_code_id: string | null
           template_id: string | null
+          text_color: string | null
           updated_at: string
           user_id: string
         }
@@ -396,6 +397,7 @@ export type Database = {
           order_item_id?: string | null
           qr_code_id?: string | null
           template_id?: string | null
+          text_color?: string | null
           updated_at?: string
           user_id: string
         }
@@ -411,6 +413,7 @@ export type Database = {
           order_item_id?: string | null
           qr_code_id?: string | null
           template_id?: string | null
+          text_color?: string | null
           updated_at?: string
           user_id?: string
         }
