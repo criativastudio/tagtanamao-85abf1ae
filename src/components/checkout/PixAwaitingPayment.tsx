@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { QrCode, Copy, CheckCircle2, Loader2, Clock, AlertCircle, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,19 @@ export default function PixAwaitingPayment({
   const [pixCopied, setPixCopied] = useState(false);
   const [status, setStatus] = useState<'pending' | 'confirmed' | 'expired'>('pending');
   const [timeLeft, setTimeLeft] = useState<number>(0);
+
+  const isConfirmedStatus = (value?: string | null) =>
+    ['confirmed', 'paid', 'payment_confirmed'].includes((value ?? '').toLowerCase());
+
+  const handlePaymentConfirmed = useCallback(() => {
+    if (status === 'confirmed') return;
+    setStatus('confirmed');
+    toast({
+      title: '🎉 Pagamento Confirmado!',
+      description: 'Seu pagamento PIX foi confirmado com sucesso.',
+    });
+    setTimeout(onPaymentConfirmed, 2000);
+  }, [status, toast, onPaymentConfirmed]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -84,13 +97,8 @@ export default function PixAwaitingPayment({
         },
         (payload) => {
           console.log('PIX payment updated:', payload);
-          if (payload.new && (payload.new as any).status === 'confirmed') {
-            setStatus('confirmed');
-            toast({
-              title: '🎉 Pagamento Confirmado!',
-              description: 'Seu pagamento PIX foi confirmado com sucesso.',
-            });
-            setTimeout(onPaymentConfirmed, 2000);
+          if (payload.new && isConfirmedStatus((payload.new as any).status)) {
+            handlePaymentConfirmed();
           }
         }
       )
@@ -100,7 +108,26 @@ export default function PixAwaitingPayment({
       console.log('Unsubscribing from PIX payment channel');
       supabase.removeChannel(channel);
     };
-  }, [pixPayment.id, onPaymentConfirmed, toast]);
+  }, [pixPayment.id, handlePaymentConfirmed]);
+
+  // Polling fallback every 5 seconds
+  useEffect(() => {
+    if (status !== 'pending') return;
+
+    const interval = setInterval(async () => {
+      const { data } = await supabase
+        .from('orders')
+        .select('payment_status, status')
+        .eq('id', orderId)
+        .maybeSingle();
+
+      if (isConfirmedStatus(data?.payment_status) || isConfirmedStatus(data?.status)) {
+        handlePaymentConfirmed();
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [orderId, status, handlePaymentConfirmed]);
 
   const copyPixKey = () => {
     navigator.clipboard.writeText(pixPayment.pixKey);

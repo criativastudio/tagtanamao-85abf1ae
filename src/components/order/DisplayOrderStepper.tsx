@@ -28,18 +28,21 @@ const steps = [
 ];
 
 function getStepIndex(order: OrderWithDisplayArts): number {
-  const status = order.status;
-  const hasOpenArt = order.display_arts?.some((art) => !art.locked);
+  const status = (order.status ?? '').toLowerCase();
+  const hasOpenArt = Boolean(order.display_arts?.some((art) => !art.locked));
 
   // Se já estiver pago e houver arte aberta, avançar para a etapa de personalização
-  if ((status === 'paid' || status === 'payment_confirmed') && hasOpenArt) return 2;
+  if ((status === 'paid' || status === 'payment_confirmed' || status === 'confirmed') && hasOpenArt) return 2;
 
   switch (status) {
     case 'pending':
     case 'awaiting_payment':
+    case 'created':
+    case 'new':
       return 0;
     case 'paid':
     case 'payment_confirmed':
+    case 'confirmed':
       return 1;
     case 'awaiting_customization':
     case 'customization_pending':

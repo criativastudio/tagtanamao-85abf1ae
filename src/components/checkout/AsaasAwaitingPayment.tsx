@@ -34,6 +34,9 @@ export default function AsaasAwaitingPayment({
   const [pixCopied, setPixCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number>(0);
 
+  const isConfirmedStatus = (value?: string | null) =>
+    ['confirmed', 'paid', 'payment_confirmed'].includes((value ?? '').toLowerCase());
+
   // Calculate time left if PIX
   useEffect(() => {
     if (asaasPayment.pixQrCode?.expirationDate) {
@@ -79,7 +82,7 @@ export default function AsaasAwaitingPayment({
         (payload) => {
           console.log('Order updated:', payload);
           const newData = payload.new as any;
-          if (newData?.payment_status === 'confirmed' || newData?.status === 'paid') {
+          if (isConfirmedStatus(newData?.payment_status) || isConfirmedStatus(newData?.status)) {
             handlePaymentConfirmed();
           }
         }
@@ -95,7 +98,7 @@ export default function AsaasAwaitingPayment({
         (payload) => {
           console.log('Payment updated:', payload);
           const newData = payload.new as any;
-          if (newData?.status === 'confirmed' || newData?.status === 'paid') {
+          if (isConfirmedStatus(newData?.status)) {
             handlePaymentConfirmed();
           }
         }
@@ -118,7 +121,7 @@ export default function AsaasAwaitingPayment({
         .eq('id', orderId)
         .maybeSingle();
 
-      if (data?.payment_status === 'confirmed' || data?.status === 'paid') {
+      if (isConfirmedStatus(data?.payment_status) || isConfirmedStatus(data?.status)) {
         handlePaymentConfirmed();
       }
     }, 5000);
