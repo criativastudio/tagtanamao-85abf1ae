@@ -1,75 +1,64 @@
 
-# Redirecionamento pos-compra para Minhas Compras
+# Cor do Texto do Nome da Empresa no Personalizar Display
 
 ## Resumo
-Ajustar o fluxo pos-checkout para redirecionar o usuario para a pagina "Minhas Compras" (`/meus-pedidos`) ao inves de `/obrigado` ou `/dashboard`. Na pagina de pedidos, cada pedido ja expande para mostrar status e itens — basta garantir que pedidos de display exibam o botao "Personalizar Arte" de forma clara.
+Adicionar um seletor de cor para o texto do nome da empresa no customizador de display, permitindo que o usuario escolha a cor que melhor combina com o template selecionado. A cor sera salva no banco de dados e utilizada tanto no preview em tempo real quanto na arte final gerada pela edge function.
 
 ## Alteracoes
 
-### 1. Redirecionar para `/meus-pedidos` apos pagamento confirmado
+### 1. Adicionar coluna `text_color` na tabela `display_arts`
+- Nova coluna `text_color` do tipo `text`, valor padrao `#000000`
+- Migracao SQL simples
 
-**Arquivo:** `src/pages/customer/Checkout.tsx`
+### 2. Atualizar `DisplayArtCustomizer.tsx`
+- Adicionar estado `textColor` (inicializado com valor do banco ou `#000000`)
+- Passar `textColor` para `buildPreviewSvg` no lugar do `#000000` fixo
+- Adicionar um seletor de cor no card "3. Nome da Empresa" com:
+  - Input nativo `type="color"` estilizado
+  - Paleta rapida com cores pre-definidas (preto, branco, vermelho, azul, dourado, verde)
+- Salvar a cor no banco ao alterar (mesma logica do `handleSaveCompanyName`)
 
-- Alterar `handlePaymentConfirmed` (linha 590): redirecionar para `/meus-pedidos` ao inves de `/obrigado`
-- Alterar redirect apos cartao de credito aprovado (linha 470): trocar `navigate('/obrigado?pedido=...')` por `navigate('/meus-pedidos')`
-- Alterar redirect no polling de cartao (linha 570): trocar `navigate('/obrigado?pedido=...')` por `navigate('/meus-pedidos')`
-
-- Alterar `PaymentSuccessOverlay` `onNavigateDashboard` (linha 932): trocar `navigate('/dashboard')` por `navigate('/meus-pedidos')`
-
-### 2. Atualizar PaymentSuccessOverlay para redirecionar automaticamente para Minhas Compras
-
-**Arquivo:** `src/components/checkout/PaymentSuccessOverlay.tsx`
-
-- O overlay ja faz redirect automatico apos 3.5s via `onNavigateDashboard()` — com a mudanca acima, ira para `/meus-pedidos` automaticamente
-- Atualizar o texto do botao principal de "Ir para Minhas Compras" ja esta correto, manter
-- Atualizar texto do rodape para indicar "Redirecionando para Minhas Compras"
-
-### 3. Garantir botao de personalizar display nos pedidos
-
-**Arquivo:** `src/pages/customer/MyOrders.tsx`
-
-- Na secao de acoes do pedido (dentro do AccordionContent), adicionar botao "Personalizar Arte" quando o pedido tiver `display_arts` com `locked === false`
-- O botao navega para `/personalizar-display/:displayArtId`
-- Exibir botao com icone de Paintbrush e texto "Personalizar Arte do Display"
+### 3. Atualizar Edge Function `finalize-display-art`
+- Buscar o campo `text_color` do registro `display_arts`
+- Usar esse valor no atributo `fill` do elemento `<text>` do nome da empresa no SVG final (linha 144), substituindo o `#000000` fixo
 
 ## Detalhes tecnicos
 
-### Checkout.tsx — mudancas de redirect
-
-```typescript
-// handlePaymentConfirmed (linha 590)
-const handlePaymentConfirmed = () => {
-  navigate('/meus-pedidos');
-};
-
-// Cartao aprovado (linha 470)
-navigate('/meus-pedidos');
-
-// Polling aprovado (linha 570)
-navigate('/meus-pedidos');
-
-// PaymentSuccessOverlay onNavigateDashboard (linha 932)
-onNavigateDashboard={() => navigate("/meus-pedidos")}
+### Migracao SQL
+```sql
+ALTER TABLE public.display_arts ADD COLUMN text_color text DEFAULT '#000000';
 ```
 
-### MyOrders.tsx — botao personalizar display
+### DisplayArtCustomizer.tsx
 
-Dentro do AccordionContent, apos a secao de itens, verificar se o pedido tem `display_arts` com pelo menos uma arte nao travada (`locked === false`) e exibir botao:
-
+Funcao `buildPreviewSvg` recebe novo parametro `textColor`:
 ```typescript
-{order.items?.map((item: any) => {
-  const openArts = item.display_arts?.filter((a: any) => !a.locked) || [];
-  return openArts.map((art: any) => (
-    <Button key={art.id} size="sm" variant="outline"
-      onClick={() => navigate(`/personalizar-display/${art.id}`)}>
-      <Paintbrush className="w-4 h-4 mr-2" />
-      Personalizar Arte do Display
-    </Button>
-  ));
-})}
+function buildPreviewSvg(svgContent, positions, logoUrl, companyName, logoZoom, textColor) {
+  // ...
+  textEl.setAttribute('fill', textColor);
+  // ...
+}
+```
+
+UI no card do nome da empresa — paleta de cores rapidas + input color:
+```typescript
+const COLOR_PRESETS = [
+  { label: 'Preto', value: '#000000' },
+  { label: 'Branco', value: '#FFFFFF' },
+  { label: 'Vermelho', value: '#DC2626' },
+  { label: 'Azul', value: '#2563EB' },
+  { label: 'Dourado', value: '#D4A843' },
+  { label: 'Verde', value: '#16A34A' },
+];
+```
+
+### Edge Function `finalize-display-art`
+Linha 144 atualizada:
+```typescript
+fill="${displayArt.text_color || '#000000'}"
 ```
 
 ### Arquivos afetados
-1. `src/pages/customer/Checkout.tsx` — trocar todos os redirects para `/meus-pedidos`
-2. `src/components/checkout/PaymentSuccessOverlay.tsx` — ajustar texto de redirect
-3. `src/pages/customer/MyOrders.tsx` — adicionar botao de personalizar arte do display
+1. Migracao SQL — nova coluna `text_color`
+2. `src/pages/customer/DisplayArtCustomizer.tsx` — estado, UI e preview
+3. `supabase/functions/finalize-display-art/index.ts` — usar cor na arte final
