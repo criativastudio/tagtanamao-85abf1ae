@@ -278,7 +278,7 @@ export default function PaymentSuccessOverlay({
               transition={{ delay: 1.1 }}
               className="text-xs text-muted-foreground mt-6"
             >
-              Redirecionando para <strong className="text-primary">Minhas Compras</strong>
+              Redirecionando para <strong className="text-primary">Meus Pedidos</strong>
             </motion.p>
           </div>
         </motion.div>
