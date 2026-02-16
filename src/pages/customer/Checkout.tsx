@@ -467,7 +467,7 @@ export default function Checkout() {
               title: "Pagamento aprovado!",
               description: "Seu pedido foi confirmado com sucesso.",
             });
-            navigate(`/obrigado?pedido=${order.id}`);
+            navigate('/meus-pedidos');
           } else if (isPending) {
             pollPaymentStatus(cardResult.payment?.id, order.id);
           } else {
@@ -567,7 +567,7 @@ export default function Checkout() {
           title: "Pagamento confirmado!",
           description: "Seu pedido foi processado com sucesso.",
         });
-        navigate(`/obrigado?pedido=${orderId}`);
+        navigate('/meus-pedidos');
       } else if (result.status === "PENDING") {
         setPollingCount((prev) => prev + 1);
         setTimeout(() => pollPaymentStatus(paymentId, orderId), 2000);
@@ -588,9 +588,7 @@ export default function Checkout() {
   };
 
   const handlePaymentConfirmed = () => {
-    if (currentOrderId) {
-      navigate(`/obrigado?pedido=${currentOrderId}`);
-    }
+    navigate('/meus-pedidos');
   };
 
   return (
@@ -929,7 +927,7 @@ export default function Checkout() {
                   selectedShipping?.delivery_time ? `${selectedShipping.delivery_time} dias úteis` : undefined
                 }
                 paymentLink={orderResult.paymentLink || undefined}
-                onNavigateDashboard={() => navigate("/dashboard")}
+                onNavigateDashboard={() => navigate("/meus-pedidos")}
                 onNavigateHome={() => navigate("/")}
               />
             )}

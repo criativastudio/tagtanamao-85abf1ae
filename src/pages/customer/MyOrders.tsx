@@ -227,32 +227,46 @@ export default function MyOrders() {
                                 )}
                               </div>
 
-                              {/* Actions — only for non-display orders */}
-                              {(!order.display_arts || order.display_arts.length === 0) && (
-                                <div className="flex gap-2">
-                                  {order.status?.toLowerCase() === "pending" && order.asaas_payment_link && (
-                                    <Button size="sm" onClick={() => window.open(order.asaas_payment_link!, "_blank")}>
-                                      <ExternalLink className="w-4 h-4 mr-2" />
-                                      Pagar Agora
-                                    </Button>
-                                  )}
-                                  {order.tracking_code && (
+                              {/* Actions */}
+                              <div className="flex flex-wrap gap-2">
+                                {order.status?.toLowerCase() === "pending" && order.asaas_payment_link && (
+                                  <Button size="sm" onClick={() => window.open(order.asaas_payment_link!, "_blank")}>
+                                    <ExternalLink className="w-4 h-4 mr-2" />
+                                    Pagar Agora
+                                  </Button>
+                                )}
+                                {order.tracking_code && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() =>
+                                      window.open(
+                                        `https://rastreamento.correios.com.br/app/index.php?objeto=${order.tracking_code}`,
+                                        "_blank",
+                                      )
+                                    }
+                                  >
+                                    <Truck className="w-4 h-4 mr-2" />
+                                    Rastrear
+                                  </Button>
+                                )}
+                                {/* Personalizar Arte do Display */}
+                                {order.items?.map((item: any) => {
+                                  const openArts = item.display_arts?.filter((a: any) => !a.locked) || [];
+                                  return openArts.map((art: any) => (
                                     <Button
+                                      key={art.id}
                                       size="sm"
                                       variant="outline"
-                                      onClick={() =>
-                                        window.open(
-                                          `https://rastreamento.correios.com.br/app/index.php?objeto=${order.tracking_code}`,
-                                          "_blank",
-                                        )
-                                      }
+                                      className="border-primary/50 text-primary hover:bg-primary/10"
+                                      onClick={() => navigate(`/personalizar-display/${art.id}`)}
                                     >
-                                      <Truck className="w-4 h-4 mr-2" />
-                                      Rastrear
+                                      <Paintbrush className="w-4 h-4 mr-2" />
+                                      Personalizar Arte do Display
                                     </Button>
-                                  )}
-                                </div>
-                              )}
+                                  ));
+                                })}
+                              </div>
                             </div>
                           </AccordionContent>
                         </AccordionItem>
