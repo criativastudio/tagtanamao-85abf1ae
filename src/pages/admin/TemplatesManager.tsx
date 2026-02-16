@@ -17,6 +17,7 @@ import { ArtTemplate, EditableField, ElementPositions } from "@/types/ecommerce"
 import { Json } from "@/integrations/supabase/types";
 import { prepareSvgForDisplay } from "@/lib/sanitize";
 import TemplatePositionControls from "@/components/admin/TemplatePositionControls";
+import TemplatePositionPreview from "@/components/admin/TemplatePositionPreview";
 
 export default function TemplatesManager() {
   const { profile, loading } = useAuth();
@@ -518,7 +519,16 @@ export default function TemplatesManager() {
 
               {/* Element Positions (for display templates) */}
               {(formData.product_type === "display" || formData.product_type === "business_display") && (
-                <TemplatePositionControls positions={elementPositions} onChange={setElementPositions} />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <TemplatePositionControls positions={elementPositions} onChange={setElementPositions} />
+                  {formData.svg_content && (
+                    <TemplatePositionPreview
+                      svgContent={formData.svg_content}
+                      positions={elementPositions}
+                      previewUrl={previewUrl}
+                    />
+                  )}
+                </div>
               )}
 
               {/* Editable Fields */}
