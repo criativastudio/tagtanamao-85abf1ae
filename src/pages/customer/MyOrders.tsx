@@ -141,7 +141,7 @@ export default function MyOrders() {
         ) : (
           <div className="space-y-4">
             {orders.map((order, index) => {
-              const normalizedStatus = order.status?.toLowerCase() || "pending";
+              const normalizedStatus = order.status ? order.status.toLowerCase() : "pending";
               const status = statusConfig[normalizedStatus] || statusConfig["pending"];
 
               const StatusIcon = status.icon;
