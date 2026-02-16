@@ -151,7 +151,7 @@ function buildPreviewSvg(
   qrLabel.setAttribute('text-anchor', 'middle');
   qrLabel.setAttribute('font-size', '14');
   qrLabel.setAttribute('fill', '#999');
-  qrLabel.textContent = 'QR Code';
+  qrLabel.textContent = 'QR gerado ao finalizar';
   svgEl.appendChild(qrLabel);
 
   const serializer = new XMLSerializer();
