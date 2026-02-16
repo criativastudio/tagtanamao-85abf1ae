@@ -1,8 +1,8 @@
-import { useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ElementPositions } from '@/types/ecommerce';
-import { Eye } from 'lucide-react';
-import { sanitizeSvg } from '@/lib/sanitize';
+import { useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ElementPositions } from "@/types/ecommerce";
+import { Eye } from "lucide-react";
+import { sanitizeSvg } from "@/lib/sanitize";
 
 interface Props {
   svgContent: string;
@@ -14,7 +14,8 @@ export default function TemplatePositionPreview({ svgContent, positions, preview
   // Parse SVG viewBox to get dimensions
   const { svgWidth, svgHeight } = useMemo(() => {
     const viewBoxMatch = svgContent.match(/viewBox="([^"]+)"/);
-    let w = 800, h = 800;
+    let w = 800,
+      h = 800;
     if (viewBoxMatch) {
       const parts = viewBoxMatch[1].split(/[\s,]+/).map(Number);
       if (parts.length >= 4) {
@@ -27,7 +28,7 @@ export default function TemplatePositionPreview({ svgContent, positions, preview
 
   const qr = positions.qr_code || { x: 300, y: 300, width: 200, height: 200 };
   const logo = positions.logo || { x: 50, y: 50, width: 120, height: 120 };
-  const cn = positions.company_name || { x: 400, y: 700, fontSize: 24, textAnchor: 'middle' as const };
+  const cn = positions.company_name || { x: 400, y: 700, fontSize: 24, textAnchor: "middle" as const };
   const on = positions.order_number || { x: 400, y: 780, fontSize: 14 };
 
   // Build the preview SVG with overlaid elements
@@ -35,13 +36,13 @@ export default function TemplatePositionPreview({ svgContent, positions, preview
     let baseSvg = sanitizeSvg(svgContent);
 
     // Remove closing tag to append
-    const closingIdx = baseSvg.lastIndexOf('</svg>');
+    const closingIdx = baseSvg.lastIndexOf("</svg>");
     if (closingIdx === -1) return baseSvg;
 
     let body = baseSvg.substring(0, closingIdx);
 
     // Logo placeholder (circular clip)
-    const clipId = 'preview-logo-clip';
+    const clipId = "preview-logo-clip";
     const logoR = Math.min(logo.width, logo.height) / 2;
     body += `
       <defs>
@@ -61,9 +62,9 @@ export default function TemplatePositionPreview({ svgContent, positions, preview
     `;
 
     // Company name placeholder
-    const cnAnchor = cn.textAnchor || 'middle';
+    const cnAnchor = cn.textAnchor || "middle";
     body += `
-      <rect x="${cnAnchor === 'middle' ? cn.x - 100 : cnAnchor === 'end' ? cn.x - 200 : cn.x}" y="${cn.y - cn.fontSize}" width="200" height="${cn.fontSize + 8}" fill="rgba(245,158,11,0.15)" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6 3" rx="3" />
+      <rect x="${cnAnchor === "middle" ? cn.x - 100 : cnAnchor === "end" ? cn.x - 200 : cn.x}" y="${cn.y - cn.fontSize}" width="200" height="${cn.fontSize + 8}" fill="rgba(245,158,11,0.15)" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6 3" rx="3" />
       <text x="${cn.x}" y="${cn.y}" font-size="${cn.fontSize}" font-family="Arial, sans-serif" font-weight="bold" text-anchor="${cnAnchor}" fill="#f59e0b">Nome da Empresa</text>
     `;
 
@@ -73,12 +74,13 @@ export default function TemplatePositionPreview({ svgContent, positions, preview
       <text x="${on.x}" y="${on.y}" font-size="${on.fontSize}" font-family="monospace" font-weight="bold" text-anchor="middle" fill="#8b5cf6">#ABC12345</text>
     `;
 
-    body += '</svg>';
+    body += "</svg>";
 
     // Adjust dimensions for responsive display
     return body
       .replace(/width="[^"]*"/, 'width="100%"')
-      .replace(/height="[^"]*"/, 'height="100%"');
+      .replace(/height="[^"]*"/, 'height="100%"')
+      .replace(/<svg/, '<svg preserveAspectRatio="xMidYMid meet"');
   }, [svgContent, positions, logo, qr, cn, on]);
 
   if (!svgContent) return null;
