@@ -98,11 +98,6 @@ export default function DisplayOrderStepper({ order }: { order: OrderWithDisplay
   const openArt = order.display_arts?.find((art) => !art.locked) ?? order.display_arts?.[0];
   const [companyName, setCompanyName] = useState('');
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [internalStatus, setInternalStatus] = useState<string | null>(null);
-
-  useEffect(() => {
-    setInternalStatus(null);
-  }, [order.id]);
 
   useEffect(() => {
     return () => {
@@ -124,19 +119,17 @@ export default function DisplayOrderStepper({ order }: { order: OrderWithDisplay
     }
   };
 
-  const handleInternalStatus = () => {
-    setInternalStatus(getInternalStatus(order));
-  };
-
   return (
     <div className="py-4 space-y-0">
-      <p
-        className="text-xs text-muted-foreground mb-3 cursor-pointer"
-        onClick={handleInternalStatus}
-        title="Clique para gerar o status interno"
-      >
-        Status interno: {internalStatus ?? 'clique para gerar'}
-      </p>
+      <div className="mb-3 space-y-2">
+        <p className="text-xs text-muted-foreground">Status do pedido: {getInternalStatus(order)}</p>
+        {openArt && (
+          <Button size="sm" variant="outline" onClick={() => navigate(`/personalizar-display/${openArt.id}`)}>
+            <Paintbrush className="w-4 h-4 mr-2" />
+            Personalizar Arte Display
+          </Button>
+        )}
+      </div>
 
       <div className="flex justify-end mb-4">
         <Dialog>
@@ -232,12 +225,6 @@ export default function DisplayOrderStepper({ order }: { order: OrderWithDisplay
                 <Button size="sm" className="mt-2" onClick={() => window.open(order.asaas_payment_link!, '_blank')}>
                   <CreditCard className="w-4 h-4 mr-2" />
                   Pagar Agora
-                </Button>
-              )}
-              {isCurrent && (i === 1 || i === 2) && openArt && (
-                <Button size="sm" className="mt-2" onClick={() => navigate(`/personalizar-display/${openArt.id}`)}>
-                  <Paintbrush className="w-4 h-4 mr-2" />
-                  Personalizar Arte Display
                 </Button>
               )}
               {isCurrent && i === 4 && order.tracking_code && (
