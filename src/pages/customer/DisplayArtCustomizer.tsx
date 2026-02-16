@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Upload, Lock, CheckCircle, Loader2, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Upload, Lock, CheckCircle, Loader2, Image as ImageIcon, ZoomIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -51,7 +52,8 @@ function buildPreviewSvg(
   svgContent: string,
   positions: ElementPositions | null,
   logoUrl: string | null,
-  companyName: string
+  companyName: string,
+  logoZoom: number = 100
 ): string {
   const parser = new DOMParser();
   const doc = parser.parseFromString(svgContent, 'image/svg+xml');
@@ -74,21 +76,29 @@ function buildPreviewSvg(
   // Add logo as image element
   if (logoUrl) {
     const logoPos = pos.logo || { x: 50, y: 50, width: 120, height: 120 };
+    const scale = logoZoom / 100;
+    const scaledW = logoPos.width * scale;
+    const scaledH = logoPos.height * scale;
+    const cx = logoPos.x + logoPos.width / 2;
+    const cy = logoPos.y + logoPos.height / 2;
+    const imgX = cx - scaledW / 2;
+    const imgY = cy - scaledH / 2;
+
     const imgEl = doc.createElementNS('http://www.w3.org/2000/svg', 'image');
     imgEl.setAttribute('href', logoUrl);
-    imgEl.setAttribute('x', String(logoPos.x));
-    imgEl.setAttribute('y', String(logoPos.y));
-    imgEl.setAttribute('width', String(logoPos.width));
-    imgEl.setAttribute('height', String(logoPos.height));
+    imgEl.setAttribute('x', String(imgX));
+    imgEl.setAttribute('y', String(imgY));
+    imgEl.setAttribute('width', String(scaledW));
+    imgEl.setAttribute('height', String(scaledH));
     imgEl.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-    // Clip to circle
+    // Clip to circle at original bounds
     const clipId = 'logo-clip-preview';
     const defs = doc.createElementNS('http://www.w3.org/2000/svg', 'defs');
     const clipPath = doc.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
     clipPath.setAttribute('id', clipId);
     const circle = doc.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    circle.setAttribute('cx', String(logoPos.x + logoPos.width / 2));
-    circle.setAttribute('cy', String(logoPos.y + logoPos.height / 2));
+    circle.setAttribute('cx', String(cx));
+    circle.setAttribute('cy', String(cy));
     circle.setAttribute('r', String(Math.min(logoPos.width, logoPos.height) / 2));
     clipPath.appendChild(circle);
     defs.appendChild(clipPath);
@@ -149,6 +159,7 @@ export default function DisplayArtCustomizer() {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState('');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoZoom, setLogoZoom] = useState(100);
   const [uploading, setUploading] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -291,7 +302,8 @@ export default function DisplayArtCustomizer() {
         currentTemplate.svg_content,
         currentTemplate.element_positions,
         logoUrl,
-        companyName || 'Nome da Empresa'
+        companyName || 'Nome da Empresa',
+        logoZoom
       ))
     : '';
 
@@ -394,9 +406,30 @@ export default function DisplayArtCustomizer() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {logoUrl ? (
-                    <div className="flex flex-col items-center gap-3">
+                    <div className="flex flex-col items-center gap-4">
                       <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-primary/30 bg-white">
                         <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                      </div>
+                      {/* Zoom control */}
+                      <div className="w-full space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="flex items-center gap-1.5 text-sm">
+                            <ZoomIn className="w-4 h-4" />
+                            Zoom da Logo
+                          </Label>
+                          <span className="text-sm text-muted-foreground">{logoZoom}%</span>
+                        </div>
+                        <Slider
+                          value={[logoZoom]}
+                          onValueChange={([v]) => setLogoZoom(v)}
+                          min={50}
+                          max={200}
+                          step={5}
+                          className="w-full"
+                        />
+                        <p className="text-xs text-muted-foreground text-center">
+                          Ajuste para encaixar a logo sem cortes
+                        </p>
                       </div>
                       <label className="cursor-pointer">
                         <Button variant="outline" size="sm" asChild>
