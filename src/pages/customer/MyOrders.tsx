@@ -228,7 +228,7 @@ export default function MyOrders() {
                               {/* Actions — only for non-display orders */}
                               {(!order.display_arts || order.display_arts.length === 0) && (
                                 <div className="flex gap-2">
-                                  {order.status === "pending" && order.asaas_payment_link && (
+                                  {order.status === "paid" && order.asaas_payment_link && (
                                     <Button size="sm" onClick={() => window.open(order.asaas_payment_link!, "_blank")}>
                                       <ExternalLink className="w-4 h-4 mr-2" />
                                       Pagar Agora
