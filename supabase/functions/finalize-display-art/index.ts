@@ -1,10 +1,29 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import QRCode from "npm:qrcode@1.5.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+/**
+ * Generate a unique 6-digit numeric activation code,
+ * checking uniqueness against both pet_tags and business_displays.
+ */
+async function generateUniqueCode(supabase: any): Promise<string> {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+
+    const [{ data: petMatch }, { data: displayMatch }] = await Promise.all([
+      supabase.from("pet_tags").select("id").eq("qr_code", code).maybeSingle(),
+      supabase.from("business_displays").select("id").eq("qr_code", code).maybeSingle(),
+    ]);
+
+    if (!petMatch && !displayMatch) return code;
+  }
+  throw new Error("Não foi possível gerar um código único após 20 tentativas");
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -59,7 +78,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify ownership
     if (displayArt.user_id !== user.id) {
       return new Response(JSON.stringify({ error: "Sem permissão" }), {
         status: 403,
@@ -74,7 +92,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Validate required fields
     if (!displayArt.template_id || !displayArt.logo_url || !displayArt.company_name) {
       return new Response(
         JSON.stringify({ error: "Template, logo e nome da empresa são obrigatórios" }),
@@ -82,14 +99,22 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Generate unique QR code
-    const qrCode = `DSP-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+    // Generate unique 6-digit activation code
+    const activationCode = await generateUniqueCode(supabase);
+
+    // Generate QR Code as PNG Data URI
+    const qrTargetUrl = `https://tagtanamao.lovable.app/display/${activationCode}`;
+    const qrDataUri = await QRCode.toDataURL(qrTargetUrl, {
+      width: 400,
+      margin: 1,
+      color: { dark: "#000000", light: "#FFFFFF" },
+    });
 
     // Insert QR code record
     const { data: qrRecord, error: qrError } = await supabase
       .from("qr_codes")
       .insert({
-        code: qrCode,
+        code: activationCode,
         order_id: displayArt.order_id,
         display_art_id: displayArt.id,
         is_used: true,
@@ -104,14 +129,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Build final SVG using element_positions from the template
+    // Build final SVG
     const template = displayArt.template;
     const positions = template?.element_positions || {};
     let baseSvg = template?.svg_content || '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800"></svg>';
-    
-    // Parse the SVG
-    // We'll build the final SVG by appending positioned elements
-    // First, get SVG dimensions from viewBox
+
     const viewBoxMatch = baseSvg.match(/viewBox="([^"]+)"/);
     let svgWidth = 800, svgHeight = 800;
     if (viewBoxMatch) {
@@ -122,7 +144,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Remove closing </svg> tag to append elements
     const closingTagIndex = baseSvg.lastIndexOf("</svg>");
     let svgBody = baseSvg.substring(0, closingTagIndex);
 
@@ -144,13 +165,15 @@ Deno.serve(async (req) => {
       <text x="${cnPos.x}" y="${cnPos.y}" font-size="${cnPos.fontSize}" font-family="Arial, sans-serif" font-weight="bold" text-anchor="${cnPos.textAnchor || 'middle'}" fill="${displayArt.text_color || '#000000'}">${displayArt.company_name}</text>
     `;
 
-    // Add QR code placeholder text (will be replaced in production with actual QR image)
+    // Add real QR Code image
     const qrPos = positions.qr_code || { x: svgWidth / 2 - 100, y: svgHeight / 2 - 100, width: 200, height: 200 };
-    const qrUrl = `${supabaseUrl.replace('.supabase.co', '.lovable.app')}/display/${qrCode}`;
     svgBody += `
-      <rect x="${qrPos.x}" y="${qrPos.y}" width="${qrPos.width}" height="${qrPos.height}" fill="white" stroke="#ddd" stroke-width="1" rx="4" />
-      <text x="${qrPos.x + qrPos.width / 2}" y="${qrPos.y + qrPos.height / 2 - 10}" text-anchor="middle" font-size="12" fill="#666">${qrCode}</text>
-      <text x="${qrPos.x + qrPos.width / 2}" y="${qrPos.y + qrPos.height / 2 + 10}" text-anchor="middle" font-size="10" fill="#999">${qrUrl}</text>
+      <image href="${qrDataUri}" x="${qrPos.x}" y="${qrPos.y}" width="${qrPos.width}" height="${qrPos.height}" />
+    `;
+
+    // Add activation code text below QR
+    svgBody += `
+      <text x="${qrPos.x + qrPos.width / 2}" y="${qrPos.y + qrPos.height + 18}" text-anchor="middle" font-size="14" font-family="monospace" font-weight="bold" fill="#333333">${activationCode}</text>
     `;
 
     // Add order number (white, centered, bottom)
@@ -160,7 +183,6 @@ Deno.serve(async (req) => {
       <text x="${onPos.x}" y="${onPos.y}" font-size="${onPos.fontSize}" font-family="monospace" font-weight="bold" text-anchor="middle" fill="white">${orderNum}</text>
     `;
 
-    // Close SVG
     const finalSvg = svgBody + "</svg>";
 
     // Update display art: lock it and save final SVG
@@ -180,7 +202,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Update order status to art_finalized
+    // Update order status
     const { error: orderError } = await supabase
       .from("orders")
       .update({ status: "art_finalized" })
@@ -190,15 +212,15 @@ Deno.serve(async (req) => {
       console.error("Error updating order status:", orderError);
     }
 
-    // Create business_display record linked to this QR code
+    // Create business_display record with is_activated: false (awaiting activation)
     const { error: displayError } = await supabase
       .from("business_displays")
       .insert({
         user_id: user.id,
-        qr_code: qrCode,
+        qr_code: activationCode,
         business_name: displayArt.company_name,
         logo_url: displayArt.logo_url,
-        is_activated: true,
+        is_activated: false,
       });
 
     if (displayError) {
@@ -208,7 +230,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        qrCode,
+        qrCode: activationCode,
         displayArtId,
         message: "Arte finalizada com sucesso!",
       }),
