@@ -281,12 +281,8 @@ export default function DisplayArtCustomizer() {
 
     setFinalizing(true);
     try {
-      const { data: session } = await supabase.auth.getSession();
       const { data, error } = await supabase.functions.invoke('finalize-display-art', {
         body: { displayArtId },
-        headers: {
-          Authorization: `Bearer ${session?.session?.access_token}`,
-        },
       });
 
       if (error) throw error;
