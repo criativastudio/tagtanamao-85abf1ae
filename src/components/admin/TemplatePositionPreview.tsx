@@ -77,10 +77,7 @@ export default function TemplatePositionPreview({ svgContent, positions, preview
     body += "</svg>";
 
     // Adjust dimensions for responsive display
-    return body
-      .replace(/width="[^"]*"/, 'width="100%"')
-      .replace(/height="[^"]*"/, 'height="100%"')
-      .replace(/<svg/, '<svg preserveAspectRatio="xMidYMid meet"');
+    return body.replace(/width="[^"]*"/, 'width="100%"').replace(/height="[^"]*"/, 'height="100%"');
   }, [svgContent, positions, logo, qr, cn, on]);
 
   if (!svgContent) return null;
@@ -96,7 +93,7 @@ export default function TemplatePositionPreview({ svgContent, positions, preview
       <CardContent>
         <div className="bg-muted/50 rounded-lg p-3">
           <div
-            className="w-full h-96 flex items-center justify-center bg-background rounded-lg overflow-hidden"
+            className="w-full h-125 flex items-center justify-center bg-background rounded-lg overflow-hidden"
             dangerouslySetInnerHTML={{ __html: previewSvg }}
           />
         </div>
