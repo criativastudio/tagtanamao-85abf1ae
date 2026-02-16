@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
 
     // Verify user auth
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -48,13 +48,18 @@ Deno.serve(async (req) => {
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: { user }, error: authError } = await userClient.auth.getUser();
-    if (authError || !user) {
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      console.error("Auth claims error:", claimsError);
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const userId = claimsData.claims.sub as string;
 
     const { displayArtId } = await req.json();
     if (!displayArtId) {
@@ -78,7 +83,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (displayArt.user_id !== user.id) {
+    if (displayArt.user_id !== userId) {
       return new Response(JSON.stringify({ error: "Sem permissão" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -216,7 +221,7 @@ Deno.serve(async (req) => {
     const { error: displayError } = await supabase
       .from("business_displays")
       .insert({
-        user_id: user.id,
+        user_id: userId,
         qr_code: activationCode,
         business_name: displayArt.company_name,
         logo_url: displayArt.logo_url,
