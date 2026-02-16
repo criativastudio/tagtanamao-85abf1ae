@@ -53,13 +53,13 @@ export default function MyOrders() {
       .from("orders")
       .select(
         `
-        *,
-        items:order_items(
-          *,
-          product:products(*)
-        ),
-        display_arts(id, locked)
-      `,
+    *,
+    items:order_items(
+      *,
+      product:products(*),
+      display_arts(id, locked)
+    )
+  `,
       )
       .eq("user_id", user?.id)
       .order("created_at", { ascending: false });
