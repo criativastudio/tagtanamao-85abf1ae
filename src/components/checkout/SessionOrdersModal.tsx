@@ -19,7 +19,7 @@ const statusConfig: Record<string, { icon: typeof Clock; color: string; label: s
   paid: { icon: CheckCircle, color: "bg-blue-500/20 text-blue-400", label: "Pedido Pago" },
   approved: { icon: CheckCircle, color: "bg-emerald-500/20 text-emerald-400", label: "Pedido Aprovado" },
   awaiting_customization: { icon: Package, color: "bg-orange-500/20 text-orange-400", label: "Aguardando Personalização" },
-  art_finalized: { icon: CheckCircle, color: "bg-green-500/20 text-green-400", label: "Arte Finalizada" },
+  art_finalized: { icon: CheckCircle, color: "bg-green-500/20 text-green-400", label: "Arte Aprovada para Impressão" },
   processing: { icon: Package, color: "bg-purple-500/20 text-purple-400", label: "Em Produção" },
   ready_to_ship: { icon: Truck, color: "bg-cyan-500/20 text-cyan-400", label: "Pronto para Envio" },
   shipped: { icon: Truck, color: "bg-cyan-500/20 text-cyan-400", label: "Enviado" },
@@ -78,6 +78,15 @@ export default function SessionOrdersModal({ open, onOpenChange }: Props) {
 
   const getStatus = (s: string | null) => statusConfig[(s || "pending").toLowerCase()] || statusConfig.pending;
 
+  const getEffectiveStatus = (order: SessionOrder) => {
+    const raw = (order.status || "pending").toLowerCase();
+    const hasDisplayEmpresarial = order.items?.some((item) =>
+      (item.product?.name || "").toLowerCase().includes("display empresarial")
+    );
+    if (raw === "approved" && hasDisplayEmpresarial) return "awaiting_customization";
+    return raw;
+  };
+
   const totalAmount = orders.reduce((acc, o) => acc + (o.total_amount || 0), 0);
   const showSummary = orders.length > 1;
 
@@ -117,7 +126,8 @@ export default function SessionOrdersModal({ open, onOpenChange }: Props) {
             {(!showSummary || listExpanded) && (
               <div className="space-y-2">
                 {orders.map((order) => {
-                  const st = getStatus(order.status);
+                  const effectiveStatus = getEffectiveStatus(order);
+                  const st = getStatus(effectiveStatus);
                   const StatusIcon = st.icon;
                   const isExpanded = expandedId === order.id;
 

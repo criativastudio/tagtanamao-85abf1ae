@@ -25,22 +25,23 @@ const steps = [
   { label: 'Pedido pago', description: 'Pagamento confirmado', icon: CreditCard },
   { label: 'Pedido aprovado', description: 'Pedido aprovado', icon: CheckCircle },
   { label: 'Aguardando personalização', description: 'Arte em aberto', icon: Paintbrush },
-  { label: 'Em produção', description: 'Arte aprovada, em produção', icon: Package },
+  { label: 'Arte aprovada para impressão', description: 'Arte pronta para impressão', icon: CheckCircle },
+  { label: 'Em produção', description: 'Produção em andamento', icon: Package },
   { label: 'Enviado', description: 'Pedido despachado', icon: Truck },
   { label: 'Entregue', description: 'Pedido recebido', icon: PackageCheck },
 ];
 
-function getStepIndex(status: string | null): number {
+function getStepIndex(status: string | null, hasDisplayArt: boolean): number {
   switch (status) {
     case 'pending': return 0;
     case 'paid': return 1;
-    case 'approved': return 2;
+    case 'approved': return hasDisplayArt ? 3 : 2;
     case 'awaiting_customization': return 3;
-    case 'art_finalized':
-    case 'processing': return 4;
+    case 'art_finalized': return 4;
+    case 'processing': return 5;
     case 'ready_to_ship':
-    case 'shipped': return 5;
-    case 'delivered': return 6;
+    case 'shipped': return 6;
+    case 'delivered': return 7;
     default: return 0;
   }
 }
@@ -85,7 +86,7 @@ export default function DisplayOrderStepper({ order }: { order: OrderWithDisplay
     };
   }, [order.id]);
 
-  const currentStep = getStepIndex(localOrder.status);
+  const currentStep = getStepIndex(localOrder.status, !!localOrder.display_arts?.length);
 
   return (
     <div className="py-4 space-y-0">
@@ -135,7 +136,7 @@ export default function DisplayOrderStepper({ order }: { order: OrderWithDisplay
                   Personalizar Meu Display
                 </Button>
               )}
-              {isCurrent && i === 5 && localOrder.tracking_code && (
+              {isCurrent && i === 6 && localOrder.tracking_code && (
                 <Button size="sm" variant="outline" className="mt-2" onClick={() => window.open(`https://rastreamento.correios.com.br/app/index.php?objeto=${localOrder.tracking_code}`, '_blank')}>
                   <Truck className="w-4 h-4 mr-2" />
                   Rastrear
