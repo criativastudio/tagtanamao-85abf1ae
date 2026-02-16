@@ -72,6 +72,7 @@ export default function DisplayOrderStepper({ order }: { order: OrderWithDisplay
 
   return (
     <div className="py-4 space-y-0">
+      <p className="text-xs text-muted-foreground mb-3">Status interno: {order.status ?? '—'}</p>
       {steps.map((step, i) => {
         const isCompleted = i < currentStep;
         const isCurrent = i === currentStep;
@@ -112,7 +113,7 @@ export default function DisplayOrderStepper({ order }: { order: OrderWithDisplay
                   Pagar Agora
                 </Button>
               )}
-              {isCurrent && i === 2 && openArt && (
+              {isCurrent && (i === 1 || i === 2) && openArt && (
                 <Button size="sm" className="mt-2" onClick={() => navigate(`/personalizar-display/${openArt.id}`)}>
                   <Paintbrush className="w-4 h-4 mr-2" />
                   Personalizar Meu Display
