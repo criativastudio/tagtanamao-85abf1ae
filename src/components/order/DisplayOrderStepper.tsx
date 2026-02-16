@@ -44,9 +44,13 @@ const steps = [
 function getStepIndex(order: OrderWithDisplayArts): number {
   const status = (order.status ?? '').toLowerCase();
   const hasOpenArt = Boolean(order.display_arts?.some((art) => !art.locked));
+  const hasApprovedArt = Boolean(order.display_arts?.length && !hasOpenArt);
 
   // Se já estiver pago e houver arte aberta, avançar para a etapa de personalização
   if ((status === 'paid' || status === 'payment_confirmed' || status === 'confirmed') && hasOpenArt) return 2;
+
+  // Se a arte foi salva (travada), avançar para arte finalizada
+  if ((status === 'paid' || status === 'payment_confirmed' || status === 'confirmed') && hasApprovedArt) return 3;
 
   switch (status) {
     case 'pending':
@@ -79,12 +83,26 @@ function getStepIndex(order: OrderWithDisplayArts): number {
   }
 }
 
+function getInternalStatus(order: OrderWithDisplayArts): string {
+  const hasOpenArt = Boolean(order.display_arts?.some((art) => !art.locked));
+  const hasApprovedArt = Boolean(order.display_arts?.length && !hasOpenArt);
+
+  if (hasOpenArt) return 'aguardando_arte';
+  if (hasApprovedArt) return 'arte_aprovada_enviada';
+  return order.status ?? '—';
+}
+
 export default function DisplayOrderStepper({ order }: { order: OrderWithDisplayArts }) {
   const navigate = useNavigate();
   const currentStep = getStepIndex(order);
   const openArt = order.display_arts?.find((art) => !art.locked) ?? order.display_arts?.[0];
   const [companyName, setCompanyName] = useState('');
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [internalStatus, setInternalStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    setInternalStatus(null);
+  }, [order.id]);
 
   useEffect(() => {
     return () => {
@@ -106,9 +124,19 @@ export default function DisplayOrderStepper({ order }: { order: OrderWithDisplay
     }
   };
 
+  const handleInternalStatus = () => {
+    setInternalStatus(getInternalStatus(order));
+  };
+
   return (
     <div className="py-4 space-y-0">
-      <p className="text-xs text-muted-foreground mb-3">Status interno: {order.status ?? '—'}</p>
+      <p
+        className="text-xs text-muted-foreground mb-3 cursor-pointer"
+        onClick={handleInternalStatus}
+        title="Clique para gerar o status interno"
+      >
+        Status interno: {internalStatus ?? 'clique para gerar'}
+      </p>
 
       <div className="flex justify-end mb-4">
         <Dialog>
@@ -209,7 +237,7 @@ export default function DisplayOrderStepper({ order }: { order: OrderWithDisplay
               {isCurrent && (i === 1 || i === 2) && openArt && (
                 <Button size="sm" className="mt-2" onClick={() => navigate(`/personalizar-display/${openArt.id}`)}>
                   <Paintbrush className="w-4 h-4 mr-2" />
-                  Personalizar Meu Display
+                  Personalizar Arte Display
                 </Button>
               )}
               {isCurrent && i === 4 && order.tracking_code && (
