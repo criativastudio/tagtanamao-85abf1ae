@@ -99,6 +99,9 @@ export default function DisplayOrderStepper({ order }: { order: OrderWithDisplay
   const [companyName, setCompanyName] = useState('');
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
+  const statusLabel = steps[currentStep]?.label ?? 'Pendente';
+  const statusDescription = steps[currentStep]?.description ?? '';
+
   useEffect(() => {
     return () => {
       if (logoPreview) {
@@ -122,7 +125,11 @@ export default function DisplayOrderStepper({ order }: { order: OrderWithDisplay
   return (
     <div className="py-4 space-y-0">
       <div className="mb-3 space-y-2">
-        <p className="text-xs text-muted-foreground">Status do pedido: {getInternalStatus(order)}</p>
+        <p className="text-xs text-muted-foreground">
+          Status do pedido: <span className="font-medium text-foreground">{statusLabel}</span>
+        </p>
+        {statusDescription && <p className="text-xs text-muted-foreground">{statusDescription}</p>}
+        <p className="text-[11px] text-muted-foreground">Código interno: {getInternalStatus(order)}</p>
         {openArt && (
           <Button size="sm" variant="outline" onClick={() => navigate(`/personalizar-display/${openArt.id}`)}>
             <Paintbrush className="w-4 h-4 mr-2" />
@@ -225,6 +232,12 @@ export default function DisplayOrderStepper({ order }: { order: OrderWithDisplay
                 <Button size="sm" className="mt-2" onClick={() => window.open(order.asaas_payment_link!, '_blank')}>
                   <CreditCard className="w-4 h-4 mr-2" />
                   Pagar Agora
+                </Button>
+              )}
+              {i === 2 && openArt && (
+                <Button size="sm" variant="outline" className="mt-2" onClick={() => navigate(`/personalizar-display/${openArt.id}`)}>
+                  <Paintbrush className="w-4 h-4 mr-2" />
+                  Personalizar Arte Display
                 </Button>
               )}
               {isCurrent && i === 4 && order.tracking_code && (
