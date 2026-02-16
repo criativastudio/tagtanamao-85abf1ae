@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Upload, Lock, CheckCircle, Loader2, Image as ImageIcon, ZoomIn } from 'lucide-react';
+import { ArrowLeft, Upload, Lock, CheckCircle, Loader2, Image as ImageIcon, ZoomIn, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,12 +48,22 @@ interface ArtTemplate {
  * Build an SVG preview with logo and company name rendered as overlay elements
  * using the position metadata from the template.
  */
+const COLOR_PRESETS = [
+  { label: 'Preto', value: '#000000' },
+  { label: 'Branco', value: '#FFFFFF' },
+  { label: 'Vermelho', value: '#DC2626' },
+  { label: 'Azul', value: '#2563EB' },
+  { label: 'Dourado', value: '#D4A843' },
+  { label: 'Verde', value: '#16A34A' },
+];
+
 function buildPreviewSvg(
   svgContent: string,
   positions: ElementPositions | null,
   logoUrl: string | null,
   companyName: string,
-  logoZoom: number = 100
+  logoZoom: number = 100,
+  textColor: string = '#000000'
 ): string {
   const parser = new DOMParser();
   const doc = parser.parseFromString(svgContent, 'image/svg+xml');
@@ -117,7 +127,7 @@ function buildPreviewSvg(
     textEl.setAttribute('font-family', 'Arial, sans-serif');
     textEl.setAttribute('font-weight', 'bold');
     textEl.setAttribute('text-anchor', cnPos.textAnchor || 'middle');
-    textEl.setAttribute('fill', '#000000');
+    textEl.setAttribute('fill', textColor);
     textEl.textContent = companyName;
     svgEl.appendChild(textEl);
   }
@@ -160,6 +170,7 @@ export default function DisplayArtCustomizer() {
   const [companyName, setCompanyName] = useState('');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoZoom, setLogoZoom] = useState(100);
+  const [textColor, setTextColor] = useState('#000000');
   const [uploading, setUploading] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -191,6 +202,7 @@ export default function DisplayArtCustomizer() {
     setSelectedTemplate(art.template_id);
     setCompanyName(art.company_name || '');
     setLogoUrl(art.logo_url);
+    setTextColor((art as any).text_color || '#000000');
 
     const { data: tmpl } = await supabase
       .from('art_templates')
@@ -243,7 +255,15 @@ export default function DisplayArtCustomizer() {
   const handleSaveCompanyName = async () => {
     await supabase
       .from('display_arts')
-      .update({ company_name: companyName })
+      .update({ company_name: companyName, text_color: textColor } as any)
+      .eq('id', displayArtId);
+  };
+
+  const handleTextColorChange = async (color: string) => {
+    setTextColor(color);
+    await supabase
+      .from('display_arts')
+      .update({ text_color: color } as any)
       .eq('id', displayArtId);
   };
 
@@ -303,7 +323,8 @@ export default function DisplayArtCustomizer() {
         currentTemplate.element_positions,
         logoUrl,
         companyName || 'Nome da Empresa',
-        logoZoom
+        logoZoom,
+        textColor
       ))
     : '';
 
@@ -466,16 +487,57 @@ export default function DisplayArtCustomizer() {
                   <CardTitle className="text-lg">3. Nome da Empresa</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    <Label htmlFor="company-name">Nome que aparecerá no display</Label>
-                    <Input
-                      id="company-name"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      onBlur={handleSaveCompanyName}
-                      placeholder="Ex: Minha Empresa"
-                      maxLength={50}
-                    />
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="company-name">Nome que aparecerá no display</Label>
+                      <Input
+                        id="company-name"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        onBlur={handleSaveCompanyName}
+                        placeholder="Ex: Minha Empresa"
+                        maxLength={50}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-1.5 text-sm">
+                        <Palette className="w-4 h-4" />
+                        Cor do Texto
+                      </Label>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {COLOR_PRESETS.map((preset) => (
+                          <button
+                            key={preset.value}
+                            type="button"
+                            title={preset.label}
+                            className={`w-8 h-8 rounded-full border-2 transition-all ${
+                              textColor === preset.value
+                                ? 'border-primary scale-110 ring-2 ring-primary/30'
+                                : 'border-border hover:border-primary/50'
+                            }`}
+                            style={{ backgroundColor: preset.value }}
+                            onClick={() => handleTextColorChange(preset.value)}
+                          />
+                        ))}
+                        <label className="relative w-8 h-8 cursor-pointer" title="Cor personalizada">
+                          <input
+                            type="color"
+                            value={textColor}
+                            onChange={(e) => handleTextColorChange(e.target.value)}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                          <div
+                            className="w-8 h-8 rounded-full border-2 border-dashed border-border flex items-center justify-center"
+                            style={{ background: `conic-gradient(red, yellow, lime, aqua, blue, magenta, red)` }}
+                          >
+                            <span className="text-[10px] font-bold text-white drop-shadow">+</span>
+                          </div>
+                        </label>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Escolha a cor que combina com o modelo selecionado
+                      </p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

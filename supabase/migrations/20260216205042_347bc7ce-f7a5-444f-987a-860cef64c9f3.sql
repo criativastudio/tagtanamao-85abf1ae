@@ -1,0 +1,1 @@
+ALTER TABLE public.display_arts ADD COLUMN text_color text DEFAULT '#000000';
