@@ -65,7 +65,7 @@ export default function TemplatePositionPreview({ svgContent, positions, preview
     const cnAnchor = cn.textAnchor || "middle";
     body += `
       <rect x="${cnAnchor === "middle" ? cn.x - 100 : cnAnchor === "end" ? cn.x - 200 : cn.x}" y="${cn.y - cn.fontSize}" width="200" height="${cn.fontSize + 8}" fill="rgba(245,158,11,0.15)" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6 3" rx="3" />
-      <text x="${cn.x}" y="${cn.y}" font-size="${cn.fontSize}" font-family="Arial, sans-serif" font-weight="bold" text-anchor="${cnAnchor}" fill="#f59e0b">Nome da Empresa</text>
+      <text x="${cn.x}" y="${cn.y}" font-size="${cn.fontSize}" font-family="Arial, sans-serif" font-weight="bold" text-anchor="${cnAnchor}" fill="#c">Nome da Empresa</text>
     `;
 
     // Order number placeholder
@@ -93,7 +93,7 @@ export default function TemplatePositionPreview({ svgContent, positions, preview
       <CardContent>
         <div className="bg-muted/50 rounded-lg p-3">
           <div
-            className="w-full h-125 flex items-center justify-center bg-background rounded-lg overflow-hidden"
+            className="w-full h-96 flex items-center justify-center bg-background rounded-lg overflow-hidden"
             dangerouslySetInnerHTML={{ __html: previewSvg }}
           />
         </div>
