@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Copy, Check, ExternalLink, Loader2, Clock, QrCode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -52,9 +52,19 @@ export default function AsaasAwaitingPayment({
     }
   }, [asaasPayment.pixQrCode?.expirationDate]);
 
+  const handlePaymentConfirmed = useCallback(() => {
+    if (status === 'confirmed') return;
+    setStatus('confirmed');
+    toast({
+      title: '🎉 Pagamento Confirmado!',
+      description: 'Seu pagamento foi confirmado com sucesso.',
+    });
+    setTimeout(onPaymentConfirmed, 2000);
+  }, [status, toast, onPaymentConfirmed]);
+
   // Real-time subscription for payment confirmation via order updates
   useEffect(() => {
-    console.log('Setting up realtime subscription for Asaas payment, order:', orderId);
+    console.log('Setting up realtime subscriptions for Asaas payment, order:', orderId);
 
     const channel = supabase
       .channel(`asaas-order-${orderId}`)
@@ -68,23 +78,53 @@ export default function AsaasAwaitingPayment({
         },
         (payload) => {
           console.log('Order updated:', payload);
-          if (payload.new && (payload.new as any).payment_status === 'confirmed') {
-            setStatus('confirmed');
-            toast({
-              title: '🎉 Pagamento Confirmado!',
-              description: 'Seu pagamento foi confirmado com sucesso.',
-            });
-            setTimeout(onPaymentConfirmed, 2000);
+          const newData = payload.new as any;
+          if (newData?.payment_status === 'confirmed' || newData?.status === 'paid') {
+            handlePaymentConfirmed();
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'payments',
+          filter: `order_id=eq.${orderId}`,
+        },
+        (payload) => {
+          console.log('Payment updated:', payload);
+          const newData = payload.new as any;
+          if (newData?.status === 'confirmed' || newData?.status === 'paid') {
+            handlePaymentConfirmed();
           }
         }
       )
       .subscribe();
 
     return () => {
-      console.log('Unsubscribing from order channel');
       supabase.removeChannel(channel);
     };
-  }, [orderId, onPaymentConfirmed, toast]);
+  }, [orderId, handlePaymentConfirmed]);
+
+  // Polling fallback every 5 seconds
+  useEffect(() => {
+    if (status !== 'pending') return;
+
+    const interval = setInterval(async () => {
+      const { data } = await supabase
+        .from('orders')
+        .select('payment_status, status')
+        .eq('id', orderId)
+        .maybeSingle();
+
+      if (data?.payment_status === 'confirmed' || data?.status === 'paid') {
+        handlePaymentConfirmed();
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [orderId, status, handlePaymentConfirmed]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
