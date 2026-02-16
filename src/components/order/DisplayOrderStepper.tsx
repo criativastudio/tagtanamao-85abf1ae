@@ -27,23 +27,45 @@ const steps = [
   { label: 'Entregue', description: 'Pedido recebido', icon: PackageCheck },
 ];
 
-function getStepIndex(status: string | null): number {
+function getStepIndex(order: OrderWithDisplayArts): number {
+  const status = order.status;
+  const hasOpenArt = order.display_arts?.some((art) => !art.locked);
+
+  // Se já estiver pago e houver arte aberta, avançar para a etapa de personalização
+  if ((status === 'paid' || status === 'payment_confirmed') && hasOpenArt) return 2;
+
   switch (status) {
-    case 'pending': return 0;
-    case 'paid': return 1;
-    case 'awaiting_customization': return 2;
+    case 'pending':
+    case 'awaiting_payment':
+      return 0;
+    case 'paid':
+    case 'payment_confirmed':
+      return 1;
+    case 'awaiting_customization':
+    case 'customization_pending':
+    case 'awaiting_art':
+    case 'art_pending':
+      return 2;
     case 'art_finalized':
-    case 'processing': return 3;
+    case 'processing':
+    case 'in_production':
+      return 3;
     case 'ready_to_ship':
-    case 'shipped': return 4;
-    case 'delivered': return 5;
-    default: return 0;
+    case 'shipped':
+    case 'in_transit':
+      return 4;
+    case 'delivered':
+    case 'completed':
+      return 5;
+    default:
+      return 0;
   }
 }
 
 export default function DisplayOrderStepper({ order }: { order: OrderWithDisplayArts }) {
   const navigate = useNavigate();
-  const currentStep = getStepIndex(order.status);
+  const currentStep = getStepIndex(order);
+  const openArt = order.display_arts?.find((art) => !art.locked) ?? order.display_arts?.[0];
 
   return (
     <div className="py-4 space-y-0">
@@ -87,8 +109,8 @@ export default function DisplayOrderStepper({ order }: { order: OrderWithDisplay
                   Pagar Agora
                 </Button>
               )}
-              {isCurrent && i === 2 && order.display_arts?.[0] && (
-                <Button size="sm" className="mt-2" onClick={() => navigate(`/personalizar-display/${order.display_arts![0].id}`)}>
+              {isCurrent && i === 2 && openArt && (
+                <Button size="sm" className="mt-2" onClick={() => navigate(`/personalizar-display/${openArt.id}`)}>
                   <Paintbrush className="w-4 h-4 mr-2" />
                   Personalizar Meu Display
                 </Button>

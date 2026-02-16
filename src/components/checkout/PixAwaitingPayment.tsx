@@ -47,6 +47,8 @@ export default function PixAwaitingPayment({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const orderCode = orderId ? orderId.slice(0, 8) : '---';
+
   // Countdown timer
   useEffect(() => {
     const expiresAt = new Date(pixPayment.expiresAt).getTime();
@@ -111,7 +113,7 @@ export default function PixAwaitingPayment({
   };
 
   const sendWhatsAppReceipt = () => {
-    const message = `Olá! Acabei de fazer o pagamento PIX do pedido #${orderId.slice(0, 8)}.
+    const message = `Olá! Acabei de fazer o pagamento PIX do pedido #${orderCode}.
 
 💰 Valor: ${formatCurrency(pixPayment.amount)}
 🔑 ID da Transação: ${pixPayment.transactionId}
@@ -174,7 +176,7 @@ Segue o comprovante em anexo.`;
         </div>
         <h2 className="text-2xl font-bold mb-2">Aguardando Pagamento PIX</h2>
         <p className="text-muted-foreground">
-          Pedido #{orderId.slice(0, 8)}
+          Pedido #{orderCode}
         </p>
       </div>
 

@@ -56,6 +56,8 @@ export default function PaymentSuccessOverlay({
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
+  const orderCode = orderId ? orderId.slice(0, 8).toUpperCase() : '---';
+
   // Generate random particles
   const particles = Array.from({ length: 15 }, (_, i) => ({
     id: i,
@@ -173,7 +175,7 @@ export default function PaymentSuccessOverlay({
                   Pedido
                 </span>
                 <span className="font-mono text-sm font-semibold text-foreground">
-                  #{orderId.slice(0, 8).toUpperCase()}
+                  #{orderCode}
                 </span>
               </div>
               
