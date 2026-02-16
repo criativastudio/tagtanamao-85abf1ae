@@ -63,13 +63,15 @@ const statusColors: Record<string, string> = {
 const statusLabels: Record<string, string> = {
   pending: "Pendente",
   paid: "Pago",
-  awaiting_customization: "Aguard. Personalização",
-  art_finalized: "Arte Finalizada",
   processing: "Em Produção",
-  ready_to_ship: "Pronto p/ Envio",
   shipped: "Enviado",
   delivered: "Entregue",
   cancelled: "Cancelado",
+  finalizado: "Finalizado",
+  aguardpersonalizacao: "Aguard. Personalização",
+  artefinalizada: "Arte Finalizada",
+  emprodução: "Em Produção",
+  prontopenvio: "Pronto p/ Envio",
 };
 
 const paymentStatusLabels: Record<string, string> = {
