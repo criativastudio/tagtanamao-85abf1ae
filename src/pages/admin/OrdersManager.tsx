@@ -54,26 +54,20 @@ const statusColors: Record<string, string> = {
   aguardpersonalizacao: "bg-orange-500/20 text-orange-400 border-orange-500/30",
   artefinalizada: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
   processing: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-  emprodução: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-  prontopenvio: "bg-sky-500/20 text-sky-400 border-sky-500/30",
   shipped: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
   delivered: "bg-green-500/20 text-green-400 border-green-500/30",
-  cancelled: "bg-red-500/20 text-red-400 border-red-500/30",
   finalizado: "bg-green-500/20 text-green-400 border-green-500/30",
 };
 
 const statusLabels: Record<string, string> = {
   pending: "Pendente",
   paid: "Pago",
+  aguardpersonalizacao: "Aguard. Personalização",
+  artefinalizada: "Arte Finalizada",
   processing: "Em Produção",
   shipped: "Enviado",
   delivered: "Entregue",
-  cancelled: "Cancelado",
   finalizado: "Finalizado",
-  aguardpersonalizacao: "Aguard. Personalização",
-  artefinalizada: "Arte Finalizada",
-  emprodução: "Em Produção",
-  prontopenvio: "Pronto p/ Envio",
 };
 
 const paymentStatusLabels: Record<string, string> = {
