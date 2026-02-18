@@ -1,75 +1,144 @@
+# Stepper Vertical de Produção — OrderProductionStepper
 
-## Problema identificado
+## Resumo
 
-Dois problemas distintos precisam ser resolvidos:
-
-### 1. Build Error na Edge Function
-O erro:
-```
-Failed resolving types for 'npm:qrcode@1.5.4'
-```
-Ocorre porque o Deno não encontra definições de tipos para a biblioteca `qrcode`. A solução é adicionar uma diretiva de tipo explícita no import usando `@deno-types` ou ignorar a verificação de tipos com `// @ts-ignore` acima do import.
-
-### 2. Botão de personalização ausente no status `awaiting_customization`
-A lógica atual do botão (linhas 254–268 em `MyOrders.tsx`) depende de `item.display_arts?.filter((a) => !a.locked)` — ou seja, só exibe o botão se já existir um registro em `display_arts` associado ao `order_item` com `locked: false`.
-
-O problema é que quando o status é `awaiting_customization`, pode não existir ainda um `display_art` no banco (arte ainda não iniciada), então o botão nunca aparece nessa condição.
-
-A solução é adicionar um botão adicional diretamente na condição de status do pedido, verificando:
-- `order.status === 'awaiting_customization'` **E**
-- não há `display_arts` com `locked: false` (para evitar duplicação com o botão existente)
-
-Esse botão deve navegar para a página de personalização passando o `order_id` como parâmetro.
+Criar um novo componente `OrderProductionStepper.tsx` com um stepper vertical moderno usando framer-motion, e integrá-lo em `MyOrders.tsx` substituindo a renderização condicional do `DisplayOrderStepper` existente — sem tocar em nenhuma lógica de fetch, tipagem ou ações de pagamento/rastreio. Preciso que os status seja refletido do painel admin para o painel do usuario.
 
 ---
 
-## Alterações técnicas
+## O que o usuário verá
 
-### Arquivo 1: `supabase/functions/finalize-display-art/index.ts`
-Adicionar diretiva de tipo antes do import do qrcode para resolver o erro de build:
+- Dentro de cada pedido expandido (accordion), o stepper aparece no topo do conteúdo
+- Pedidos **cancelados** mostram um card vermelho no lugar do stepper
+- Etapas concluídas: círculo preenchido com `primary` + ícone de check
+- Etapa atual: círculo `primary` com anel pulsante (framer-motion) + label em negrito
+- Etapas futuras: círculo `muted` com ícone da etapa
+- Linha vertical conectando os círculos — colorida até a etapa atual, `muted` após
+
+---
+
+## Fluxo fixo de etapas
+
+
+| Status                   | Ícone        | Label                |
+| ------------------------ | ------------ | -------------------- |
+| `pending`                | Clock        | Aguardando Pagamento |
+| `paid`                   | CreditCard   | Pagamento Aprovado   |
+| `awaiting_customization` | Paintbrush   | Personalizar Arte    |
+| `art_finalized`          | CheckCircle  | Arte Finalizada      |
+| `processing`             | Package      | Em Produção          |
+| `ready_to_ship`          | PackageOpen  | Pronto para Envio    |
+| `shipped`                | Truck        | Enviado              |
+| `delivered`              | PackageCheck | Entregue             |
+
+
+---
+
+## Arquivos a criar/editar
+
+### 1. CRIAR: `src/components/order/OrderProductionStepper.tsx`
+
+**Props:** `{ status: string }`
+
+**Lógica de índice:**
+
 ```typescript
-// @ts-ignore - no type definitions available for qrcode npm module in Deno
-import QRCode from "npm:qrcode@1.5.4";
+const productionFlow = [
+  "pending", "paid", "awaiting_customization",
+  "art_finalized", "processing", "ready_to_ship",
+  "shipped", "delivered"
+];
+
+const currentIndex = productionFlow.indexOf(status.toLowerCase());
+// Se não encontrar (ex: "cancelled"), currentIndex === -1
 ```
 
-### Arquivo 2: `src/pages/customer/MyOrders.tsx`
-Na seção `{/* Actions */}`, adicionar botão condicional para status `awaiting_customization`:
+**Caso cancelado:** retorna card vermelho com `XCircle` e texto "Pedido Cancelado" (mas na verdade a condição de cancelado é tratada no MyOrders — o componente recebe somente status não-cancelados).
 
-**Lógica:**
-```typescript
-// Verifica se há arte aberta já existente (evita duplicar botão)
-const hasOpenArt = order.items?.some((item: any) =>
-  item.display_arts?.some((a: any) => !a.locked)
-);
+**UI do stepper:**
 
-// Botão aparece quando:
-// 1. Status é awaiting_customization E não há arte aberta (arte ainda não iniciada)
-// 2. OU o status indica que o pedido é de display e precisa de personalização
-{normalizedStatus === "awaiting_customization" && !hasOpenArt && (
-  <Button
-    size="sm"
-    variant="outline"
-    className="border-primary/50 text-primary hover:bg-primary/10"
-    onClick={() => navigate(`/personalizar-display?order_id=${order.id}`)}
-  >
-    <Paintbrush className="w-4 h-4 mr-2" />
-    Personalizar Arte do Display
-  </Button>
+```
+[círculo]──────── Label principal (bold se atual)
+    |              Descrição pequena (text-xs muted)
+    |
+[círculo]──────── ...
+```
+
+**Animação framer-motion na etapa atual:**
+
+- O círculo da etapa atual terá um anel animado usando `motion.div` com `animate={{ scale: [1, 1.15, 1] }}` em loop suave (tipo "heartbeat")
+- O label da etapa atual faz `initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}`
+
+**Linha vertical:**
+
+- `bg-primary` entre etapas concluídas
+- `bg-muted` entre etapa atual e as futuras
+- Não renderiza linha após a última etapa
+
+---
+
+### 2. EDITAR: `src/pages/customer/MyOrders.tsx`
+
+Apenas duas mudanças dentro do `AccordionContent`, sem tocar em mais nada:
+
+**A) Remover** a renderização condicional do `DisplayOrderStepper` (que só aparecia para display_arts):
+
+```tsx
+// REMOVER:
+{order.display_arts && order.display_arts.length > 0 && order.status !== "cancelled" && (
+  <DisplayOrderStepper order={order} />
 )}
 ```
 
-**Nota:** A navegação usa `order_id` como query param para que a página de personalização saiba qual pedido está sendo personalizado. Se a rota `/personalizar-display` já aceita apenas um `art_id`, a lógica de redirecionamento precisará ser ajustada na página `DisplayArtCustomizer.tsx` para buscar a arte pelo `order_id` quando nenhum `art_id` for passado.
+**B) Adicionar** o novo stepper para todos os pedidos não-cancelados:
+
+```tsx
+{normalizedStatus !== "cancelled" && (
+  <OrderProductionStepper status={normalizedStatus} />
+)}
+```
+
+**C) Adicionar** o card de cancelado quando aplicável:
+
+```tsx
+{normalizedStatus === "cancelled" && (
+  <div className="flex items-center gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400">
+    <XCircle className="w-5 h-5 shrink-0" />
+    <div>
+      <p className="font-semibold text-sm">Pedido Cancelado</p>
+      <p className="text-xs text-muted-foreground">Este pedido foi cancelado.</p>
+    </div>
+  </div>
+)}
+```
+
+O import do `DisplayOrderStepper` pode ser removido se não for mais usado.
 
 ---
 
-## Verificação da rota de personalização
+## O que NÃO muda
 
-Preciso confirmar como a página `DisplayArtCustomizer.tsx` recebe o parâmetro para garantir que a navegação funcione corretamente. Se ela já busca por `order_id`, perfeito. Caso contrário, a navegação deve apontar para a arte existente usando o ID da `display_art`.
+- `fetchOrders` e toda lógica de dados
+- Tipagens (`OrderWithItems`, `OrderItem`, etc.)
+- `statusConfig` e os badges de status no header do card
+- Seção de items (produtos)
+- Seção de entrega/endereço
+- Seção de actions (Pagar Agora, Rastrear, Personalizar Arte)
+- Animações de entrada do `motion.div` dos cards
 
-**Abordagem segura:** Como o `display_art` pode ou não existir para um pedido `awaiting_customization`, o botão deve:
-- Navegar para `/personalizar-display/${art.id}` se já existir uma arte (comportamento atual do botão existente)
-- Navegar para `/personalizar-display?order_id=${order.id}` se não existir arte ainda
+---
 
-### Arquivos afetados
-1. `supabase/functions/finalize-display-art/index.ts` — corrige o build error com `@ts-ignore`
-2. `src/pages/customer/MyOrders.tsx` — adiciona botão de personalização para status `awaiting_customization`
+## Estrutura do componente final
+
+```text
+OrderProductionStepper
+├── productionFlow (array de 8 status)
+├── steps (array com label, descrição, ícone)  
+├── currentIndex = productionFlow.indexOf(status)
+└── Render
+    ├── Para cada step:
+    │   ├── motion.div [círculo] — concluído / atual / futuro
+    │   ├── linha vertical (exceto último)
+    │   └── label + descrição
+    └── Framer-motion: etapa atual pulsa suavemente
+```
