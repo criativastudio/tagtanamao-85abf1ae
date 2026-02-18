@@ -15,9 +15,6 @@ const ASAAS_BASE_URL = asaasApiKey?.includes("_hmlg_")
   : "https://api.asaas.com/v3";
 
 // --- Shipping validation ---
-// With Melhor Envio integration, shipping costs are dynamic.
-// We validate that the stored shipping_cost matches what was calculated and stored at order creation.
-// Local delivery options are still validated by city/state.
 const LOCAL_SHIPPING: Record<string, { price: number; city: string; state: string }> = {
   "Entrega Local - Porto Velho": { price: 5.00, city: "porto velho", state: "RO" },
   "Frete Grátis - Jaru": { price: 0, city: "jaru", state: "RO" },
@@ -28,7 +25,6 @@ function validateShippingMethod(method: string | null, cost: number | null, city
   if (!method) return "Método de envio não informado";
   if (cost === null || cost === undefined || cost < 0) return "Valor de frete inválido";
   
-  // Validate local delivery
   const localCfg = LOCAL_SHIPPING[method];
   if (localCfg) {
     if (Math.abs((cost || 0) - localCfg.price) > 0.01) return `Valor de frete inválido para ${method}`;
@@ -37,7 +33,6 @@ function validateShippingMethod(method: string | null, cost: number | null, city
     if (s !== localCfg.state) return `Entrega local disponível apenas para ${localCfg.state}`;
     if (c !== localCfg.city) return `Entrega local indisponível para esta cidade`;
   }
-  // For Melhor Envio quotes, we trust the stored value since it was calculated server-side
   return null;
 }
 
@@ -66,6 +61,22 @@ async function validateOrderAmount(supabase: any, orderId: string, frontendAmoun
     return `Valor do pagamento não confere. Esperado: ${expected.toFixed(2)}`;
   }
   return null;
+}
+
+/**
+ * Detecta se o pedido contém display (business_display) e determina o próximo status
+ * após pagamento confirmado.
+ * - Display presente → awaiting_customization
+ * - Apenas pet_tag ou outros → processing
+ */
+async function getNextStatusAfterPayment(supabase: any, orderId: string): Promise<string> {
+  const { data: items } = await supabase
+    .from("order_items")
+    .select("product_id, products(type)")
+    .eq("order_id", orderId);
+
+  const hasDisplay = items?.some((item: any) => item.products?.type === "business_display");
+  return hasDisplay ? "awaiting_customization" : "processing";
 }
 
 // --- Asaas helpers ---
@@ -189,6 +200,13 @@ async function handleWebhook(supabase: any, payload: WebhookPayload): Promise<{ 
     status: paymentStatus,
     paid_at: paymentStatus === "confirmed" ? new Date().toISOString() : null,
   }).eq("order_id", orderId);
+
+  // Auto-advance: if payment confirmed, move to next status based on order type
+  if (orderStatus === "paid") {
+    const nextStatus = await getNextStatusAfterPayment(supabase, orderId);
+    await supabase.from("orders").update({ status: nextStatus }).eq("id", orderId);
+    console.log(`Auto-advanced order ${orderId} from 'paid' to '${nextStatus}'`);
+  }
 
   console.log("Order updated:", { orderId, orderStatus, paymentStatus });
   return { success: true, message: "Webhook processed" };
