@@ -47,7 +47,11 @@ export default function MyOrders() {
         { event: "UPDATE", schema: "public", table: "orders", filter: `user_id=eq.${user.id}` },
         (payload) => {
           console.log("Pedido atualizado:", payload.new);
-          setOrders((prev) => prev.map((o) => (o.id === payload.new.id ? payload.new : o)));
+          setOrders((prev) =>
+            prev.map((o) =>
+              o.id === payload.new.id ? { ...o, ...(payload.new as Partial<OrderWithItems>) } : o,
+            ),
+          );
         },
       )
       .subscribe();
@@ -164,7 +168,8 @@ export default function MyOrders() {
             {orders.map((order, index) => {
               const normalizedStatus = order.status ? order.status.toLowerCase() : "pending";
               const status = statusConfig[normalizedStatus] || statusConfig["pending"];
-
+              const hasDisplay =
+                order.items?.some((item: any) => item.product?.type === "business_display") ?? false;
               const StatusIcon = status.icon;
 
               return (
@@ -199,13 +204,9 @@ export default function MyOrders() {
                           <AccordionContent>
                             <div className="space-y-4 pt-2">
                               {/* Production stepper */}
-                              {(() => {
-                                const hasDisplay =
-                                  order.items?.some((item: any) => item.product?.type === "business_display") ?? false;
-                                return normalizedStatus !== "cancelled" ? (
-                                  <OrderProductionStepper status={normalizedStatus} hasDisplay={hasDisplay} />
-                                ) : null;
-                              })()}
+                              {normalizedStatus !== "cancelled" && (
+                                <OrderProductionStepper status={normalizedStatus} hasDisplay={hasDisplay} />
+                              )}
                               {normalizedStatus === "cancelled" && (
                                 <div className="flex items-center gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400">
                                   <XCircle className="w-5 h-5 shrink-0" />
@@ -284,35 +285,18 @@ export default function MyOrders() {
                                     Rastrear
                                   </Button>
                                 )}
-                                {/* Personalizar Arte do Display - arte já existente */}
-                                {order.items?.map((item: any) => {
-                                  const openArts = item.display_arts?.filter((a: any) => !a.locked) || [];
-                                  return openArts.map((art: any) => (
-                                    <Button
-                                      key={art.id}
-                                      size="sm"
-                                      variant="outline"
-                                      className="border-primary/50 text-primary hover:bg-primary/10"
-                                      onClick={() => navigate(`/personalizar-display/${art.id}`)}
-                                    >
-                                      <Paintbrush className="w-4 h-4 mr-2" />
-                                      Personalizar Arte do Display
-                                    </Button>
-                                  ));
-                                })}
-                                {/* Personalizar Arte do Display - status awaiting_customization sem arte criada */}
-                                {normalizedStatus === "awaiting_customization" &&
-                                  !order.items?.some((item: any) => item.display_arts?.some((a: any) => !a.locked)) && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="border-primary/50 text-primary hover:bg-primary/10"
-                                      onClick={() => navigate(`/personalizar-display?order_id=${order.id}`)}
-                                    >
-                                      <Paintbrush className="w-4 h-4 mr-2" />
-                                      Personalizar Arte do Display
-                                    </Button>
-                                  )}
+                                {/* Personalizar Arte do Display — botão único por pedido */}
+                                {hasDisplay && ["awaiting_customization", "paid"].includes(normalizedStatus) && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-primary/50 text-primary hover:bg-primary/10"
+                                    onClick={() => navigate(`/personalizar-display?order_id=${order.id}`)}
+                                  >
+                                    <Paintbrush className="w-4 h-4 mr-2" />
+                                    Personalizar Arte do Display
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           </AccordionContent>
