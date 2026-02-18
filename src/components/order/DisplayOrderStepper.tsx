@@ -102,6 +102,7 @@ export default function DisplayOrderStepper({ order }: { order: OrderWithDisplay
   const statusLabel = steps[currentStep]?.label ?? 'Pendente';
   const statusDescription = steps[currentStep]?.description ?? '';
   const shouldShowCustomizerButton = currentStep === 2 && Boolean(openArt);
+  const isAwaitingCustomization = (order.status ?? '').toLowerCase() === 'awaiting_customization';
 
   useEffect(() => {
     return () => {
@@ -126,17 +127,19 @@ export default function DisplayOrderStepper({ order }: { order: OrderWithDisplay
   return (
     <div className="py-4 space-y-0">
       <div className="mb-3 space-y-2">
-        <p className="text-xs text-muted-foreground">
-          Status do pedido: <span className="font-medium text-foreground">{statusLabel}</span>
-        </p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-xs text-muted-foreground">
+            Status do pedido: <span className="font-medium text-foreground">{statusLabel}</span>
+          </p>
+          {shouldShowCustomizerButton && isAwaitingCustomization && openArt && (
+            <Button size="sm" variant="outline" onClick={() => navigate(`/personalizar-display/${openArt.id}`)}>
+              <Paintbrush className="w-4 h-4 mr-2" />
+              Personalizar Arte Display
+            </Button>
+          )}
+        </div>
         {statusDescription && <p className="text-xs text-muted-foreground">{statusDescription}</p>}
         <p className="text-[11px] text-muted-foreground">Código interno: {getInternalStatus(order)}</p>
-        {shouldShowCustomizerButton && openArt && (
-          <Button size="sm" variant="outline" onClick={() => navigate(`/personalizar-display/${openArt.id}`)}>
-            <Paintbrush className="w-4 h-4 mr-2" />
-            Personalizar Arte Display
-          </Button>
-        )}
       </div>
 
       <div className="flex justify-end mb-4">
@@ -235,7 +238,7 @@ export default function DisplayOrderStepper({ order }: { order: OrderWithDisplay
                   Pagar Agora
                 </Button>
               )}
-              {i === 2 && openArt && (
+              {i === 2 && openArt && !isAwaitingCustomization && (
                 <Button size="sm" variant="outline" className="mt-2" onClick={() => navigate(`/personalizar-display/${openArt.id}`)}>
                   <Paintbrush className="w-4 h-4 mr-2" />
                   Personalizar Arte Display
