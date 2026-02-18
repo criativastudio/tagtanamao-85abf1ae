@@ -10,18 +10,14 @@ import {
   PackageCheck,
 } from "lucide-react";
 
-const productionFlow = [
-  "pending",
-  "paid",
-  "awaiting_customization",
-  "art_finalized",
-  "processing",
-  "ready_to_ship",
-  "shipped",
-  "delivered",
-];
+interface StepDef {
+  status: string;
+  label: string;
+  description: string;
+  icon: React.ElementType;
+}
 
-const steps = [
+const ALL_STEPS: StepDef[] = [
   {
     status: "pending",
     label: "Aguardando Pagamento",
@@ -72,19 +68,33 @@ const steps = [
   },
 ];
 
-interface OrderProductionStepperProps {
-  status: string;
+const CUSTOMIZATION_STATUSES = ["awaiting_customization", "art_finalized"];
+
+export function getProductionFlow(hasDisplay: boolean): { flow: string[]; steps: StepDef[] } {
+  const steps = hasDisplay
+    ? ALL_STEPS
+    : ALL_STEPS.filter((s) => !CUSTOMIZATION_STATUSES.includes(s.status));
+
+  return {
+    flow: steps.map((s) => s.status),
+    steps,
+  };
 }
 
-export default function OrderProductionStepper({ status }: OrderProductionStepperProps) {
-  const currentIndex = productionFlow.indexOf(status.toLowerCase());
+interface OrderProductionStepperProps {
+  status: string;
+  hasDisplay: boolean;
+}
+
+export default function OrderProductionStepper({ status, hasDisplay }: OrderProductionStepperProps) {
+  const { flow, steps } = getProductionFlow(hasDisplay);
+  const currentIndex = flow.indexOf(status.toLowerCase());
 
   return (
     <div className="py-2">
       {steps.map((step, index) => {
         const isDone = index < currentIndex;
         const isCurrent = index === currentIndex;
-        const isFuture = index > currentIndex;
         const isLast = index === steps.length - 1;
 
         const StepIcon = step.icon;
