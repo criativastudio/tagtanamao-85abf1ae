@@ -23,6 +23,7 @@ import Shop from "./pages/customer/Shop";
 import Checkout from "./pages/customer/Checkout";
 import ArtCustomizer from "./pages/customer/ArtCustomizer";
 import MyOrders from "./pages/customer/MyOrders";
+import DisplaysOrderManager from "./pages/customer/DisplaysOrderManager";
 import DisplayArtCustomizer from "./pages/customer/DisplayArtCustomizer";
 import UserSettings from "./pages/customer/UserSettings";
 import ProductsManager from "./pages/admin/ProductsManager";
@@ -131,6 +132,7 @@ const App = () => (
               <Route path="/dashboard/configuracoes" element={<ProtectedRoute><UserSettings /></ProtectedRoute>} />
               <Route path="/arte/:templateId" element={<ProtectedRoute><ArtCustomizer /></ProtectedRoute>} />
               <Route path="/arte/:templateId/:artId" element={<ProtectedRoute><ArtCustomizer /></ProtectedRoute>} />
+              <Route path="/personalizar-display" element={<ProtectedRoute><DisplaysOrderManager /></ProtectedRoute>} />
               <Route path="/personalizar-display/:displayArtId" element={<ProtectedRoute><DisplayArtCustomizer /></ProtectedRoute>} />
               {/* Admin routes */}
               <Route path="/admin/pedidos" element={<ProtectedRoute><OrdersManager /></ProtectedRoute>} />
