@@ -39,17 +39,21 @@ export default function MyOrders() {
   useEffect(() => {
     if (!user) return;
 
-    const subscription = supabase
-      .from(`orders:user_id=eq.${user.id}`)
-      .on("UPDATE", (payload) => {
-        console.log("Pedido atualizado:", payload.new);
-        // Atualiza o pedido no state
-        setOrders((prev) => prev.map((o) => (o.id === payload.new.id ? payload.new : o)));
-      })
+    // Cria canal Realtime
+    const channel = supabase
+      .channel(`orders_user_${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "orders", filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          console.log("Pedido atualizado:", payload.new);
+          setOrders((prev) => prev.map((o) => (o.id === payload.new.id ? payload.new : o)));
+        },
+      )
       .subscribe();
 
     return () => {
-      supabase.removeSubscription(subscription);
+      supabase.removeChannel(channel);
     };
   }, [user]);
 
