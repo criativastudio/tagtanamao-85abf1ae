@@ -18,16 +18,35 @@ interface OrderWithItems extends Order {
   display_arts?: { id: string; locked: boolean }[];
 }
 
+// Configuração de status para exibição no frontend
 const statusConfig: Record<string, { icon: typeof Clock; color: string; label: string }> = {
   pending: { icon: Clock, color: "bg-yellow-500/20 text-yellow-400", label: "Aguardando Pagamento" },
   paid: { icon: CheckCircle, color: "bg-blue-500/20 text-blue-400", label: "Pago" },
-  awaiting_customization: { icon: Package, color: "bg-orange-500/20 text-orange-400", label: "Personalizar Arte" },
+  awaiting_customization: {
+    icon: Package,
+    color: "bg-orange-500/20 text-orange-400",
+    label: "Aguardando Personalização",
+  },
   art_finalized: { icon: CheckCircle, color: "bg-green-500/20 text-green-400", label: "Arte Finalizada" },
   processing: { icon: Package, color: "bg-purple-500/20 text-purple-400", label: "Em Produção" },
   ready_to_ship: { icon: Truck, color: "bg-cyan-500/20 text-cyan-400", label: "Pronto para Envio" },
   shipped: { icon: Truck, color: "bg-cyan-500/20 text-cyan-400", label: "Enviado" },
   delivered: { icon: CheckCircle, color: "bg-green-500/20 text-green-400", label: "Entregue" },
   cancelled: { icon: XCircle, color: "bg-red-500/20 text-red-400", label: "Cancelado" },
+};
+
+// Mapeamento de status do banco para o frontend
+const statusMap: Record<string, string> = {
+  pending: "pending",
+  paid: "paid",
+  aguardpersonalizacao: "awaiting_customization",
+  artefinalizada: "art_finalized",
+  processing: "processing",
+  ready_to_ship: "ready_to_ship",
+  shipped: "shipped",
+  delivered: "delivered",
+  finalizado: "delivered",
+  cancelled: "cancelled",
 };
 
 export default function MyOrders() {
@@ -53,13 +72,13 @@ export default function MyOrders() {
       .from("orders")
       .select(
         `
-    *,
-    items:order_items(
       *,
-      product:products(*),
-      display_arts(id, locked)
-    )
-  `,
+      items:order_items(
+        *,
+        product:products(*),
+        display_arts(id, locked)
+      )
+    `,
       )
       .eq("user_id", user?.id)
       .order("created_at", { ascending: false });
@@ -141,8 +160,8 @@ export default function MyOrders() {
         ) : (
           <div className="space-y-4">
             {orders.map((order, index) => {
-              const normalizedStatus = order.status ? order.status.toLowerCase() : "pending";
-              const status = statusConfig[normalizedStatus] || statusConfig["pending"];
+              const normalizedStatus = statusMap[order.status?.toLowerCase() || "pending"] || "pending";
+              const status = statusConfig[normalizedStatus];
 
               const StatusIcon = status.icon;
 
@@ -177,11 +196,10 @@ export default function MyOrders() {
                           </AccordionTrigger>
                           <AccordionContent>
                             <div className="space-y-4 pt-2">
-              {/* Production stepper */}
+                              {/* Production stepper */}
                               {(() => {
-                                const hasDisplay = order.items?.some(
-                                  (item: any) => item.product?.type === "business_display"
-                                ) ?? false;
+                                const hasDisplay =
+                                  order.items?.some((item: any) => item.product?.type === "business_display") ?? false;
                                 return normalizedStatus !== "cancelled" ? (
                                   <OrderProductionStepper status={normalizedStatus} hasDisplay={hasDisplay} />
                                 ) : null;
@@ -282,19 +300,17 @@ export default function MyOrders() {
                                 })}
                                 {/* Personalizar Arte do Display - status awaiting_customization sem arte criada */}
                                 {normalizedStatus === "awaiting_customization" &&
-                                  !order.items?.some((item: any) =>
-                                    item.display_arts?.some((a: any) => !a.locked)
-                                  ) && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="border-primary/50 text-primary hover:bg-primary/10"
-                                    onClick={() => navigate(`/personalizar-display?order_id=${order.id}`)}
-                                  >
-                                    <Paintbrush className="w-4 h-4 mr-2" />
-                                    Personalizar Arte do Display
-                                  </Button>
-                                )}
+                                  !order.items?.some((item: any) => item.display_arts?.some((a: any) => !a.locked)) && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="border-primary/50 text-primary hover:bg-primary/10"
+                                      onClick={() => navigate(`/personalizar-display?order_id=${order.id}`)}
+                                    >
+                                      <Paintbrush className="w-4 h-4 mr-2" />
+                                      Personalizar Arte do Display
+                                    </Button>
+                                  )}
                               </div>
                             </div>
                           </AccordionContent>
