@@ -250,7 +250,7 @@ export default function MyOrders() {
                                     Rastrear
                                   </Button>
                                 )}
-                                {/* Personalizar Arte do Display */}
+                                {/* Personalizar Arte do Display - arte já existente */}
                                 {order.items?.map((item: any) => {
                                   const openArts = item.display_arts?.filter((a: any) => !a.locked) || [];
                                   return openArts.map((art: any) => (
@@ -266,6 +266,21 @@ export default function MyOrders() {
                                     </Button>
                                   ));
                                 })}
+                                {/* Personalizar Arte do Display - status awaiting_customization sem arte criada */}
+                                {normalizedStatus === "awaiting_customization" &&
+                                  !order.items?.some((item: any) =>
+                                    item.display_arts?.some((a: any) => !a.locked)
+                                  ) && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-primary/50 text-primary hover:bg-primary/10"
+                                    onClick={() => navigate(`/personalizar-display?order_id=${order.id}`)}
+                                  >
+                                    <Paintbrush className="w-4 h-4 mr-2" />
+                                    Personalizar Arte do Display
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           </AccordionContent>
