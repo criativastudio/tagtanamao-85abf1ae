@@ -1,63 +1,75 @@
 
+## Problema identificado
 
-# Gerar QR Code real e codigo de ativacao na arte do display
+Dois problemas distintos precisam ser resolvidos:
 
-## Resumo
-Ao finalizar a arte, o sistema vai gerar um QR Code real (imagem) na posicao correta do template, junto com um codigo unico de ativacao de 6 digitos no rodape. O display sera criado como "aguardando ativacao" para que o usuario ative na dashboard usando esse codigo. O admin recebe a arte completa pronta para producao.
+### 1. Build Error na Edge Function
+O erro:
+```
+Failed resolving types for 'npm:qrcode@1.5.4'
+```
+Ocorre porque o Deno não encontra definições de tipos para a biblioteca `qrcode`. A solução é adicionar uma diretiva de tipo explícita no import usando `@deno-types` ou ignorar a verificação de tipos com `// @ts-ignore` acima do import.
 
-## O que muda para o usuario
+### 2. Botão de personalização ausente no status `awaiting_customization`
+A lógica atual do botão (linhas 254–268 em `MyOrders.tsx`) depende de `item.display_arts?.filter((a) => !a.locked)` — ou seja, só exibe o botão se já existir um registro em `display_arts` associado ao `order_item` com `locked: false`.
 
-- A arte finalizada tera um QR Code visual real (nao mais texto placeholder)
-- Um codigo numerico de 6 digitos aparecera no rodape da arte (igual ao padrao das pet tags)
-- O display aparecera na lista do admin como "aguardando ativacao"
-- O usuario ativa o display na dashboard usando o codigo de 6 digitos impresso na arte
-- Apos ativacao, o QR Code direciona para a pagina publica do display
+O problema é que quando o status é `awaiting_customization`, pode não existir ainda um `display_art` no banco (arte ainda não iniciada), então o botão nunca aparece nessa condição.
 
-## Alteracoes tecnicas
+A solução é adicionar um botão adicional diretamente na condição de status do pedido, verificando:
+- `order.status === 'awaiting_customization'` **E**
+- não há `display_arts` com `locked: false` (para evitar duplicação com o botão existente)
 
-### 1. Edge Function `finalize-display-art/index.ts`
+Esse botão deve navegar para a página de personalização passando o `order_id` como parâmetro.
 
-**Importar biblioteca QR Code:**
+---
+
+## Alterações técnicas
+
+### Arquivo 1: `supabase/functions/finalize-display-art/index.ts`
+Adicionar diretiva de tipo antes do import do qrcode para resolver o erro de build:
 ```typescript
+// @ts-ignore - no type definitions available for qrcode npm module in Deno
 import QRCode from "npm:qrcode@1.5.4";
 ```
 
-**Gerar codigo numerico de 6 digitos** (em vez do formato DSP-XXXXXXXX) para alinhar com o sistema de ativacao existente. Verificar unicidade em `pet_tags` e `business_displays`.
+### Arquivo 2: `src/pages/customer/MyOrders.tsx`
+Na seção `{/* Actions */}`, adicionar botão condicional para status `awaiting_customization`:
 
-**Gerar QR Code como Data URI PNG** usando `QRCode.toDataURL()` e embutir como `<image>` no SVG final na posicao `qrPos` do template.
+**Lógica:**
+```typescript
+// Verifica se há arte aberta já existente (evita duplicar botão)
+const hasOpenArt = order.items?.some((item: any) =>
+  item.display_arts?.some((a: any) => !a.locked)
+);
 
-**Adicionar codigo de ativacao como texto** logo abaixo do QR Code:
-```xml
-<text x="{centro}" y="{abaixo do QR}" text-anchor="middle"
-      font-size="14" font-family="monospace" font-weight="bold"
-      fill="#333">{codigo6digitos}</text>
+// Botão aparece quando:
+// 1. Status é awaiting_customization E não há arte aberta (arte ainda não iniciada)
+// 2. OU o status indica que o pedido é de display e precisa de personalização
+{normalizedStatus === "awaiting_customization" && !hasOpenArt && (
+  <Button
+    size="sm"
+    variant="outline"
+    className="border-primary/50 text-primary hover:bg-primary/10"
+    onClick={() => navigate(`/personalizar-display?order_id=${order.id}`)}
+  >
+    <Paintbrush className="w-4 h-4 mr-2" />
+    Personalizar Arte do Display
+  </Button>
+)}
 ```
 
-**Criar `business_displays` com `is_activated: false`** (em vez de `true`), para que o display apareca no painel admin como "aguardando ativacao" e o usuario precise ativar manualmente.
+**Nota:** A navegação usa `order_id` como query param para que a página de personalização saiba qual pedido está sendo personalizado. Se a rota `/personalizar-display` já aceita apenas um `art_id`, a lógica de redirecionamento precisará ser ajustada na página `DisplayArtCustomizer.tsx` para buscar a arte pelo `order_id` quando nenhum `art_id` for passado.
 
-**URL do QR Code:** `https://tagtanamao.lovable.app/display/{codigo6digitos}`
+---
 
-### 2. Preview no frontend (`DisplayArtCustomizer.tsx`)
+## Verificação da rota de personalização
 
-Atualizar o placeholder do QR no `buildPreviewSvg` para mostrar texto mais claro:
-- Manter retangulo tracejado indicando a posicao
-- Texto "QR gerado ao finalizar" em vez de "QR Code"
+Preciso confirmar como a página `DisplayArtCustomizer.tsx` recebe o parâmetro para garantir que a navegação funcione corretamente. Se ela já busca por `order_id`, perfeito. Caso contrário, a navegação deve apontar para a arte existente usando o ID da `display_art`.
 
-### Fluxo completo
-
-```text
-1. Usuario finaliza arte no customizador
-2. Edge function gera codigo numerico de 6 digitos unico
-3. Gera imagem QR Code apontando para /display/{codigo}
-4. Embute QR + codigo no SVG final na posicao do template
-5. Cria registro em business_displays com is_activated=false
-6. Admin ve display na lista como "aguardando ativacao"
-7. Admin imprime a arte com QR + codigo visivel
-8. Usuario recebe o produto e ativa com o codigo de 6 digitos
-9. QR Code passa a funcionar redirecionando para a pagina publica
-```
+**Abordagem segura:** Como o `display_art` pode ou não existir para um pedido `awaiting_customization`, o botão deve:
+- Navegar para `/personalizar-display/${art.id}` se já existir uma arte (comportamento atual do botão existente)
+- Navegar para `/personalizar-display?order_id=${order.id}` se não existir arte ainda
 
 ### Arquivos afetados
-1. `supabase/functions/finalize-display-art/index.ts` — gerar QR real + codigo 6 digitos + is_activated=false
-2. `src/pages/customer/DisplayArtCustomizer.tsx` — melhorar placeholder do QR no preview
-
+1. `supabase/functions/finalize-display-art/index.ts` — corrige o build error com `@ts-ignore`
+2. `src/pages/customer/MyOrders.tsx` — adiciona botão de personalização para status `awaiting_customization`
