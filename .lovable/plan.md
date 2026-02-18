@@ -1,144 +1,112 @@
-# Stepper Vertical de Produção — OrderProductionStepper
 
-## Resumo
+## Ajuste do Stepper por Tipo de Produto
 
-Criar um novo componente `OrderProductionStepper.tsx` com um stepper vertical moderno usando framer-motion, e integrá-lo em `MyOrders.tsx` substituindo a renderização condicional do `DisplayOrderStepper` existente — sem tocar em nenhuma lógica de fetch, tipagem ou ações de pagamento/rastreio. Preciso que os status seja refletido do painel admin para o painel do usuario.
+### Problema identificado
+
+O `OrderProductionStepper` atualmente recebe apenas `status: string` e renderiza sempre o fluxo completo de 8 etapas — incluindo `awaiting_customization` e `art_finalized`, que só fazem sentido para pedidos de **Display**. Para pedidos de **Pet Tag**, essas 2 etapas não existem, então o stepper mostra etapas irrelevantes e o progresso aparece errado.
+
+### Lógica de negócio
+
+| Tipo do pedido | Fluxo exibido |
+|---|---|
+| Pet Tag (somente) | 6 etapas: sem `awaiting_customization` e `art_finalized` |
+| Display (ou mix com Display) | 8 etapas completas |
+| Outros produtos futuros | Fluxo padrão (6 etapas, sem personalização) |
+
+Para determinar o tipo, basta inspecionar `order.items[].product.type`:
+- Se **qualquer** item for `business_display` → fluxo completo (8 etapas)
+- Caso contrário → fluxo padrão (6 etapas)
+
+### Arquivos a modificar
+
+**1. `src/components/order/OrderProductionStepper.tsx`** — Refatoração principal
+
+- Remover o `productionFlow` e `steps` fixos do módulo
+- Criar e exportar uma função utilitária pura: `getProductionFlow(hasDisplay: boolean)`
+- A função retorna um objeto com `{ flow: string[], steps: StepDef[] }` — onde `StepDef` é a definição de cada etapa (status, label, descrição, ícone)
+- Adicionar prop `hasDisplay: boolean` ao componente (além de `status`)
+- Internamente, derivar `flow` e `steps` chamando `getProductionFlow(hasDisplay)`
+- O cálculo de `currentIndex` passa a usar o `flow` retornado pela função
+
+**Função utilitária (estrutura):**
+```typescript
+// Exportada para uso em MyOrders e futuros componentes
+export function getProductionFlow(hasDisplay: boolean) {
+  const allSteps = [ /* 8 etapas com definições */ ];
+  const CUSTOMIZATION_STATUSES = ["awaiting_customization", "art_finalized"];
+  
+  const steps = hasDisplay 
+    ? allSteps 
+    : allSteps.filter(s => !CUSTOMIZATION_STATUSES.includes(s.status));
+  
+  return {
+    flow: steps.map(s => s.status),
+    steps,
+  };
+}
+```
+
+**Props do componente atualizadas:**
+```typescript
+interface OrderProductionStepperProps {
+  status: string;
+  hasDisplay: boolean; // novo
+}
+```
 
 ---
 
-## O que o usuário verá
+**2. `src/pages/customer/MyOrders.tsx`** — Integração da nova prop
 
-- Dentro de cada pedido expandido (accordion), o stepper aparece no topo do conteúdo
-- Pedidos **cancelados** mostram um card vermelho no lugar do stepper
-- Etapas concluídas: círculo preenchido com `primary` + ícone de check
-- Etapa atual: círculo `primary` com anel pulsante (framer-motion) + label em negrito
-- Etapas futuras: círculo `muted` com ícone da etapa
-- Linha vertical conectando os círculos — colorida até a etapa atual, `muted` após
-
----
-
-## Fluxo fixo de etapas
-
-
-| Status                   | Ícone        | Label                |
-| ------------------------ | ------------ | -------------------- |
-| `pending`                | Clock        | Aguardando Pagamento |
-| `paid`                   | CreditCard   | Pagamento Aprovado   |
-| `awaiting_customization` | Paintbrush   | Personalizar Arte    |
-| `art_finalized`          | CheckCircle  | Arte Finalizada      |
-| `processing`             | Package      | Em Produção          |
-| `ready_to_ship`          | PackageOpen  | Pronto para Envio    |
-| `shipped`                | Truck        | Enviado              |
-| `delivered`              | PackageCheck | Entregue             |
-
-
----
-
-## Arquivos a criar/editar
-
-### 1. CRIAR: `src/components/order/OrderProductionStepper.tsx`
-
-**Props:** `{ status: string }`
-
-**Lógica de índice:**
+Dentro do `orders.map(...)`, antes de renderizar o `OrderProductionStepper`, calcular se o pedido contém algum item do tipo `business_display`:
 
 ```typescript
-const productionFlow = [
-  "pending", "paid", "awaiting_customization",
-  "art_finalized", "processing", "ready_to_ship",
-  "shipped", "delivered"
-];
-
-const currentIndex = productionFlow.indexOf(status.toLowerCase());
-// Se não encontrar (ex: "cancelled"), currentIndex === -1
+const hasDisplay = order.items?.some(
+  (item: any) => item.product?.type === "business_display"
+) ?? false;
 ```
 
-**Caso cancelado:** retorna card vermelho com `XCircle` e texto "Pedido Cancelado" (mas na verdade a condição de cancelado é tratada no MyOrders — o componente recebe somente status não-cancelados).
-
-**UI do stepper:**
-
-```
-[círculo]──────── Label principal (bold se atual)
-    |              Descrição pequena (text-xs muted)
-    |
-[círculo]──────── ...
-```
-
-**Animação framer-motion na etapa atual:**
-
-- O círculo da etapa atual terá um anel animado usando `motion.div` com `animate={{ scale: [1, 1.15, 1] }}` em loop suave (tipo "heartbeat")
-- O label da etapa atual faz `initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}`
-
-**Linha vertical:**
-
-- `bg-primary` entre etapas concluídas
-- `bg-muted` entre etapa atual e as futuras
-- Não renderiza linha após a última etapa
-
----
-
-### 2. EDITAR: `src/pages/customer/MyOrders.tsx`
-
-Apenas duas mudanças dentro do `AccordionContent`, sem tocar em mais nada:
-
-**A) Remover** a renderização condicional do `DisplayOrderStepper` (que só aparecia para display_arts):
-
-```tsx
-// REMOVER:
-{order.display_arts && order.display_arts.length > 0 && order.status !== "cancelled" && (
-  <DisplayOrderStepper order={order} />
-)}
-```
-
-**B) Adicionar** o novo stepper para todos os pedidos não-cancelados:
-
+Passar `hasDisplay` para o stepper:
 ```tsx
 {normalizedStatus !== "cancelled" && (
-  <OrderProductionStepper status={normalizedStatus} />
+  <OrderProductionStepper status={normalizedStatus} hasDisplay={hasDisplay} />
 )}
 ```
 
-**C) Adicionar** o card de cancelado quando aplicável:
+**Nenhuma outra parte de `MyOrders.tsx` é alterada** — fetch, tipagens, badges, seção de itens, entrega e ações permanecem intocados.
 
-```tsx
-{normalizedStatus === "cancelled" && (
-  <div className="flex items-center gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400">
-    <XCircle className="w-5 h-5 shrink-0" />
-    <div>
-      <p className="font-semibold text-sm">Pedido Cancelado</p>
-      <p className="text-xs text-muted-foreground">Este pedido foi cancelado.</p>
-    </div>
-  </div>
-)}
+---
+
+### Escalabilidade futura
+
+A função `getProductionFlow` pode ser expandida facilmente:
+
+```typescript
+// Futuros produtos com fluxo próprio:
+export function getProductionFlow(hasDisplay: boolean, hasNFC?: boolean) {
+  // lógica adicional aqui
+}
 ```
 
-O import do `DisplayOrderStepper` pode ser removido se não for mais usado.
+Como é uma função pura exportada, pode ser reutilizada em:
+- Componentes de notificação de status
+- Emails transacionais
+- Painel admin para visualizar progresso do pedido
 
 ---
 
-## O que NÃO muda
+### Resumo visual dos fluxos
 
-- `fetchOrders` e toda lógica de dados
-- Tipagens (`OrderWithItems`, `OrderItem`, etc.)
-- `statusConfig` e os badges de status no header do card
-- Seção de items (produtos)
-- Seção de entrega/endereço
-- Seção de actions (Pagar Agora, Rastrear, Personalizar Arte)
-- Animações de entrada do `motion.div` dos cards
-
----
-
-## Estrutura do componente final
-
+**Fluxo Pet Tag (6 etapas):**
 ```text
-OrderProductionStepper
-├── productionFlow (array de 8 status)
-├── steps (array com label, descrição, ícone)  
-├── currentIndex = productionFlow.indexOf(status)
-└── Render
-    ├── Para cada step:
-    │   ├── motion.div [círculo] — concluído / atual / futuro
-    │   ├── linha vertical (exceto último)
-    │   └── label + descrição
-    └── Framer-motion: etapa atual pulsa suavemente
+pending → paid → processing → ready_to_ship → shipped → delivered
 ```
+
+**Fluxo Display (8 etapas):**
+```text
+pending → paid → awaiting_customization → art_finalized → processing → ready_to_ship → shipped → delivered
+```
+
+### Arquivos afetados
+1. `src/components/order/OrderProductionStepper.tsx` — refatoração + nova prop `hasDisplay` + função `getProductionFlow` exportada
+2. `src/pages/customer/MyOrders.tsx` — calcular `hasDisplay` e passar para o stepper
