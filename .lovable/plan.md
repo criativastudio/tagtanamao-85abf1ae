@@ -1,112 +1,153 @@
 
-## Ajuste do Stepper por Tipo de Produto
+# Ajuste do botão "Personalizar Arte do Display" + Fix do build error
 
-### Problema identificado
+## Problemas a resolver
 
-O `OrderProductionStepper` atualmente recebe apenas `status: string` e renderiza sempre o fluxo completo de 8 etapas — incluindo `awaiting_customization` e `art_finalized`, que só fazem sentido para pedidos de **Display**. Para pedidos de **Pet Tag**, essas 2 etapas não existem, então o stepper mostra etapas irrelevantes e o progresso aparece errado.
+### 1. Build Error (crítico)
+**Arquivo:** `src/pages/customer/MyOrders.tsx`, linha 50
 
-### Lógica de negócio
+O Realtime do Supabase retorna `payload.new` como `Record<string, any>`, mas o `setOrders` espera `OrderWithItems[]`. O TypeScript rejeita a atribuição porque o tipo retornado não satisfaz a interface.
 
-| Tipo do pedido | Fluxo exibido |
-|---|---|
-| Pet Tag (somente) | 6 etapas: sem `awaiting_customization` e `art_finalized` |
-| Display (ou mix com Display) | 8 etapas completas |
-| Outros produtos futuros | Fluxo padrão (6 etapas, sem personalização) |
-
-Para determinar o tipo, basta inspecionar `order.items[].product.type`:
-- Se **qualquer** item for `business_display` → fluxo completo (8 etapas)
-- Caso contrário → fluxo padrão (6 etapas)
-
-### Arquivos a modificar
-
-**1. `src/components/order/OrderProductionStepper.tsx`** — Refatoração principal
-
-- Remover o `productionFlow` e `steps` fixos do módulo
-- Criar e exportar uma função utilitária pura: `getProductionFlow(hasDisplay: boolean)`
-- A função retorna um objeto com `{ flow: string[], steps: StepDef[] }` — onde `StepDef` é a definição de cada etapa (status, label, descrição, ícone)
-- Adicionar prop `hasDisplay: boolean` ao componente (além de `status`)
-- Internamente, derivar `flow` e `steps` chamando `getProductionFlow(hasDisplay)`
-- O cálculo de `currentIndex` passa a usar o `flow` retornado pela função
-
-**Função utilitária (estrutura):**
-```typescript
-// Exportada para uso em MyOrders e futuros componentes
-export function getProductionFlow(hasDisplay: boolean) {
-  const allSteps = [ /* 8 etapas com definições */ ];
-  const CUSTOMIZATION_STATUSES = ["awaiting_customization", "art_finalized"];
-  
-  const steps = hasDisplay 
-    ? allSteps 
-    : allSteps.filter(s => !CUSTOMIZATION_STATUSES.includes(s.status));
-  
-  return {
-    flow: steps.map(s => s.status),
-    steps,
-  };
-}
-```
-
-**Props do componente atualizadas:**
-```typescript
-interface OrderProductionStepperProps {
-  status: string;
-  hasDisplay: boolean; // novo
-}
-```
+**Fix:** fazer cast explícito de `payload.new as OrderWithItems` dentro do `.map()`.
 
 ---
 
-**2. `src/pages/customer/MyOrders.tsx`** — Integração da nova prop
+### 2. Botão de Personalizar — Nova Página de Gerenciamento
 
-Dentro do `orders.map(...)`, antes de renderizar o `OrderProductionStepper`, calcular se o pedido contém algum item do tipo `business_display`:
+**Problema atual:** quando o pedido tem múltiplos displays (quantidade > 1), cada arte gera um botão separado desorientado. Além disso, navegar direto para `/personalizar-display/:id` não dá visão geral do progresso do pedido.
 
+**Solução:** criar uma nova página `DisplaysOrderManager` que centraliza a personalização de um pedido inteiro, e alterar o botão em `MyOrders` para apontar para ela.
+
+---
+
+## Arquivos a criar/editar
+
+### 1. FIX: `src/pages/customer/MyOrders.tsx`
+
+**A) Corrigir o build error no realtime (linha 50):**
 ```typescript
-const hasDisplay = order.items?.some(
-  (item: any) => item.product?.type === "business_display"
-) ?? false;
+// Antes (quebrado):
+setOrders((prev) => prev.map((o) => (o.id === payload.new.id ? payload.new : o)));
+
+// Depois (corrigido):
+setOrders((prev) =>
+  prev.map((o) =>
+    o.id === payload.new.id
+      ? { ...o, ...(payload.new as Partial<OrderWithItems>) }
+      : o
+  )
+);
 ```
 
-Passar `hasDisplay` para o stepper:
+**B) Simplificar os botões de "Personalizar Arte" — substituir toda a lógica existente por um único botão por pedido que navega para a nova página:**
 ```tsx
-{normalizedStatus !== "cancelled" && (
-  <OrderProductionStepper status={normalizedStatus} hasDisplay={hasDisplay} />
+{/* Botão único por pedido — somente para displays, somente se não processando */}
+{hasDisplay && ["awaiting_customization", "paid"].includes(normalizedStatus) && (
+  <Button
+    size="sm"
+    variant="outline"
+    className="border-primary/50 text-primary hover:bg-primary/10"
+    onClick={() => navigate(`/personalizar-display?order_id=${order.id}`)}
+  >
+    <Paintbrush className="w-4 h-4 mr-2" />
+    Personalizar Arte do Display
+  </Button>
 )}
 ```
 
-**Nenhuma outra parte de `MyOrders.tsx` é alterada** — fetch, tipagens, badges, seção de itens, entrega e ações permanecem intocados.
+---
+
+### 2. CRIAR: `src/pages/customer/DisplaysOrderManager.tsx`
+
+Nova página acessada via `/personalizar-display?order_id=<uuid>`.
+
+**O que ela faz:**
+- Busca o pedido e todos os seus `order_items` com `product.type === 'business_display'` + `display_arts`
+- Para cada display item (respeitando `quantity`), mostra um card com:
+  - Nome do produto
+  - Status da arte (não iniciada / em edição / finalizada)
+  - Botão "Personalizar" que navega para `/personalizar-display/:artId` (ou cria a arte e navega)
+- Botão "Voltar aos Pedidos"
+- Atualização em tempo real via Realtime (canal `display_arts`)
+
+**UI dos cards de display:**
+
+```
+┌─────────────────────────────────────────────┐
+│  [ícone]  Display Acrílico Empresarial       │
+│           Arte: Em edição                    │
+│                           [Personalizar →]   │
+└─────────────────────────────────────────────┘
+```
+
+Status visual:
+- Não iniciada → badge amarelo "Pendente"
+- Em edição (locked: false) → badge azul "Em edição"  
+- Finalizada (locked: true) → badge verde "Finalizada ✓"
+
+**Lógica de navegação ao clicar em Personalizar:**
+- Se já existe `display_art` para aquele `order_item_id` → navegar para `/personalizar-display/:artId`
+- Se não existe → criar nova `display_art` com `order_id` e `order_item_id` → navegar para o ID criado
+
+**Lógica de criação de artes por quantidade:**
+
+Como cada `order_item` pode ter `quantity > 1`, a página cria/lista artes suficientes. Exemplo: se `quantity = 2`, existirão 2 `display_art` records associados àquele `order_item_id`.
 
 ---
 
-### Escalabilidade futura
+### 3. EDITAR: `src/App.tsx`
 
-A função `getProductionFlow` pode ser expandida facilmente:
+Adicionar rota para a nova página:
+```tsx
+import DisplaysOrderManager from "./pages/customer/DisplaysOrderManager";
 
-```typescript
-// Futuros produtos com fluxo próprio:
-export function getProductionFlow(hasDisplay: boolean, hasNFC?: boolean) {
-  // lógica adicional aqui
-}
+// Na lista de rotas:
+<Route
+  path="/personalizar-display"
+  element={<ProtectedRoute><DisplaysOrderManager /></ProtectedRoute>}
+/>
 ```
 
-Como é uma função pura exportada, pode ser reutilizada em:
-- Componentes de notificação de status
-- Emails transacionais
-- Painel admin para visualizar progresso do pedido
+A rota `/personalizar-display/:displayArtId` (com parâmetro) já existe e permanece intacta para a personalização individual.
 
 ---
 
-### Resumo visual dos fluxos
+## Fluxo completo após a mudança
 
-**Fluxo Pet Tag (6 etapas):**
 ```text
-pending → paid → processing → ready_to_ship → shipped → delivered
+MyOrders
+  └── [botão "Personalizar Arte do Display"]
+        │
+        ▼
+  DisplaysOrderManager (/personalizar-display?order_id=<uuid>)
+        │  Lista todos os displays do pedido
+        │  Mostra status de cada arte
+        │
+        └── [botão "Personalizar" por display]
+              │
+              ▼
+        DisplayArtCustomizer (/personalizar-display/:artId)
+              │  Editor completo (template, logo, nome)
+              │  Ao finalizar → edge function → status → processing
+              │
+              └── [Voltar] → DisplaysOrderManager
 ```
 
-**Fluxo Display (8 etapas):**
-```text
-pending → paid → awaiting_customization → art_finalized → processing → ready_to_ship → shipped → delivered
-```
+---
 
-### Arquivos afetados
-1. `src/components/order/OrderProductionStepper.tsx` — refatoração + nova prop `hasDisplay` + função `getProductionFlow` exportada
-2. `src/pages/customer/MyOrders.tsx` — calcular `hasDisplay` e passar para o stepper
+## O que NÃO muda
+
+- `fetchOrders` e toda lógica de dados em `MyOrders`
+- `DisplayArtCustomizer` — permanece intacto
+- `OrderProductionStepper` — permanece intacto
+- `statusConfig`, badges, seção de itens, entrega, rastreio em `MyOrders`
+- Edge functions existentes
+- RLS policies
+
+---
+
+## Arquivos afetados
+
+1. `src/pages/customer/MyOrders.tsx` — fix build error + simplificação do botão
+2. `src/pages/customer/DisplaysOrderManager.tsx` — CRIAR (nova página)
+3. `src/App.tsx` — adicionar rota `/personalizar-display` (sem parâmetro)
