@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Upload, Lock, CheckCircle, Loader2, Image as ImageIcon, ZoomIn, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -160,6 +160,8 @@ function buildPreviewSvg(
 
 export default function DisplayArtCustomizer() {
   const { displayArtId } = useParams<{ displayArtId: string }>();
+  const [searchParams] = useSearchParams();
+  const orderIdParam = searchParams.get('order_id');
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -181,19 +183,59 @@ export default function DisplayArtCustomizer() {
       return;
     }
     fetchData();
-  }, [user, displayArtId]);
+  }, [user, displayArtId, orderIdParam]);
 
   const fetchData = async () => {
     setLoading(true);
 
-    const { data: art, error: artError } = await supabase
-      .from('display_arts')
-      .select('*, template:art_templates(*)')
-      .eq('id', displayArtId)
-      .single();
+    let art: any = null;
 
-    if (artError || !art) {
-      toast({ title: 'Arte não encontrada', variant: 'destructive' });
+    if (displayArtId) {
+      // Route: /personalizar-display/:displayArtId
+      const { data, error: artError } = await supabase
+        .from('display_arts')
+        .select('*, template:art_templates(*)')
+        .eq('id', displayArtId)
+        .single();
+
+      if (artError || !data) {
+        toast({ title: 'Arte não encontrada', variant: 'destructive' });
+        navigate('/meus-pedidos');
+        return;
+      }
+      art = data;
+    } else if (orderIdParam) {
+      // Route: /personalizar-display?order_id=...
+      // Try to find an existing unlocked display_art for this order
+      const { data: existing } = await supabase
+        .from('display_arts')
+        .select('*, template:art_templates(*)')
+        .eq('order_id', orderIdParam)
+        .eq('locked', false)
+        .maybeSingle();
+
+      if (existing) {
+        art = existing;
+        // Redirect to canonical URL
+        navigate(`/personalizar-display/${existing.id}`, { replace: true });
+      } else {
+        // Create a new display_art for this order
+        const { data: newArt, error: createError } = await supabase
+          .from('display_arts')
+          .insert({ order_id: orderIdParam, user_id: user!.id })
+          .select('*, template:art_templates(*)')
+          .single();
+
+        if (createError || !newArt) {
+          toast({ title: 'Erro ao iniciar personalização', description: createError?.message, variant: 'destructive' });
+          navigate('/meus-pedidos');
+          return;
+        }
+        art = newArt;
+        navigate(`/personalizar-display/${newArt.id}`, { replace: true });
+      }
+    } else {
+      toast({ title: 'Parâmetros inválidos', variant: 'destructive' });
       navigate('/meus-pedidos');
       return;
     }
