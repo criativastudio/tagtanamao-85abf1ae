@@ -25,7 +25,6 @@ function validateShippingMethod(
 ): string | null {
   if (!method) return "Método de envio não informado";
 
-  // normaliza nome do método recebido
   let normalizedMethod = (method || "").toUpperCase();
 
   if (normalizedMethod.includes("PAC")) normalizedMethod = "PAC";
@@ -70,6 +69,21 @@ async function validateOrderAmount(supabase: any, orderId: string, frontendAmoun
     return `Valor do pagamento não confere. Esperado: ${expected.toFixed(2)}`;
   }
   return null;
+}
+
+/**
+ * Determina o próximo status após pagamento confirmado com base no tipo de produto.
+ * - Display → awaiting_customization
+ * - Pet tag / outros → processing
+ */
+async function getNextStatusAfterPayment(supabase: any, orderId: string): Promise<string> {
+  const { data: items } = await supabase
+    .from("order_items")
+    .select("product_id, products(type)")
+    .eq("order_id", orderId);
+
+  const hasDisplay = items?.some((item: any) => item.products?.type === "business_display");
+  return hasDisplay ? "awaiting_customization" : "processing";
 }
 
 // --- PIX helpers ---
@@ -233,7 +247,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
       if (pixUpdateError) throw pixUpdateError;
 
-      await supabase.from("orders").update({ payment_status: "confirmed", status: "paid" }).eq("id", data.orderId);
+      // Determine next status after payment — auto-advance based on product type
+      const nextStatus = await getNextStatusAfterPayment(supabase, data.orderId);
+      console.log(`Auto-advancing PIX order ${data.orderId} to '${nextStatus}' after confirmation`);
+
+      await supabase.from("orders").update({
+        payment_status: "confirmed",
+        status: nextStatus,
+      }).eq("id", data.orderId);
 
       const { data: customerProfile } = await supabase
         .from("profiles")
@@ -312,6 +333,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         JSON.stringify({
           success: true,
           message: "Payment confirmed",
+          nextStatus,
           customerPhone: customerProfile?.phone || customerProfile?.whatsapp,
           adminWhatsapp,
         }),

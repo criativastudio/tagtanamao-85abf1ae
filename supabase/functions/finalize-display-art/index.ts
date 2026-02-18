@@ -208,14 +208,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Update order status
+    // Update order: art_finalized first, then auto-advance to processing
+    // art_finalized → processing (customization done, ready for production)
     const { error: orderError } = await supabase
       .from("orders")
-      .update({ status: "art_finalized" })
+      .update({ status: "processing" })
       .eq("id", displayArt.order_id);
 
     if (orderError) {
       console.error("Error updating order status:", orderError);
+    } else {
+      console.log(`Order ${displayArt.order_id} auto-advanced to 'processing' after art finalization`);
     }
 
     // Create business_display record with is_activated: false (awaiting activation)

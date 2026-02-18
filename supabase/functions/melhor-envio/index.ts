@@ -440,16 +440,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const printResult = await printLabel([shipmentId]);
       const labelUrl = printResult?.url || "";
 
-      // Update order
+      // Update order: label generated → auto-advance to ready_to_ship
       await supabase
         .from("orders")
         .update({
           melhor_envio_shipment_id: shipmentId,
           melhor_envio_label_url: labelUrl,
           shipping_status: "label_generated",
-          status: "processing",
+          status: "ready_to_ship",
         })
         .eq("id", orderId);
+      console.log(`Order ${orderId} auto-advanced to 'ready_to_ship' after label generation`);
 
       return new Response(
         JSON.stringify({
@@ -534,15 +535,40 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const trackingResult = await getTracking(order.melhor_envio_shipment_id);
       const trackingData = trackingResult?.[order.melhor_envio_shipment_id] || trackingResult;
 
-      // Update tracking code if available
+      // Update tracking code and auto-advance order status
       if (trackingData?.tracking) {
+        const meStatus = (trackingData.status || "").toLowerCase();
+
+        // Map Melhor Envio statuses to order statuses
+        let orderStatusUpdate: string | null = null;
+        if (meStatus === "delivered" || meStatus === "entregue") {
+          orderStatusUpdate = "delivered";
+        } else if (
+          meStatus === "posted" ||
+          meStatus === "in_transit" ||
+          meStatus === "shipped" ||
+          meStatus === "em_transito" ||
+          trackingData.tracking
+        ) {
+          orderStatusUpdate = "shipped";
+        }
+
+        const updatePayload: any = {
+          tracking_code: trackingData.tracking,
+          shipping_status: meStatus || "posted",
+        };
+        if (orderStatusUpdate) {
+          updatePayload.status = orderStatusUpdate;
+        }
+
         await supabase
           .from("orders")
-          .update({
-            tracking_code: trackingData.tracking,
-            shipping_status: trackingData.status || "posted",
-          })
+          .update(updatePayload)
           .eq("id", orderId);
+
+        if (orderStatusUpdate) {
+          console.log(`Order ${orderId} auto-advanced to '${orderStatusUpdate}' based on ME tracking status '${meStatus}'`);
+        }
       }
 
       return new Response(JSON.stringify({ success: true, tracking: trackingData }), {

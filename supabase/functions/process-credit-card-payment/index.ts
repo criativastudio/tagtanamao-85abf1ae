@@ -57,6 +57,21 @@ async function validateOrderAmount(supabase: any, orderId: string, frontendAmoun
   return null;
 }
 
+/**
+ * Determina o próximo status após pagamento confirmado com base no tipo de produto.
+ * - Display → awaiting_customization
+ * - Pet tag / outros → processing
+ */
+async function getNextStatusAfterPayment(supabase: any, orderId: string): Promise<string> {
+  const { data: items } = await supabase
+    .from("order_items")
+    .select("product_id, products(type)")
+    .eq("order_id", orderId);
+
+  const hasDisplay = items?.some((item: any) => item.products?.type === "business_display");
+  return hasDisplay ? "awaiting_customization" : "processing";
+}
+
 // --- Asaas helpers ---
 interface ProcessPaymentRequest {
   orderId: string;
@@ -241,10 +256,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const isPending = payment.status === "PENDING";
     const mappedPaymentStatus = isConfirmed ? "confirmed" : isPending ? "pending" : "failed";
 
+    // Determine next status after payment confirmation
+    let finalOrderStatus: string;
+    if (mappedPaymentStatus === "confirmed") {
+      finalOrderStatus = await getNextStatusAfterPayment(supabase, data.orderId);
+      console.log(`Auto-advancing order ${data.orderId} to '${finalOrderStatus}' after credit card confirmation`);
+    } else {
+      finalOrderStatus = "pending";
+    }
+
     const { error: updateOrderError } = await supabase.from("orders").update({
       asaas_payment_id: payment.id, payment_method: "credit_card",
       payment_status: mappedPaymentStatus,
-      status: mappedPaymentStatus === "confirmed" ? "paid" : "pending",
+      status: finalOrderStatus,
     }).eq("id", data.orderId);
 
     if (updateOrderError) {
@@ -264,7 +288,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     });
 
     const frontendStatus = isConfirmed ? 'CONFIRMED' : isPending ? 'PENDING' : 'REJECTED';
-    console.log("Payment result:", { orderId: data.orderId, status: frontendStatus, mappedPaymentStatus });
+    console.log("Payment result:", { orderId: data.orderId, status: frontendStatus, finalOrderStatus });
 
     return new Response(JSON.stringify({
       success: true, status: frontendStatus, mappedPaymentStatus,
