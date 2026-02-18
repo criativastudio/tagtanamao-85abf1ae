@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Order, OrderItem } from "@/types/ecommerce";
-import DisplayOrderStepper from "@/components/order/DisplayOrderStepper";
+import OrderProductionStepper from "@/components/order/OrderProductionStepper";
 
 interface OrderWithItems extends Order {
   items?: OrderItem[];
@@ -177,9 +177,18 @@ export default function MyOrders() {
                           </AccordionTrigger>
                           <AccordionContent>
                             <div className="space-y-4 pt-2">
-                              {/* Stepper for display orders */}
-                              {order.display_arts && order.display_arts.length > 0 && order.status !== "cancelled" && (
-                                <DisplayOrderStepper order={order} />
+                              {/* Production stepper */}
+                              {normalizedStatus !== "cancelled" && (
+                                <OrderProductionStepper status={normalizedStatus} />
+                              )}
+                              {normalizedStatus === "cancelled" && (
+                                <div className="flex items-center gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400">
+                                  <XCircle className="w-5 h-5 shrink-0" />
+                                  <div>
+                                    <p className="font-semibold text-sm">Pedido Cancelado</p>
+                                    <p className="text-xs text-muted-foreground">Este pedido foi cancelado.</p>
+                                  </div>
+                                </div>
                               )}
 
                               {/* Items */}
