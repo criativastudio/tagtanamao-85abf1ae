@@ -631,7 +631,7 @@ export default function OrdersManager() {
                 <TableHead>Pedido</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Total</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Status do pedido</TableHead>
                 <TableHead>Pagamento</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
