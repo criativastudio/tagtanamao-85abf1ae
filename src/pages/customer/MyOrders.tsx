@@ -177,10 +177,15 @@ export default function MyOrders() {
                           </AccordionTrigger>
                           <AccordionContent>
                             <div className="space-y-4 pt-2">
-                              {/* Production stepper */}
-                              {normalizedStatus !== "cancelled" && (
-                                <OrderProductionStepper status={normalizedStatus} />
-                              )}
+              {/* Production stepper */}
+                              {(() => {
+                                const hasDisplay = order.items?.some(
+                                  (item: any) => item.product?.type === "business_display"
+                                ) ?? false;
+                                return normalizedStatus !== "cancelled" ? (
+                                  <OrderProductionStepper status={normalizedStatus} hasDisplay={hasDisplay} />
+                                ) : null;
+                              })()}
                               {normalizedStatus === "cancelled" && (
                                 <div className="flex items-center gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400">
                                   <XCircle className="w-5 h-5 shrink-0" />
