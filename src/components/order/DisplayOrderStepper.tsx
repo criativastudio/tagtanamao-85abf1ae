@@ -101,6 +101,7 @@ export default function DisplayOrderStepper({ order }: { order: OrderWithDisplay
 
   const statusLabel = steps[currentStep]?.label ?? 'Pendente';
   const statusDescription = steps[currentStep]?.description ?? '';
+  const shouldShowCustomizerButton = currentStep === 2 && Boolean(openArt);
 
   useEffect(() => {
     return () => {
@@ -130,7 +131,7 @@ export default function DisplayOrderStepper({ order }: { order: OrderWithDisplay
         </p>
         {statusDescription && <p className="text-xs text-muted-foreground">{statusDescription}</p>}
         <p className="text-[11px] text-muted-foreground">Código interno: {getInternalStatus(order)}</p>
-        {openArt && (
+        {shouldShowCustomizerButton && openArt && (
           <Button size="sm" variant="outline" onClick={() => navigate(`/personalizar-display/${openArt.id}`)}>
             <Paintbrush className="w-4 h-4 mr-2" />
             Personalizar Arte Display
