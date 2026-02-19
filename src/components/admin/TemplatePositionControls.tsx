@@ -83,10 +83,10 @@ export default function TemplatePositionControls({ positions, onChange }: Props)
           </div>
         </div>
 
-        {/* Order Number */}
+        {/* Unique Code */}
         <div className="space-y-2">
           <Label className="flex items-center gap-2 text-sm font-medium">
-            <Type className="w-4 h-4 text-muted-foreground" /> Nº do Pedido
+            <Type className="w-4 h-4 text-muted-foreground" /> Código Único
           </Label>
           <div className="grid grid-cols-3 gap-2">
             <PosField label="X" value={on.x} onChange={(v) => update('order_number', 'x', v)} />

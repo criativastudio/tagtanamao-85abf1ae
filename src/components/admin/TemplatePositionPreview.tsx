@@ -29,7 +29,9 @@ export default function TemplatePositionPreview({ svgContent, positions, preview
   const qr = positions.qr_code || { x: 300, y: 300, width: 200, height: 200 };
   const logo = positions.logo || { x: 50, y: 50, width: 120, height: 120 };
   const cn = positions.company_name || { x: 400, y: 700, fontSize: 24, textAnchor: "middle" as const };
-  const on = positions.order_number || { x: 400, y: 780, fontSize: 14 };
+  const on = positions.order_number || { x: 400, y: 780, fontSize: 14, textAnchor: "middle" as const };
+
+  const uniqueCodeText = "DSP-XXXXXXXX";
 
   // Build the preview SVG with overlaid elements
   const previewSvg = useMemo(() => {
@@ -58,7 +60,7 @@ export default function TemplatePositionPreview({ svgContent, positions, preview
     body += `
       <rect x="${qr.x}" y="${qr.y}" width="${qr.width}" height="${qr.height}" fill="rgba(16,185,129,0.15)" stroke="#10b981" stroke-width="3" stroke-dasharray="8 4" rx="4" />
       <text x="${qr.x + qr.width / 2}" y="${qr.y + qr.height / 2 - 8}" text-anchor="middle" font-size="${Math.max(12, qr.width / 8)}" fill="#10b981" font-family="Arial, sans-serif" font-weight="bold">QR CODE</text>
-      <text x="${qr.x + qr.width / 2}" y="${qr.y + qr.height / 2 + 14}" text-anchor="middle" font-size="${Math.max(10, qr.width / 12)}" fill="#10b981" font-family="Arial, sans-serif">DSP-XXXXXXXX</text>
+      <text x="${qr.x + qr.width / 2}" y="${qr.y + qr.height / 2 + 14}" text-anchor="middle" font-size="${Math.max(10, qr.width / 12)}" fill="#10b981" font-family="Arial, sans-serif">${uniqueCodeText}</text>
     `;
 
     // Company name placeholder
@@ -68,10 +70,13 @@ export default function TemplatePositionPreview({ svgContent, positions, preview
       <text x="${cn.x}" y="${cn.y}" font-size="${cn.fontSize}" font-family="Arial, sans-serif" font-weight="bold" text-anchor="${cnAnchor}" fill="#c">Nome da Empresa</text>
     `;
 
-    // Order number placeholder
+    // Unique code placeholder (same code as QR)
+    const onAnchor = on.textAnchor || "middle";
+    const onWidth = Math.max(80, uniqueCodeText.length * on.fontSize * 0.6);
+    const onRectX = onAnchor === "middle" ? on.x - onWidth / 2 : onAnchor === "end" ? on.x - onWidth : on.x;
     body += `
-      <rect x="${on.x - 60}" y="${on.y - on.fontSize}" width="120" height="${on.fontSize + 6}" fill="rgba(139,92,246,0.2)" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="6 3" rx="3" />
-      <text x="${on.x}" y="${on.y}" font-size="${on.fontSize}" font-family="monospace" font-weight="bold" text-anchor="middle" fill="#8b5cf6">#ABC12345</text>
+      <rect x="${onRectX}" y="${on.y - on.fontSize}" width="${onWidth}" height="${on.fontSize + 6}" fill="rgba(139,92,246,0.2)" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="6 3" rx="3" />
+      <text x="${on.x}" y="${on.y}" font-size="${on.fontSize}" font-family="monospace" font-weight="bold" text-anchor="${onAnchor}" fill="#8b5cf6">${uniqueCodeText}</text>
     `;
 
     body += "</svg>";
@@ -108,7 +113,7 @@ export default function TemplatePositionPreview({ svgContent, positions, preview
             <span className="w-3 h-3 rounded-full bg-[#f59e0b] inline-block" /> Empresa
           </span>
           <span className="flex items-center gap-1">
-            <span className="w-3 h-3 rounded-full bg-[#8b5cf6] inline-block" /> Nº Pedido
+            <span className="w-3 h-3 rounded-full bg-[#8b5cf6] inline-block" /> Código Único
           </span>
         </div>
       </CardContent>
