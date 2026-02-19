@@ -330,8 +330,21 @@ export default function DisplayArtCustomizer() {
       if (error) throw error;
 
       if (data?.success) {
-        toast({ title: '✅ Arte finalizada!', description: `QR Code gerado: ${data.qrCode}` });
-        fetchData();
+        if (data.allArtsFinalized) {
+          toast({
+            title: '🎉 Todas as artes finalizadas!',
+            description: 'Pedido encaminhado para produção.',
+          });
+          // All done → go to my orders
+          navigate('/meus-pedidos');
+        } else {
+          toast({
+            title: '✅ Arte salva!',
+            description: 'Agora personalize o próximo display.',
+          });
+          // Still pending arts → back to manager so user picks the next one
+          navigate(`/personalizar-display?order_id=${displayArt?.order_id}`);
+        }
       } else {
         throw new Error(data?.error || 'Erro ao finalizar arte');
       }
@@ -371,7 +384,7 @@ export default function DisplayArtCustomizer() {
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/meus-pedidos')}>
+          <Button variant="ghost" size="icon" onClick={() => navigate(displayArt?.order_id ? `/personalizar-display?order_id=${displayArt.order_id}` : '/meus-pedidos')}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1">
@@ -407,8 +420,11 @@ export default function DisplayArtCustomizer() {
                     dangerouslySetInnerHTML={{ __html: sanitizeSvg(displayArt.final_svg) }}
                   />
                 )}
-                <Button onClick={() => navigate('/meus-pedidos')} className="w-full">
-                  Voltar aos Meus Pedidos
+                <Button
+                  onClick={() => navigate(displayArt?.order_id ? `/personalizar-display?order_id=${displayArt.order_id}` : '/meus-pedidos')}
+                  className="w-full"
+                >
+                  Voltar à Lista de Displays
                 </Button>
               </CardContent>
             </Card>
