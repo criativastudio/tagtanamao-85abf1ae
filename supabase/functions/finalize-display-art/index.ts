@@ -99,10 +99,10 @@ Deno.serve(async (req) => {
     }
 
     if (!displayArt.template_id || !displayArt.logo_url || !displayArt.company_name) {
-      return new Response(
-        JSON.stringify({ error: "Template, logo e nome da empresa são obrigatórios" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Template, logo e nome da empresa são obrigatórios" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Generate unique 6-digit activation code
@@ -141,7 +141,8 @@ Deno.serve(async (req) => {
     let baseSvg = template?.svg_content || '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800"></svg>';
 
     const viewBoxMatch = baseSvg.match(/viewBox="([^"]+)"/);
-    let svgWidth = 800, svgHeight = 800;
+    let svgWidth = 800,
+      svgHeight = 800;
     if (viewBoxMatch) {
       const parts = viewBoxMatch[1].split(/[\s,]+/).map(Number);
       if (parts.length >= 4) {
@@ -168,7 +169,7 @@ Deno.serve(async (req) => {
     // Add company name
     const cnPos = positions.company_name || { x: svgWidth / 2, y: svgHeight - 80, fontSize: 24, textAnchor: "middle" };
     svgBody += `
-      <text x="${cnPos.x}" y="${cnPos.y}" font-size="${cnPos.fontSize}" font-family="Arial, sans-serif" font-weight="bold" text-anchor="${cnPos.textAnchor || 'middle'}" fill="${displayArt.text_color || '#000000'}">${displayArt.company_name}</text>
+      <text x="${cnPos.x}" y="${cnPos.y}" font-size="${cnPos.fontSize}" font-family="Arial, sans-serif" font-weight="bold" text-anchor="${cnPos.textAnchor || "middle"}" fill="${displayArt.text_color || "#000000"}">${displayArt.company_name}</text>
     `;
 
     // Add real QR Code image
@@ -179,7 +180,7 @@ Deno.serve(async (req) => {
 
     // Add activation code (6 digits) below QR — white, bold, in place of the bold '#' code
     svgBody += `
-      <text x="${qrPos.x + qrPos.width / 2}" y="${qrPos.y + qrPos.height + 22}" text-anchor="middle" font-size="18" font-family="monospace" font-weight="bold" fill="white">${activationCode}</text>
+      <text x="${qrPos.x + qrPos.width / 2}" y="${qrPos.y + qrPos.height + 42}" text-anchor="middle" font-size="18" font-family="monospace" font-weight="bold" fill="white">${activationCode}</text>
     `;
 
     // Add order number (# + 8 chars) at bottom-right corner, white
@@ -208,15 +209,13 @@ Deno.serve(async (req) => {
     }
 
     // Create business_display record with is_activated: false (awaiting activation)
-    const { error: displayError } = await supabase
-      .from("business_displays")
-      .insert({
-        user_id: userId,
-        qr_code: activationCode,
-        business_name: displayArt.company_name,
-        logo_url: displayArt.logo_url,
-        is_activated: false,
-      });
+    const { error: displayError } = await supabase.from("business_displays").insert({
+      user_id: userId,
+      qr_code: activationCode,
+      business_name: displayArt.company_name,
+      logo_url: displayArt.logo_url,
+      is_activated: false,
+    });
 
     if (displayError) {
       console.error("Error creating business display:", displayError);
@@ -243,23 +242,21 @@ Deno.serve(async (req) => {
 
     const allArtsFinalized = totalLocked >= totalExpected;
 
-    console.log(`Order ${displayArt.order_id}: ${totalLocked}/${totalExpected} arts finalized. allDone=${allArtsFinalized}`);
+    console.log(
+      `Order ${displayArt.order_id}: ${totalLocked}/${totalExpected} arts finalized. allDone=${allArtsFinalized}`,
+    );
 
     if (allArtsFinalized) {
       // Advance order: art_finalized → processing
-      await supabase
-        .from("orders")
-        .update({ status: "art_finalized" })
-        .eq("id", displayArt.order_id);
+      await supabase.from("orders").update({ status: "art_finalized" }).eq("id", displayArt.order_id);
 
-      await supabase
-        .from("orders")
-        .update({ status: "processing" })
-        .eq("id", displayArt.order_id);
+      await supabase.from("orders").update({ status: "processing" }).eq("id", displayArt.order_id);
 
       console.log(`Order ${displayArt.order_id} advanced to 'processing' — all ${totalExpected} arts finalized.`);
     } else {
-      console.log(`Order ${displayArt.order_id} stays in 'awaiting_customization' — ${totalExpected - totalLocked} art(s) still pending.`);
+      console.log(
+        `Order ${displayArt.order_id} stays in 'awaiting_customization' — ${totalExpected - totalLocked} art(s) still pending.`,
+      );
     }
     // ──────────────────────────────────────────────────────────────────────────
 
@@ -273,7 +270,7 @@ Deno.serve(async (req) => {
           ? "Todas as artes finalizadas! Pedido em produção."
           : "Arte finalizada! Personalize o próximo display.",
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error: any) {
     console.error("Error in finalize-display-art:", error);
