@@ -92,10 +92,12 @@ export default function TemplatePositionPreview({ svgContent, positions, preview
       </CardHeader>
       <CardContent>
         <div className="bg-muted/50 rounded-lg p-3">
-          <div
-            className="w-full h-96 flex items-center justify-center bg-background rounded-lg overflow-hidden"
-            dangerouslySetInnerHTML={{ __html: previewSvg }}
-          />
+          <div className="flex items-center justify-center">
+            <div
+              className="w-full max-w-md aspect-[2/3] flex items-center justify-center bg-background rounded-lg overflow-hidden"
+              dangerouslySetInnerHTML={{ __html: previewSvg }}
+            />
+          </div>
         </div>
         <div className="flex flex-wrap gap-3 mt-3 text-xs">
           <span className="flex items-center gap-1">
@@ -111,6 +113,9 @@ export default function TemplatePositionPreview({ svgContent, positions, preview
             <span className="w-3 h-3 rounded-full bg-[#8b5cf6] inline-block" /> Nº Pedido
           </span>
         </div>
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          Arte em proporção 10x15 cm. Exportação em PNG A4 com 2 artes por folha quando houver mais de 1 display.
+        </p>
       </CardContent>
     </Card>
   );

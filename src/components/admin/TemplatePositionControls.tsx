@@ -95,6 +95,10 @@ export default function TemplatePositionControls({ positions, onChange }: Props)
           </div>
           <p className="text-xs text-muted-foreground">Cor branca, centralizado na parte inferior da arte</p>
         </div>
+
+        <p className="text-[11px] text-muted-foreground">
+          Tamanho final: 10x15 cm. Para impressão, as artes são exportadas em PNG alta qualidade em A4 com 2 por folha quando houver mais de 1.
+        </p>
       </CardContent>
     </Card>
   );
