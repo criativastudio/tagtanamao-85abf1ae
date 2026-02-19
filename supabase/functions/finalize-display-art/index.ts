@@ -177,16 +177,15 @@ Deno.serve(async (req) => {
       <image href="${qrDataUri}" x="${qrPos.x}" y="${qrPos.y}" width="${qrPos.width}" height="${qrPos.height}" />
     `;
 
-    // Add activation code text below QR
+    // Add activation code (6 digits) below QR — white, bold, in place of the bold '#' code
     svgBody += `
-      <text x="${qrPos.x + qrPos.width / 2}" y="${qrPos.y + qrPos.height + 18}" text-anchor="middle" font-size="14" font-family="monospace" font-weight="bold" fill="#333333">${activationCode}</text>
+      <text x="${qrPos.x + qrPos.width / 2}" y="${qrPos.y + qrPos.height + 22}" text-anchor="middle" font-size="18" font-family="monospace" font-weight="bold" fill="white">${activationCode}</text>
     `;
 
-    // Add order number (white, centered, bottom)
+    // Add order number (# + 8 chars) at bottom-right corner, white
     const orderNum = `#${displayArt.order_id.slice(0, 8)}`;
-    const onPos = positions.order_number || { x: svgWidth / 2, y: svgHeight - 15, fontSize: 14 };
     svgBody += `
-      <text x="${onPos.x}" y="${onPos.y}" font-size="${onPos.fontSize}" font-family="monospace" font-weight="bold" text-anchor="middle" fill="white">${orderNum}</text>
+      <text x="${svgWidth - 12}" y="${svgHeight - 10}" font-size="12" font-family="monospace" font-weight="bold" text-anchor="end" fill="white">${orderNum}</text>
     `;
 
     const finalSvg = svgBody + "</svg>";
@@ -208,19 +207,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Update order: art_finalized first, then auto-advance to processing
-    // art_finalized → processing (customization done, ready for production)
-    const { error: orderError } = await supabase
-      .from("orders")
-      .update({ status: "processing" })
-      .eq("id", displayArt.order_id);
-
-    if (orderError) {
-      console.error("Error updating order status:", orderError);
-    } else {
-      console.log(`Order ${displayArt.order_id} auto-advanced to 'processing' after art finalization`);
-    }
-
     // Create business_display record with is_activated: false (awaiting activation)
     const { error: displayError } = await supabase
       .from("business_displays")
@@ -236,12 +222,56 @@ Deno.serve(async (req) => {
       console.error("Error creating business display:", displayError);
     }
 
+    // ─── Check if ALL arts for this order are now finalized ───────────────────
+    // Fetch all display_arts for this order (the current one is now locked in DB)
+    const { data: allArts } = await supabase
+      .from("display_arts")
+      .select("id, locked")
+      .eq("order_id", displayArt.order_id);
+
+    // Fetch total expected displays by summing quantity of business_display order_items
+    const { data: displayOrderItems } = await supabase
+      .from("order_items")
+      .select("id, quantity, product:products(type)")
+      .eq("order_id", displayArt.order_id);
+
+    const totalExpected = ((displayOrderItems || []) as any[])
+      .filter((item: any) => item.product?.type === "business_display")
+      .reduce((sum: number, item: any) => sum + (item.quantity || 1), 0);
+
+    const totalLocked = ((allArts || []) as any[]).filter((a: any) => a.locked).length;
+
+    const allArtsFinalized = totalLocked >= totalExpected;
+
+    console.log(`Order ${displayArt.order_id}: ${totalLocked}/${totalExpected} arts finalized. allDone=${allArtsFinalized}`);
+
+    if (allArtsFinalized) {
+      // Advance order: art_finalized → processing
+      await supabase
+        .from("orders")
+        .update({ status: "art_finalized" })
+        .eq("id", displayArt.order_id);
+
+      await supabase
+        .from("orders")
+        .update({ status: "processing" })
+        .eq("id", displayArt.order_id);
+
+      console.log(`Order ${displayArt.order_id} advanced to 'processing' — all ${totalExpected} arts finalized.`);
+    } else {
+      console.log(`Order ${displayArt.order_id} stays in 'awaiting_customization' — ${totalExpected - totalLocked} art(s) still pending.`);
+    }
+    // ──────────────────────────────────────────────────────────────────────────
+
     return new Response(
       JSON.stringify({
         success: true,
         qrCode: activationCode,
         displayArtId,
-        message: "Arte finalizada com sucesso!",
+        allArtsFinalized,
+        message: allArtsFinalized
+          ? "Todas as artes finalizadas! Pedido em produção."
+          : "Arte finalizada! Personalize o próximo display.",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

@@ -465,14 +465,14 @@ export default function OrdersManager() {
   const handleDownloadDisplayArt = async (order: OrderWithItems) => {
     setDownloadingArt(order.id);
     try {
-      const { data: displayArt, error } = await supabase
+      // Fetch ALL finalized arts for this order
+      const { data: displayArts, error } = await supabase
         .from("display_arts")
-        .select("final_svg")
+        .select("id, final_svg, company_name")
         .eq("order_id", order.id)
-        .eq("locked", true)
-        .maybeSingle();
+        .eq("locked", true);
 
-      if (error || !displayArt?.final_svg) {
+      if (error || !displayArts?.length) {
         toast({
           title: "Arte não encontrada",
           description: "Nenhuma arte finalizada para este pedido.",
@@ -481,52 +481,22 @@ export default function OrdersManager() {
         return;
       }
 
-      const orderLabel = `#${order.id.slice(0, 8)}`;
-      let svgContent = displayArt.final_svg;
+      // Download each art as a separate numbered SVG file
+      displayArts.forEach((art, index) => {
+        if (!art.final_svg) return;
+        const blob = new Blob([art.final_svg], { type: "image/svg+xml" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `arte-display-${order.id.slice(0, 8)}-${index + 1}.svg`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
 
-      // Parse SVG to inject order number at bottom-right
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(svgContent, "image/svg+xml");
-      const svgEl = doc.querySelector("svg");
-      if (svgEl) {
-        const viewBox = svgEl.getAttribute("viewBox");
-        let svgWidth = 800;
-        let svgHeight = 600;
-        if (viewBox) {
-          const parts = viewBox.split(/[\s,]+/).map(Number);
-          if (parts.length === 4) {
-            svgWidth = parts[2];
-            svgHeight = parts[3];
-          }
-        } else {
-          const w = parseFloat(svgEl.getAttribute("width") || "800");
-          const h = parseFloat(svgEl.getAttribute("height") || "600");
-          svgWidth = w;
-          svgHeight = h;
-        }
-
-        const textEl = doc.createElementNS("http://www.w3.org/2000/svg", "text");
-        textEl.setAttribute("x", String(svgWidth - 10));
-        textEl.setAttribute("y", String(svgHeight - 10));
-        textEl.setAttribute("text-anchor", "end");
-        textEl.setAttribute("font-size", "12");
-        textEl.setAttribute("font-family", "monospace");
-        textEl.setAttribute("fill", "#666666");
-        textEl.textContent = orderLabel;
-        svgEl.appendChild(textEl);
-
-        svgContent = new XMLSerializer().serializeToString(doc);
-      }
-
-      const blob = new Blob([svgContent], { type: "image/svg+xml" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `arte-display-${order.id.slice(0, 8)}.svg`;
-      a.click();
-      URL.revokeObjectURL(url);
-
-      toast({ title: "Arte baixada!", description: `Arquivo com pedido ${orderLabel} no rodapé.` });
+      toast({
+        title: `${displayArts.length} arte(s) baixada(s)!`,
+        description: `Arquivos numerados para o pedido #${order.id.slice(0, 8)}.`,
+      });
     } catch (err: any) {
       toast({ title: "Erro ao baixar arte", description: err.message, variant: "destructive" });
     } finally {

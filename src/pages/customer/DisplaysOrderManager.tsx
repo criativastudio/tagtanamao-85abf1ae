@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Monitor, Paintbrush, CheckCircle, Clock, Edit3, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -152,6 +152,10 @@ export default function DisplaysOrderManager() {
   };
 
   const handleCustomize = async (item: DisplayOrderItem, artIndex: number) => {
+    // Prevent duplicate creation by checking the creating state
+    const key = `${item.id}-${artIndex}`;
+    if (creatingArt === key) return;
+
     const existingArt = item.arts[artIndex];
 
     if (existingArt) {
@@ -160,7 +164,7 @@ export default function DisplaysOrderManager() {
     }
 
     // Create a new display_art for this item slot
-    setCreatingArt(`${item.id}-${artIndex}`);
+    setCreatingArt(key);
     const { data: newArt, error } = await supabase
       .from("display_arts")
       .insert({
@@ -184,10 +188,21 @@ export default function DisplaysOrderManager() {
   const allFinalized =
     items.length > 0 &&
     items.every((item) => {
-      const totalArts = item.quantity;
       const finalizedArts = item.arts.filter((a) => a.locked).length;
-      return finalizedArts >= totalArts;
+      return finalizedArts >= item.quantity;
     });
+
+  // Find the first pending slot to visually highlight as "next"
+  let nextPendingKey: string | null = null;
+  outer: for (const item of items) {
+    for (let i = 0; i < item.quantity; i++) {
+      const art = item.arts[i] ?? null;
+      if (!art || !art.locked) {
+        nextPendingKey = `${item.id}-${i}`;
+        break outer;
+      }
+    }
+  }
 
   if (loading) {
     return (
@@ -213,6 +228,7 @@ export default function DisplaysOrderManager() {
           </div>
         </div>
 
+        {/* All finalized banner */}
         {allFinalized && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
@@ -227,11 +243,30 @@ export default function DisplaysOrderManager() {
           </motion.div>
         )}
 
+        {/* Next pending hint */}
+        {!allFinalized && nextPendingKey && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 rounded-lg bg-primary/10 border border-primary/30 flex items-center gap-3"
+          >
+            <Paintbrush className="w-5 h-5 text-primary shrink-0" />
+            <div>
+              <p className="text-primary font-semibold text-sm">Próximo display aguardando personalização</p>
+              <p className="text-muted-foreground text-xs">
+                Clique em "Personalizar" no item destacado abaixo para continuar.
+              </p>
+            </div>
+          </motion.div>
+        )}
+
         <div className="space-y-4">
           {items.map((item) =>
             Array.from({ length: item.quantity }).map((_, artIndex) => {
               const art = item.arts[artIndex] ?? null;
               const isCreating = creatingArt === `${item.id}-${artIndex}`;
+              const cardKey = `${item.id}-${artIndex}`;
+              const isNextPending = cardKey === nextPendingKey;
               const label =
                 item.quantity > 1
                   ? `${item.product?.name || "Display"} — Unidade ${artIndex + 1}`
@@ -239,19 +274,25 @@ export default function DisplaysOrderManager() {
 
               return (
                 <motion.div
-                  key={`${item.id}-${artIndex}`}
+                  key={cardKey}
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: artIndex * 0.08 }}
                 >
-                  <Card className="glass-card">
+                  <Card
+                    className={`glass-card transition-all duration-300 ${
+                      isNextPending
+                        ? "border-primary/60 shadow-[0_0_20px_hsl(var(--primary)/0.2)] ring-1 ring-primary/30"
+                        : ""
+                    }`}
+                  >
                     <CardContent className="p-4 flex items-center gap-4">
                       {/* Icon / thumbnail */}
                       <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
                         {item.product?.image_url ? (
                           <img
                             src={item.product.image_url}
-                            alt={item.product.name}
+                            alt={item.product.name ?? "Display"}
                             className="w-full h-full object-cover rounded-lg"
                           />
                         ) : (
@@ -261,7 +302,14 @@ export default function DisplaysOrderManager() {
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-foreground truncate">{label}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium text-sm text-foreground truncate">{label}</p>
+                          {isNextPending && (
+                            <span className="text-[10px] font-bold text-primary bg-primary/10 border border-primary/30 rounded-full px-2 py-0.5 shrink-0">
+                              Próximo
+                            </span>
+                          )}
+                        </div>
                         <div className="mt-1">
                           <ArtStatusBadge art={art} />
                         </div>
@@ -281,6 +329,8 @@ export default function DisplaysOrderManager() {
                         className={
                           art?.locked
                             ? "border-green-500/50 text-green-400 hover:bg-green-500/10"
+                            : isNextPending
+                            ? "animate-pulse"
                             : ""
                         }
                       >
