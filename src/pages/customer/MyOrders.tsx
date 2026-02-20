@@ -286,23 +286,17 @@ export default function MyOrders() {
                                   </Button>
                                 )}
                                 {/* Personalizar Arte do Display — botão único por pedido */}
-                                {hasDisplay && ["awaiting_customization", "paid"].includes(normalizedStatus) &&
-  order.items?.map((item: any) =>
-    item.display_arts?.filter((art: any) => !art.locked).map((art: any) => (
-      <Button
-        key={art.id}
-        size="sm"
-        variant="outline"
-        className="border-primary/50 text-primary hover:bg-primary/10"
-        onClick={() => navigate(`/personalizar-display?displayArtId=${art.id}`)}
-      >
-        <Paintbrush className="w-4 h-4 mr-2" />
-        Personalizar Arte do Display
-      </Button>
-    ))
-  )
-}
-
+                                {hasDisplay && ["awaiting_customization", "paid"].includes(normalizedStatus) && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-primary/50 text-primary hover:bg-primary/10"
+                                    onClick={() => navigate(`/personalizar-display?order_id=${order.id}`)}
+                                  >
+                                    <Paintbrush className="w-4 h-4 mr-2" />
+                                    Personalizar Arte do Display
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           </AccordionContent>
