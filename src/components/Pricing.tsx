@@ -26,7 +26,7 @@ const pricingPlans = [
   },
   {
     name: "2 Tags Pet",
-    price: "109,90",
+    price: "99,90",
     originalPrice: "159,80",
     description: "Ideal para famílias com 2 pets",
     features: [
@@ -42,7 +42,7 @@ const pricingPlans = [
   },
   {
     name: "3 Tags Pet",
-    price: "139,90",
+    price: "129,90",
     originalPrice: "239,70",
     description: "Melhor custo-benefício",
     features: [
