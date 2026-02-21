@@ -53,7 +53,7 @@ export interface ElementPositions {
   qr_code?: { x: number; y: number; width: number; height: number };
   logo?: { x: number; y: number; width: number; height: number };
   company_name?: { x: number; y: number; fontSize: number; textAnchor?: 'start' | 'middle' | 'end' };
-  order_number?: { x: number; y: number; fontSize: number };
+  order_number?: { x: number; y: number; fontSize: number; textAnchor?: 'start' | 'middle' | 'end' };
 }
 
 export interface ArtTemplate {
