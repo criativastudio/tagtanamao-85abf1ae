@@ -43,7 +43,7 @@ const pricingPlans = [
   {
     name: "3 Tags Pet",
     price: "139,90",
-    originalPrice: "179,70",
+    originalPrice: "239,70",
     description: "Melhor custo-benefício",
     features: [
       "3 Tags Pet QR Code Premium",
