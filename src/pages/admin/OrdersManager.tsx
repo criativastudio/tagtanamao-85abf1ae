@@ -33,8 +33,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Order, OrderItem } from "@/types/ecommerce";
 
+interface OrderItemSummary {
+  id: string;
+  quantity: number;
+  unit_price: number;
+  product?: { name: string; type: string } | null;
+}
+
 interface OrderWithItems extends Order {
-  items?: OrderItem[];
+  items?: (OrderItem | OrderItemSummary)[];
   melhor_envio_shipment_id?: string | null;
   melhor_envio_label_url?: string | null;
   shipping_carrier?: string | null;
@@ -77,6 +84,16 @@ const paymentStatusLabels: Record<string, string> = {
   refunded: "Reembolsado",
 };
 
+const productTypeLabels: Record<string, string> = {
+  pet_tag: "Pet Tag",
+  business_display: "Display Empresarial",
+};
+
+const productTypeColors: Record<string, string> = {
+  pet_tag: "bg-green-500/20 text-green-400 border-green-500/30",
+  business_display: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+};
+
 export default function OrdersManager() {
   const { profile, loading } = useAuth();
   const navigate = useNavigate();
@@ -109,7 +126,8 @@ export default function OrdersManager() {
       .select(
         `
         *,
-        profile:profiles(email, full_name, phone)
+        profile:profiles(email, full_name, phone),
+        items:order_items(id, quantity, unit_price, product:products(name, type))
       `,
       )
       .order("created_at", { ascending: false });
@@ -596,6 +614,7 @@ export default function OrdersManager() {
               <TableRow>
                 <TableHead>Pedido</TableHead>
                 <TableHead>Cliente</TableHead>
+                <TableHead>Produtos</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead>Status do pedido</TableHead>
                 <TableHead>Pagamento</TableHead>
@@ -606,13 +625,13 @@ export default function OrdersManager() {
             <TableBody>
               {loadingOrders ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={8} className="text-center py-8">
                     <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : filteredOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     Nenhum pedido encontrado
                   </TableCell>
                 </TableRow>
@@ -624,6 +643,23 @@ export default function OrdersManager() {
                       <div>
                         <p className="font-medium">{order.shipping_name || order.profile?.full_name || "-"}</p>
                         <p className="text-xs text-muted-foreground">{order.profile?.email}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        {order.items && order.items.length > 0 ? (
+                          order.items.map((item) => (
+                            <div key={item.id} className="flex items-center gap-1.5 text-xs">
+                              <span className="truncate max-w-[120px]">{item.product?.name || "Produto"}</span>
+                              <Badge className={`text-[10px] px-1.5 py-0 ${productTypeColors[item.product?.type || ""] || "bg-muted text-muted-foreground border-border"}`}>
+                                {productTypeLabels[item.product?.type || ""] || item.product?.type || "—"}
+                              </Badge>
+                              <span className="text-muted-foreground">x{item.quantity}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="font-semibold text-primary">{formatCurrency(order.total_amount)}</TableCell>
@@ -827,7 +863,8 @@ export default function OrdersManager() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Produto</TableHead>
+                         <TableHead>Produto</TableHead>
+                          <TableHead>Tipo</TableHead>
                           <TableHead>Qtd</TableHead>
                           <TableHead>Preço Unit.</TableHead>
                           <TableHead>Total</TableHead>
@@ -837,6 +874,11 @@ export default function OrdersManager() {
                         {selectedOrder.items?.map((item) => (
                           <TableRow key={item.id}>
                             <TableCell>{item.product?.name || "Produto"}</TableCell>
+                            <TableCell>
+                              <Badge className={productTypeColors[item.product?.type || ""] || "bg-muted text-muted-foreground border-border"}>
+                                {productTypeLabels[item.product?.type || ""] || item.product?.type || "—"}
+                              </Badge>
+                            </TableCell>
                             <TableCell>{item.quantity}</TableCell>
                             <TableCell>{formatCurrency(item.unit_price)}</TableCell>
                             <TableCell>{formatCurrency(item.unit_price * item.quantity)}</TableCell>
