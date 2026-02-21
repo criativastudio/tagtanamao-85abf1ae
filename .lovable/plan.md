@@ -1,81 +1,61 @@
 
-
-# Exibir Tipo de Produto e Quantidade na Gestao de Pedidos
+# Melhorar Layout da Lista de Pedidos - Admin
 
 ## Problema atual
 
-1. **Na listagem de pedidos (tabela)**: nao mostra quais produtos foram comprados nem a quantidade. O admin precisa clicar no icone de "olho" para ver os itens.
-2. **No detalhamento do pedido (dialog)**: mostra nome do produto e quantidade, mas nao mostra o **tipo** do produto (ex: "pet_tag", "business_display").
+A tabela de pedidos tem 8 colunas densas, com badges, textos pequenos e muitas acoes comprimidas na mesma linha. Em telas menores fica ainda pior. A hierarquia visual nao esta clara -- tudo tem o mesmo peso visual.
 
-## Solucao
+## Solucao: Layout em Cards
 
-### 1. Buscar itens junto com os pedidos na listagem
+Substituir a tabela por um layout de cards responsivos. Cada card representa um pedido com hierarquia visual clara:
 
-Alterar `fetchOrders` para incluir `order_items` com `product` na query principal:
+### Estrutura de cada card
 
-```typescript
-const { data, error } = await supabase
-  .from("orders")
-  .select(`
-    *,
-    profile:profiles(email, full_name, phone),
-    items:order_items(id, quantity, unit_price, product:products(name, type))
-  `)
-  .order("created_at", { ascending: false });
+```text
++----------------------------------------------------------+
+|  #a1b2c3d4    Pendente [badge]       14/02/2025 10:30     |
+|----------------------------------------------------------|
+|  Joao Silva                                               |
+|  joao@email.com                                          |
+|----------------------------------------------------------|
+|  Tag Pet Inteligente (Pet Tag) x1                        |
+|  Display Acrilico (Display Empresarial) x2               |
+|----------------------------------------------------------|
+|  Total: R$ 189,90    Pgto: Confirmado [badge]            |
+|  Frete: PAC - R$ 22,50                                   |
+|----------------------------------------------------------|
+|  [Olho] [Arte] [Etiqueta] [Declaracao] [Imprimir]       |
++----------------------------------------------------------+
 ```
 
-Isso elimina a necessidade de buscar itens separadamente ao clicar no olho (a funcao `fetchOrderItems` continua para garantir dados completos no dialog).
+### Hierarquia visual
 
-### 2. Adicionar coluna "Produtos" na tabela de listagem
+1. **Linha 1 (header do card)**: ID do pedido (mono, destaque), status (badge colorido), data (muted, direita)
+2. **Linha 2 (cliente)**: Nome em negrito, email abaixo em muted
+3. **Linha 3 (produtos)**: Lista de itens com nome, badge de tipo e quantidade -- separados por divisor sutil
+4. **Linha 4 (valores)**: Total em destaque (primary), status de pagamento como badge outline, frete em muted
+5. **Linha 5 (acoes)**: Botoes de acao com tooltips, alinhados a direita
 
-Nova coluna entre "Cliente" e "Total" mostrando resumo dos itens. Cada item aparece como uma linha com:
-- Nome do produto
-- Tipo (badge colorido: "Pet Tag" em verde, "Display" em azul)
-- Quantidade (ex: "x2")
+### Melhorias especificas
 
-Exemplo visual na celula:
+- **Espacamento**: padding consistente de `p-4` com `gap-3` entre secoes
+- **Separadores**: `border-b border-border/50` sutis entre secoes do card
+- **Tipografia**: titulos em `font-semibold text-sm`, dados secundarios em `text-xs text-muted-foreground`
+- **Badges**: tamanho consistente, sem badges minusculos de 10px
+- **Responsivo**: cards empilham naturalmente em mobile sem scroll horizontal
 
-```
-Tag Pet Inteligente (Pet Tag) x1
-Display Acrilico (Display) x2
-```
+### Manter tabela no dialog de detalhes
 
-### 3. Adicionar coluna "Tipo" na tabela de itens do dialog
-
-Na tabela de itens dentro do dialog de detalhes, adicionar coluna "Tipo" com badge colorido mostrando o tipo do produto traduzido:
-- `pet_tag` -> badge verde "Pet Tag"
-- `business_display` -> badge azul "Display Empresarial"
-- outros -> badge cinza com o valor original
+O dialog de detalhes continua com tabela pois mostra poucos itens e funciona bem ali. Apenas ajustar espacamento interno.
 
 ## Arquivos afetados
 
-1. `src/pages/admin/OrdersManager.tsx` -- unico arquivo a editar
+1. `src/pages/admin/OrdersManager.tsx` -- substituir bloco da tabela (linhas 610-744) por layout de cards
 
-## Detalhes tecnicos
+## O que NAO muda
 
-**Alteracoes em `fetchOrders`:**
-- Expandir a query SELECT para incluir `items:order_items(id, quantity, unit_price, product:products(name, type))`
-- O tipo `OrderWithItems` ja suporta `items?: OrderItem[]`
-
-**Nova coluna na tabela principal (entre Cliente e Total):**
-- TableHead: "Produtos"
-- TableCell: mapeia `order.items` e mostra cada produto com nome, tipo (badge) e quantidade
-- Colspan do loading/empty row passa de 7 para 8
-
-**Coluna extra no dialog de detalhes:**
-- Adicionar TableHead "Tipo" apos "Produto"
-- Adicionar TableCell com badge colorido baseado em `item.product?.type`
-
-**Helper de traducao de tipo:**
-```typescript
-const productTypeLabels: Record<string, string> = {
-  pet_tag: "Pet Tag",
-  business_display: "Display Empresarial",
-};
-
-const productTypeColors: Record<string, string> = {
-  pet_tag: "bg-green-500/20 text-green-400 border-green-500/30",
-  business_display: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-};
-```
-
+- Logica de fetch, filtros, busca
+- Stats cards no topo
+- Dialog de detalhes (apenas ajustes menores de espacamento)
+- Todas as funcoes de acao (etiqueta, arte, declaracao, etc)
+- Filtros e barra de busca
