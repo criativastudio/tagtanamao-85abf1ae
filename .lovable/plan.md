@@ -1,55 +1,37 @@
 
+# Adicionar botao "Adicionar ao Carrinho" nos combos de Tag Pet
 
-# Permitir preenchimento manual quando API de CEP falhar
+## Situacao atual
 
-## Problema atual
+A secao de precos (`Pricing.tsx`) exibe 3 planos de combos de Tag Pet (1, 2 e 3 tags) mas cada card so tem o botao "Comprar Agora", que adiciona ao carrinho e redireciona direto ao checkout. Nao ha opcao de apenas adicionar ao carrinho sem sair da pagina.
 
-Quando a API de CEP (ViaCEP ou BrasilAPI) falha ou nao encontra o CEP, o checkout trava silenciosamente:
-- O `catch` na linha 213 apenas faz `console.error` -- o usuario nao recebe feedback
-- Os campos de endereco ficam vazios e sem opcoes de frete
-- Nao ha como calcular frete manualmente apos preencher cidade/estado
+## Alteracao
 
-## Solucao
+Adicionar um botao discreto com icone de carrinho ao lado (ou abaixo) do botao "Comprar Agora" em cada card de combo.
 
-### 1. Feedback ao usuario quando CEP falhar
+### Novo botao
 
-No bloco `catch` (linha 213) e quando `data.erro` + BrasilAPI tambem falhar, mostrar um toast informativo (nao destrutivo) orientando o usuario a preencher manualmente.
+- Icone: `ShoppingCart` (lucide)
+- Variante: `ghost` (discreto)
+- Comportamento: adiciona o produto ao carrinho, exibe toast de confirmacao, mas **nao redireciona** ao checkout
+- Posicao: ao lado esquerdo do botao "Comprar Agora", na mesma linha
 
-### 2. Adicionar estado `cepFailed`
+### Logica
 
-Novo estado `cepFailed` (boolean) que sera `true` quando ambas APIs falharem. Isso habilita:
-- Uma mensagem visual no formulario indicando "CEP nao encontrado, preencha manualmente"
-- Um botao "Calcular Frete" que aparece quando `cepFailed === true` e cidade/estado estao preenchidos
+Criar funcao `handleAddToCart` similar a `handleBuyNow` mas sem o `navigate("/loja/checkout")`:
+- Monta o objeto `Product` igual ao `handleBuyNow`
+- Chama `addToCart(product)`
+- Se nao logado: redireciona para login com redirect ao checkout
+- Se logado: mostra toast de confirmacao e permanece na pagina
 
-### 3. Botao "Calcular Frete" manual
+### Layout dos botoes
 
-Quando o CEP falhar mas o usuario preencher cidade e estado manualmente, um botao aparece para disparar `fetchShippingQuotesWithAddress` com os dados manuais. Isso reutiliza a mesma logica existente de cotacao.
-
-### 4. Tratar falha do BrasilAPI tambem
-
-Atualmente, se ViaCEP retorna `erro: true` e BrasilAPI tambem falha, o codigo quebra silenciosamente. Envolver a chamada do BrasilAPI em try/catch proprio.
-
-## Alteracoes no arquivo `src/pages/customer/Checkout.tsx`
-
-### Novo estado
-```typescript
-const [cepFailed, setCepFailed] = useState(false);
+```
+[Icone Carrinho] [   Comprar Agora   ]
 ```
 
-### Funcao `handleZipBlur` atualizada
-- Resetar `cepFailed` no inicio
-- Envolver BrasilAPI em try/catch
-- Se ambas APIs falharem: setar `cepFailed = true`, mostrar toast informativo, permitir preenchimento manual
-- Se apenas dados de endereco falharem mas temos o CEP: ainda tentar buscar frete
+O botao de carrinho sera `variant="ghost" size="icon"` com classe `h-10 w-10` para ficar alinhado com o botao principal.
 
-### UI: Mensagem de fallback + botao calcular frete
-- Abaixo dos campos de endereco, quando `cepFailed === true`, exibir alerta amarelo: "Nao conseguimos encontrar seu CEP. Preencha o endereco manualmente."
-- Botao "Calcular Frete" visivel quando `cepFailed && shippingData.city && shippingData.state`
-- O botao chama `fetchShippingQuotesWithAddress(digits, shippingData.city, shippingData.state)`
+## Arquivo afetado
 
-## O que NAO muda
-
-- Fluxo normal quando CEP e encontrado
-- Logica de frete local (Jaru/Porto Velho)
-- Validacao de campos obrigatorios no `validateShipping`
-- Logica de pagamento e criacao de pedido
+`src/components/Pricing.tsx` -- adicionar import do `ShoppingCart`, criar `handleAddToCart`, e ajustar o JSX dos botoes (linhas 179-187).
