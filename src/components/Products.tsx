@@ -159,9 +159,20 @@ const Products = () => {
                         <p className="text-2xl font-display font-bold text-gradient">{formatCurrency(product.price)}</p>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="icon" onClick={() => handleAddToCart(product)}>
-                          <ShoppingCart className="w-4 h-4" />
-                        </Button>
+                        {product.type === "pet_tag" ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            onClick={() => handleAddToCart(product)}
+                          >
+                            <ShoppingCart className="w-3.5 h-3.5" />
+                          </Button>
+                        ) : (
+                          <Button variant="outline" size="icon" onClick={() => handleAddToCart(product)}>
+                            <ShoppingCart className="w-4 h-4" />
+                          </Button>
+                        )}
                         <Button variant="hero" onClick={() => handleBuyNow(product)}>
                           Comprar
                         </Button>
