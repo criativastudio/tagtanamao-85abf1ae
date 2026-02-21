@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Package, MapPin, CreditCard, Truck, Loader2, Ticket, QrCode } from "lucide-react";
+import { ArrowLeft, Package, MapPin, CreditCard, Truck, Loader2, Ticket, QrCode, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -92,6 +92,7 @@ export default function Checkout() {
   const [shippingQuotes, setShippingQuotes] = useState<ShippingQuote[]>([]);
   const [selectedShipping, setSelectedShipping] = useState<ShippingQuote | null>(null);
   const [lastZipFetched, setLastZipFetched] = useState("");
+  const [cepFailed, setCepFailed] = useState(false);
 
   // Coupon
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
@@ -160,29 +161,41 @@ export default function Checkout() {
     const digits = shippingData.zip.replace(/\D/g, "");
     if (digits.length !== 8 || digits === lastZipFetched) return;
     setLastZipFetched(digits);
+    setCepFailed(false);
 
     let data: any = null;
+    let addressFound = false;
 
     try {
       // 1️⃣ tenta ViaCEP primeiro
       const response = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
       data = await response.json();
 
-      // se não encontrou, tenta BrasilAPI
       if (data.erro) {
-        const backup = await fetch(`https://brasilapi.com.br/api/cep/v1/${digits}`);
-        const backupData = await backup.json();
-
-        data = {
-          logradouro: backupData.street,
-          bairro: backupData.neighborhood,
-          localidade: backupData.city,
-          uf: backupData.state,
-        };
+        // 2️⃣ tenta BrasilAPI como fallback
+        try {
+          const backup = await fetch(`https://brasilapi.com.br/api/cep/v1/${digits}`);
+          if (backup.ok) {
+            const backupData = await backup.json();
+            data = {
+              logradouro: backupData.street,
+              bairro: backupData.neighborhood,
+              localidade: backupData.city,
+              uf: backupData.state,
+            };
+            addressFound = !!(data.localidade && data.uf);
+          }
+        } catch (brasilApiError) {
+          console.error("BrasilAPI também falhou:", brasilApiError);
+        }
+      } else {
+        addressFound = !!(data.localidade && data.uf);
       }
+    } catch (error) {
+      console.error("Erro ao buscar CEP:", error);
+    }
 
-      if (!data) return;
-
+    if (addressFound && data) {
       setShippingData((prev) => ({
         ...prev,
         address: data.logradouro || "",
@@ -210,9 +223,38 @@ export default function Checkout() {
       }
 
       fetchShippingQuotesWithAddress(digits, data.localidade, data.uf);
-    } catch (error) {
-      console.error("Erro ao buscar CEP:", error);
+    } else {
+      // CEP não encontrado em nenhuma API
+      setCepFailed(true);
+      toast({
+        title: "CEP não encontrado",
+        description: "Preencha o endereço manualmente e clique em 'Calcular Frete'.",
+      });
     }
+  };
+
+  const handleManualShippingCalc = () => {
+    const digits = shippingData.zip.replace(/\D/g, "");
+    if (digits.length !== 8) return;
+
+    const city = shippingData.city.trim().toLowerCase();
+    const state = shippingData.state.trim().toUpperCase();
+
+    // Check local shipping first
+    if (state === "RO" && (city === "porto velho" || city === "jaru")) {
+      const isJaru = city === "jaru";
+      const local: ShippingQuote = {
+        service: isJaru ? `Frete Grátis - ${shippingData.city}` : `Entrega Local - ${shippingData.city}`,
+        carrier: "Entrega Local",
+        price: isJaru ? 0 : 5.0,
+        delivery_time: 2,
+      };
+      setShippingQuotes([local]);
+      setSelectedShipping(local);
+      return;
+    }
+
+    fetchShippingQuotesWithAddress(digits, shippingData.city, shippingData.state);
   };
 
   const fetchShippingQuotesWithAddress = async (zip: string, city: string, state: string) => {
@@ -741,6 +783,32 @@ export default function Checkout() {
                         />
                       </div>
                     </div>
+
+                    {cepFailed && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-sm">
+                        <AlertTriangle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+                        <div className="space-y-2">
+                          <p className="text-foreground">
+                            Não conseguimos encontrar seu CEP. Preencha o endereço manualmente acima.
+                          </p>
+                          {shippingData.city && shippingData.state && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={handleManualShippingCalc}
+                              disabled={loadingShipping}
+                            >
+                              {loadingShipping ? (
+                                <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                              ) : (
+                                <Truck className="w-4 h-4 mr-1" />
+                              )}
+                              Calcular Frete
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
