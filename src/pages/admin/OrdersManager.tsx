@@ -620,8 +620,8 @@ export default function OrdersManager() {
           <div className="text-center py-12 text-muted-foreground">Nenhum pedido encontrado</div>
         ) : (
           <div className="grid gap-4">
-            {filteredOrders.map((order) => (
-              <div key={order.id} className="glass-card rounded-xl p-4 space-y-3">
+            {filteredOrders.map((order, index) => (
+              <div key={order.id} className={`glass-card rounded-xl p-4 space-y-3 ${index % 2 === 1 ? "bg-muted/30" : ""}`}>
                 {/* Header: ID + Status + Date */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
