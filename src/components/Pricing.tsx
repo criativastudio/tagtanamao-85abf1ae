@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Check, Star, Sparkles } from "lucide-react";
+import { Check, Star, Sparkles, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
@@ -64,10 +64,9 @@ const Pricing = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const handleBuyNow = (plan: (typeof pricingPlans)[0]) => {
-    // Create product based on plan
+  const buildProduct = (plan: (typeof pricingPlans)[0]): Product => {
     const quantity = plan.name.includes("3") ? 3 : plan.name.includes("2") ? 2 : 1;
-    const product: Product = {
+    return {
       id: `pet-tag-pack-${quantity}`,
       name: plan.name,
       description: plan.description,
@@ -78,7 +77,10 @@ const Pricing = () => {
       gallery_images: null,
       created_at: null,
     };
+  };
 
+  const handleBuyNow = (plan: (typeof pricingPlans)[0]) => {
+    const product = buildProduct(plan);
     addToCart(product);
 
     if (!user) {
@@ -100,6 +102,30 @@ const Pricing = () => {
       ),
     });
     navigate("/loja/checkout");
+  };
+
+  const handleAddToCart = (plan: (typeof pricingPlans)[0]) => {
+    const product = buildProduct(plan);
+    addToCart(product);
+
+    if (!user) {
+      toast({
+        title: "Faça login para continuar",
+        description: "Você precisa estar logado para finalizar a compra.",
+      });
+      navigate("/auth?redirect=/loja/checkout");
+      return;
+    }
+
+    toast({
+      title: "Adicionado ao carrinho!",
+      description: (
+        <div className="flex items-center gap-2">
+          <Check className="w-4 h-4 text-primary" />
+          <span>{plan.name}</span>
+        </div>
+      ),
+    });
   };
 
   return (
@@ -176,15 +202,25 @@ const Pricing = () => {
                   ))}
                 </ul>
 
-                <Button
-                  variant={plan.popular ? "hero" : "outline"}
-                  size="lg"
-                  className="w-full"
-                  onClick={() => handleBuyNow(plan)}
-                >
-                  {plan.popular && <Sparkles className="w-4 h-4" />}
-                  Comprar Agora
-                </Button>
+                <div className="flex gap-2 w-full">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-12 w-12 shrink-0 text-muted-foreground hover:text-primary"
+                    onClick={() => handleAddToCart(plan)}
+                  >
+                    <ShoppingCart className="w-5 h-5" />
+                  </Button>
+                  <Button
+                    variant={plan.popular ? "hero" : "outline"}
+                    size="lg"
+                    className="flex-1"
+                    onClick={() => handleBuyNow(plan)}
+                  >
+                    {plan.popular && <Sparkles className="w-4 h-4" />}
+                    Comprar Agora
+                  </Button>
+                </div>
               </div>
             </motion.div>
           ))}
