@@ -1,61 +1,48 @@
 
-# Melhorar Layout da Lista de Pedidos - Admin
 
-## Problema atual
+# Melhorar exibicao de todos os tipos de produto nos pedidos
 
-A tabela de pedidos tem 8 colunas densas, com badges, textos pequenos e muitas acoes comprimidas na mesma linha. Em telas menores fica ainda pior. A hierarquia visual nao esta clara -- tudo tem o mesmo peso visual.
+## Situacao atual
 
-## Solucao: Layout em Cards
+O codigo ja exibe corretamente nome, tipo e quantidade para todos os produtos (pet_tag, business_display, etc). O motivo de so aparecer "Display Empresarial" e que a maioria dos pedidos no banco so contem esse produto. Pedidos que incluem Pet Tag (como #7e128a38 e #af23bc5b) ja mostram corretamente os dois tipos.
 
-Substituir a tabela por um layout de cards responsivos. Cada card representa um pedido com hierarquia visual clara:
+Porem, existem melhorias a fazer:
 
-### Estrutura de cada card
+1. **Itens sem produto vinculado** (`product_id: null`) aparecem como "Produto" sem tipo -- precisa de tratamento melhor
+2. **Futuros tipos de produto** (nfc_card, nfc_tag) nao tem labels nem cores definidas
+3. **Fallback generico** para tipos desconhecidos pode ser mais claro
 
-```text
-+----------------------------------------------------------+
-|  #a1b2c3d4    Pendente [badge]       14/02/2025 10:30     |
-|----------------------------------------------------------|
-|  Joao Silva                                               |
-|  joao@email.com                                          |
-|----------------------------------------------------------|
-|  Tag Pet Inteligente (Pet Tag) x1                        |
-|  Display Acrilico (Display Empresarial) x2               |
-|----------------------------------------------------------|
-|  Total: R$ 189,90    Pgto: Confirmado [badge]            |
-|  Frete: PAC - R$ 22,50                                   |
-|----------------------------------------------------------|
-|  [Olho] [Arte] [Etiqueta] [Declaracao] [Imprimir]       |
-+----------------------------------------------------------+
+## Alteracoes propostas
+
+### 1. Expandir mapeamentos de tipos
+
+Adicionar labels e cores para todos os tipos de produto suportados no sistema (incluindo futuros):
+
+```typescript
+const productTypeLabels: Record<string, string> = {
+  pet_tag: "Pet Tag",
+  business_display: "Display Empresarial",
+  nfc_card: "Cartao NFC",
+  nfc_tag: "Tag NFC",
+};
+
+const productTypeColors: Record<string, string> = {
+  pet_tag: "bg-green-500/20 text-green-400 border-green-500/30",
+  business_display: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  nfc_card: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+  nfc_tag: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+};
 ```
 
-### Hierarquia visual
+### 2. Melhorar fallback para itens sem produto
 
-1. **Linha 1 (header do card)**: ID do pedido (mono, destaque), status (badge colorido), data (muted, direita)
-2. **Linha 2 (cliente)**: Nome em negrito, email abaixo em muted
-3. **Linha 3 (produtos)**: Lista de itens com nome, badge de tipo e quantidade -- separados por divisor sutil
-4. **Linha 4 (valores)**: Total em destaque (primary), status de pagamento como badge outline, frete em muted
-5. **Linha 5 (acoes)**: Botoes de acao com tooltips, alinhados a direita
+Para order_items com `product_id: null` (existem 3 no banco), mostrar "Produto removido" em vez de "Produto", com badge cinza "Indisponivel".
 
-### Melhorias especificas
+### 3. Nenhuma alteracao de logica de dados
 
-- **Espacamento**: padding consistente de `p-4` com `gap-3` entre secoes
-- **Separadores**: `border-b border-border/50` sutis entre secoes do card
-- **Tipografia**: titulos em `font-semibold text-sm`, dados secundarios em `text-xs text-muted-foreground`
-- **Badges**: tamanho consistente, sem badges minusculos de 10px
-- **Responsivo**: cards empilham naturalmente em mobile sem scroll horizontal
+A query de `fetchOrders` ja busca os itens com produto corretamente. Nao ha bug no codigo -- apenas refinamento visual.
 
-### Manter tabela no dialog de detalhes
+## Arquivo afetado
 
-O dialog de detalhes continua com tabela pois mostra poucos itens e funciona bem ali. Apenas ajustar espacamento interno.
+1. `src/pages/admin/OrdersManager.tsx` -- atualizar mapeamentos `productTypeLabels` e `productTypeColors`, melhorar fallback para itens sem produto
 
-## Arquivos afetados
-
-1. `src/pages/admin/OrdersManager.tsx` -- substituir bloco da tabela (linhas 610-744) por layout de cards
-
-## O que NAO muda
-
-- Logica de fetch, filtros, busca
-- Stats cards no topo
-- Dialog de detalhes (apenas ajustes menores de espacamento)
-- Todas as funcoes de acao (etiqueta, arte, declaracao, etc)
-- Filtros e barra de busca
