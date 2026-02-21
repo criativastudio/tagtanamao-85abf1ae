@@ -206,7 +206,7 @@ const Products = () => {
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 text-muted-foreground text-sm">
             <span className="w-2 h-2 rounded-full bg-glow-secondary animate-pulse" />
-            Em breve: NFC Cards & NFC Tags para Celular
+            Personalize e surpreenda seus clientes!
           </div>
         </motion.div>
       </div>
