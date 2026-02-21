@@ -87,11 +87,15 @@ const paymentStatusLabels: Record<string, string> = {
 const productTypeLabels: Record<string, string> = {
   pet_tag: "Pet Tag",
   business_display: "Display Empresarial",
+  nfc_card: "Cartão NFC",
+  nfc_tag: "Tag NFC",
 };
 
 const productTypeColors: Record<string, string> = {
   pet_tag: "bg-green-500/20 text-green-400 border-green-500/30",
   business_display: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  nfc_card: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+  nfc_tag: "bg-amber-500/20 text-amber-400 border-amber-500/30",
 };
 
 export default function OrdersManager() {
@@ -640,9 +644,9 @@ export default function OrdersManager() {
                   {order.items && order.items.length > 0 ? (
                     order.items.map((item) => (
                       <div key={item.id} className="flex items-center gap-2 text-sm">
-                        <span className="text-foreground">{item.product?.name || "Produto"}</span>
+                        <span className="text-foreground">{item.product?.name || "Produto removido"}</span>
                         <Badge className={`text-xs px-2 py-0.5 ${productTypeColors[item.product?.type || ""] || "bg-muted text-muted-foreground border-border"}`}>
-                          {productTypeLabels[item.product?.type || ""] || item.product?.type || "—"}
+                          {productTypeLabels[item.product?.type || ""] || item.product?.type || "Indisponível"}
                         </Badge>
                         <span className="text-muted-foreground">x{item.quantity}</span>
                       </div>
@@ -863,10 +867,10 @@ export default function OrdersManager() {
                       <TableBody>
                         {selectedOrder.items?.map((item) => (
                           <TableRow key={item.id}>
-                            <TableCell>{item.product?.name || "Produto"}</TableCell>
+                            <TableCell>{item.product?.name || "Produto removido"}</TableCell>
                             <TableCell>
                               <Badge className={productTypeColors[item.product?.type || ""] || "bg-muted text-muted-foreground border-border"}>
-                                {productTypeLabels[item.product?.type || ""] || item.product?.type || "—"}
+                                {productTypeLabels[item.product?.type || ""] || item.product?.type || "Indisponível"}
                               </Badge>
                             </TableCell>
                             <TableCell>{item.quantity}</TableCell>
