@@ -607,141 +607,131 @@ export default function OrdersManager() {
           </Select>
         </div>
 
-        {/* Orders Table */}
-        <div className="glass-card rounded-xl overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Pedido</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Produtos</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Status do pedido</TableHead>
-                <TableHead>Pagamento</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loadingOrders ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
-                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-                  </TableCell>
-                </TableRow>
-              ) : filteredOrders.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    Nenhum pedido encontrado
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredOrders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-mono text-sm">#{order.id.slice(0, 8)}</TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{order.shipping_name || order.profile?.full_name || "-"}</p>
-                        <p className="text-xs text-muted-foreground">{order.profile?.email}</p>
+        {/* Orders Cards */}
+        {loadingOrders ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : filteredOrders.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">Nenhum pedido encontrado</div>
+        ) : (
+          <div className="grid gap-4">
+            {filteredOrders.map((order) => (
+              <div key={order.id} className="glass-card rounded-xl p-4 space-y-3">
+                {/* Header: ID + Status + Date */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-sm font-semibold text-foreground">#{order.id.slice(0, 8)}</span>
+                    <Badge className={statusColors[order.status || "pending"]}>
+                      {statusLabels[order.status || "pending"]}
+                    </Badge>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{formatDate(order.created_at)}</span>
+                </div>
+
+                {/* Customer */}
+                <div className="border-t border-border/50 pt-3">
+                  <p className="text-sm font-semibold text-foreground">{order.shipping_name || order.profile?.full_name || "-"}</p>
+                  <p className="text-xs text-muted-foreground">{order.profile?.email}</p>
+                </div>
+
+                {/* Products */}
+                <div className="border-t border-border/50 pt-3 space-y-1.5">
+                  {order.items && order.items.length > 0 ? (
+                    order.items.map((item) => (
+                      <div key={item.id} className="flex items-center gap-2 text-sm">
+                        <span className="text-foreground">{item.product?.name || "Produto"}</span>
+                        <Badge className={`text-xs px-2 py-0.5 ${productTypeColors[item.product?.type || ""] || "bg-muted text-muted-foreground border-border"}`}>
+                          {productTypeLabels[item.product?.type || ""] || item.product?.type || "—"}
+                        </Badge>
+                        <span className="text-muted-foreground">x{item.quantity}</span>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        {order.items && order.items.length > 0 ? (
-                          order.items.map((item) => (
-                            <div key={item.id} className="flex items-center gap-1.5 text-xs">
-                              <span className="truncate max-w-[120px]">{item.product?.name || "Produto"}</span>
-                              <Badge className={`text-[10px] px-1.5 py-0 ${productTypeColors[item.product?.type || ""] || "bg-muted text-muted-foreground border-border"}`}>
-                                {productTypeLabels[item.product?.type || ""] || item.product?.type || "—"}
-                              </Badge>
-                              <span className="text-muted-foreground">x{item.quantity}</span>
-                            </div>
-                          ))
+                    ))
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Sem itens</span>
+                  )}
+                </div>
+
+                {/* Values */}
+                <div className="border-t border-border/50 pt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <span className="text-sm font-semibold text-primary">{formatCurrency(order.total_amount)}</span>
+                  <Badge variant="outline" className="text-xs">
+                    {paymentStatusLabels[order.payment_status || "pending"]}
+                  </Badge>
+                  {order.shipping_method && (
+                    <span className="text-xs text-muted-foreground">
+                      Frete: {order.shipping_service_name || order.shipping_method} - {formatCurrency(order.shipping_cost || 0)}
+                    </span>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="border-t border-border/50 pt-3 flex items-center justify-end gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => handleViewOrder(order)} title="Ver detalhes">
+                    <Eye className="w-4 h-4" />
+                  </Button>
+                  {["art_finalized", "processing", "ready_to_ship"].includes(order.status || "") && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDownloadDisplayArt(order)}
+                      title="Baixar arte do display"
+                      disabled={downloadingArt === order.id}
+                    >
+                      {downloadingArt === order.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Image className="w-4 h-4 text-emerald-400" />
+                      )}
+                    </Button>
+                  )}
+                  {(order.status === "paid" || order.payment_status === "confirmed") &&
+                    !order.melhor_envio_label_url && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleGenerateLabel(order.id)}
+                        title="Gerar Etiqueta Melhor Envio"
+                        disabled={generatingLabel === order.id}
+                      >
+                        {generatingLabel === order.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
+                          <Truck className="w-4 h-4" />
                         )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-semibold text-primary">{formatCurrency(order.total_amount)}</TableCell>
-                    <TableCell>
-                      <Badge className={statusColors[order.status || "pending"]}>
-                        {statusLabels[order.status || "pending"]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{paymentStatusLabels[order.payment_status || "pending"]}</Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{formatDate(order.created_at)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleViewOrder(order)} title="Ver detalhes">
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        {["art_finalized", "processing", "ready_to_ship"].includes(order.status || "") && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDownloadDisplayArt(order)}
-                            title="Baixar arte do display"
-                            disabled={downloadingArt === order.id}
-                          >
-                            {downloadingArt === order.id ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Image className="w-4 h-4 text-emerald-400" />
-                            )}
-                          </Button>
-                        )}
-                        {(order.status === "paid" || order.payment_status === "confirmed") &&
-                          !order.melhor_envio_label_url && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleGenerateLabel(order.id)}
-                              title="Gerar Etiqueta Melhor Envio"
-                              disabled={generatingLabel === order.id}
-                            >
-                              {generatingLabel === order.id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Truck className="w-4 h-4" />
-                              )}
-                            </Button>
-                          )}
-                        {order.melhor_envio_label_url && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => window.open(order.melhor_envio_label_url!, "_blank")}
-                            title="Baixar Etiqueta"
-                          >
-                            <Download className="w-4 h-4 text-primary" />
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => generateContentDeclaration(order)}
-                          title="Declaração de Conteúdo"
-                        >
-                          <FileText className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => generateShippingLabel(order)}
-                          title="Etiqueta simples"
-                        >
-                          <Printer className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                      </Button>
+                    )}
+                  {order.melhor_envio_label_url && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => window.open(order.melhor_envio_label_url!, "_blank")}
+                      title="Baixar Etiqueta"
+                    >
+                      <Download className="w-4 h-4 text-primary" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => generateContentDeclaration(order)}
+                    title="Declaração de Conteúdo"
+                  >
+                    <FileText className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => generateShippingLabel(order)}
+                    title="Etiqueta simples"
+                  >
+                    <Printer className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Order Details Dialog */}
         <Dialog open={showOrderDialog} onOpenChange={setShowOrderDialog}>
