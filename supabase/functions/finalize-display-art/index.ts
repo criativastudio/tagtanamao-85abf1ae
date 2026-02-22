@@ -9,6 +9,38 @@ const corsHeaders = {
 };
 
 /**
+ * Embed all external <image href="https://..."> as base64 data URIs
+ * so the final SVG is fully self-contained.
+ */
+async function embedExternalImages(svg: string): Promise<string> {
+  const imageRegex = /(<image[^>]*?\s)href="(https?:\/\/[^"]+)"/g;
+  const matches: { full: string; prefix: string; url: string }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = imageRegex.exec(svg)) !== null) {
+    matches.push({ full: m[0], prefix: m[1], url: m[2] });
+  }
+  if (matches.length === 0) return svg;
+
+  let result = svg;
+  for (const match of matches) {
+    try {
+      const resp = await fetch(match.url);
+      if (!resp.ok) continue;
+      const buf = await resp.arrayBuffer();
+      const contentType = resp.headers.get("content-type") || "image/png";
+      const base64 = btoa(
+        new Uint8Array(buf).reduce((data, byte) => data + String.fromCharCode(byte), "")
+      );
+      const dataUri = `data:${contentType};base64,${base64}`;
+      result = result.replace(match.full, `${match.prefix}href="${dataUri}"`);
+    } catch (e) {
+      console.warn("Could not embed image:", match.url, e);
+    }
+  }
+  return result;
+}
+
+/**
  * Generate a unique 6-digit numeric activation code,
  * checking uniqueness against both pet_tags and business_displays.
  */
@@ -139,6 +171,9 @@ Deno.serve(async (req) => {
     const template = displayArt.template;
     const positions = template?.element_positions || {};
     let baseSvg = template?.svg_content || '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800"></svg>';
+
+    // Embed all external images (background, etc.) as base64
+    baseSvg = await embedExternalImages(baseSvg);
 
     const viewBoxMatch = baseSvg.match(/viewBox="([^"]+)"/);
     let svgWidth = 800,
