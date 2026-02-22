@@ -10,6 +10,8 @@ export function sanitizeSvg(svgContent: string): string {
   return DOMPurify.sanitize(svgContent, {
     USE_PROFILES: { svg: true, svgFilters: true },
     ADD_TAGS: ['use', 'symbol', 'defs', 'clipPath', 'mask', 'pattern', 'marker', 'linearGradient', 'radialGradient', 'stop', 'feGaussianBlur', 'feOffset', 'feMerge', 'feMergeNode', 'feBlend', 'feColorMatrix', 'feComposite', 'feFlood', 'feMorphology', 'feDisplacementMap', 'feTurbulence', 'feImage'],
+    ADD_ATTR: ['href', 'xlink:href', 'preserveAspectRatio', 'clip-path'],
+    ADD_DATA_URI_TAGS: ['image'],
     FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'input', 'button', 'foreignObject'],
     FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onmouseout', 'onmouseenter', 'onmouseleave', 'onfocus', 'onblur', 'onchange', 'onsubmit', 'onreset', 'onkeydown', 'onkeyup', 'onkeypress', 'ontouchstart', 'ontouchend', 'ontouchmove'],
   });
