@@ -1,8 +1,15 @@
+import { useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { BioButton } from "@/types/bioPage";
+import { supabase } from "@/integrations/supabase/client";
+import { compressImage, getOutputExtension } from "@/lib/imageCompression";
+import { Camera, X, Loader2, User } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 interface SpecialButtonFieldsProps {
   button: BioButton;
@@ -31,6 +38,7 @@ const parseVCardUrl = (url: string) => {
     instagram: parts[5] || '',
     facebook: parts[6] || '',
     company: parts[7] || '',
+    photoUrl: parts[8] || '',
   };
 };
 
@@ -123,90 +131,7 @@ export const SpecialButtonFields = ({ button, onUpdate }: SpecialButtonFieldsPro
 
   // vCard / Save Contact fields
   if (button.icon === 'Contact') {
-    const vcard = parseVCardUrl(button.url);
-    
-    const updateVCard = (field: string, value: string) => {
-      const updated = { ...vcard, [field]: value };
-      onUpdate({ 
-        url: `${updated.name}|${updated.phone}|${updated.email}|${updated.website}|${updated.address}|${updated.instagram}|${updated.facebook}|${updated.company}` 
-      });
-    };
-
-    return (
-      <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label>Nome</Label>
-            <Input
-              value={vcard.name}
-              onChange={(e) => updateVCard('name', e.target.value)}
-              placeholder="Nome completo"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Empresa</Label>
-            <Input
-              value={vcard.company}
-              onChange={(e) => updateVCard('company', e.target.value)}
-              placeholder="Nome da empresa"
-            />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label>Telefone</Label>
-            <Input
-              value={vcard.phone}
-              onChange={(e) => updateVCard('phone', e.target.value)}
-              placeholder="+55 11 99999-9999"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Email</Label>
-            <Input
-              value={vcard.email}
-              onChange={(e) => updateVCard('email', e.target.value)}
-              placeholder="email@empresa.com"
-            />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label>Website</Label>
-          <Input
-            value={vcard.website}
-            onChange={(e) => updateVCard('website', e.target.value)}
-            placeholder="https://www.empresa.com"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Endereço</Label>
-          <Textarea
-            value={vcard.address}
-            onChange={(e) => updateVCard('address', e.target.value)}
-            placeholder="Rua, número, bairro, cidade - Estado"
-            rows={2}
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label>Instagram</Label>
-            <Input
-              value={vcard.instagram}
-              onChange={(e) => updateVCard('instagram', e.target.value)}
-              placeholder="@usuario"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Facebook</Label>
-            <Input
-              value={vcard.facebook}
-              onChange={(e) => updateVCard('facebook', e.target.value)}
-              placeholder="facebook.com/pagina"
-            />
-          </div>
-        </div>
-      </div>
-    );
+    return <VCardFields button={button} onUpdate={onUpdate} />;
   }
 
   // Default URL field for other button types
@@ -218,6 +143,139 @@ export const SpecialButtonFields = ({ button, onUpdate }: SpecialButtonFieldsPro
         onChange={(e) => onUpdate({ url: e.target.value })}
         placeholder={getPlaceholder(button.icon)}
       />
+    </div>
+  );
+};
+
+// Extracted VCard fields component with photo upload
+const VCardFields = ({ button, onUpdate }: SpecialButtonFieldsProps) => {
+  const vcard = parseVCardUrl(button.url);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const updateVCard = (field: string, value: string) => {
+    const updated = { ...vcard, [field]: value };
+    onUpdate({
+      url: `${updated.name}|${updated.phone}|${updated.email}|${updated.website}|${updated.address}|${updated.instagram}|${updated.facebook}|${updated.company}|${updated.photoUrl}`,
+    });
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const compressed = await compressImage(file, 'profile');
+      const ext = getOutputExtension('profile');
+      const fileName = `vcard-photos/${crypto.randomUUID()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('bio-images')
+        .upload(fileName, compressed, { contentType: `image/${ext}`, upsert: false });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from('bio-images').getPublicUrl(fileName);
+      updateVCard('photoUrl', urlData.publicUrl);
+      toast({ title: 'Foto enviada com sucesso!' });
+    } catch (err) {
+      console.error(err);
+      toast({ title: 'Erro ao enviar foto', variant: 'destructive' });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const removePhoto = () => {
+    updateVCard('photoUrl', '');
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Photo upload */}
+      <div className="space-y-2">
+        <Label>Foto do Contato</Label>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Avatar className="h-16 w-16">
+              {vcard.photoUrl ? (
+                <AvatarImage src={vcard.photoUrl} alt="Foto do contato" />
+              ) : null}
+              <AvatarFallback><User className="h-6 w-6" /></AvatarFallback>
+            </Avatar>
+            {vcard.photoUrl && (
+              <button
+                type="button"
+                onClick={removePhoto}
+                className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={uploading}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {uploading ? (
+              <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Enviando...</>
+            ) : (
+              <><Camera className="h-4 w-4 mr-1" /> Enviar foto</>
+            )}
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handlePhotoUpload}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <Label>Nome</Label>
+          <Input value={vcard.name} onChange={(e) => updateVCard('name', e.target.value)} placeholder="Nome completo" />
+        </div>
+        <div className="space-y-2">
+          <Label>Empresa</Label>
+          <Input value={vcard.company} onChange={(e) => updateVCard('company', e.target.value)} placeholder="Nome da empresa" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <Label>Telefone</Label>
+          <Input value={vcard.phone} onChange={(e) => updateVCard('phone', e.target.value)} placeholder="+55 11 99999-9999" />
+        </div>
+        <div className="space-y-2">
+          <Label>Email</Label>
+          <Input value={vcard.email} onChange={(e) => updateVCard('email', e.target.value)} placeholder="email@empresa.com" />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label>Website</Label>
+        <Input value={vcard.website} onChange={(e) => updateVCard('website', e.target.value)} placeholder="https://www.empresa.com" />
+      </div>
+      <div className="space-y-2">
+        <Label>Endereço</Label>
+        <Textarea value={vcard.address} onChange={(e) => updateVCard('address', e.target.value)} placeholder="Rua, número, bairro, cidade - Estado" rows={2} />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <Label>Instagram</Label>
+          <Input value={vcard.instagram} onChange={(e) => updateVCard('instagram', e.target.value)} placeholder="@usuario" />
+        </div>
+        <div className="space-y-2">
+          <Label>Facebook</Label>
+          <Input value={vcard.facebook} onChange={(e) => updateVCard('facebook', e.target.value)} placeholder="facebook.com/pagina" />
+        </div>
+      </div>
     </div>
   );
 };

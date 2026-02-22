@@ -208,7 +208,7 @@ const PublicDisplayPage = () => {
 
     if (button.icon === 'Contact') {
       const vcard = parseVCardData(button.url);
-      const vcardContent = generateVCard(vcard);
+      const vcardContent = await generateVCard(vcard);
       downloadVCard(vcardContent, vcard.name || 'contato');
       return;
     }

@@ -3,7 +3,7 @@
 /**
  * Generate vCard content from contact info
  */
-export const generateVCard = (data: {
+export const generateVCard = async (data: {
   name: string;
   phone?: string;
   email?: string;
@@ -12,6 +12,7 @@ export const generateVCard = (data: {
   instagram?: string;
   facebook?: string;
   company?: string;
+  photoUrl?: string;
 }) => {
   const lines = [
     'BEGIN:VCARD',
@@ -39,6 +40,28 @@ export const generateVCard = (data: {
   }
   if (data.facebook) {
     lines.push(`X-SOCIALPROFILE;TYPE=facebook:${data.facebook}`);
+  }
+
+  // Add photo if available
+  if (data.photoUrl) {
+    try {
+      const response = await fetch(data.photoUrl);
+      const blob = await response.blob();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          // Remove data URL prefix (e.g. "data:image/webp;base64,")
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      lines.push(`PHOTO;ENCODING=b;TYPE=JPEG:${base64}`);
+    } catch (e) {
+      console.warn('Failed to fetch vCard photo, skipping:', e);
+    }
   }
 
   lines.push('END:VCARD');
@@ -130,6 +153,7 @@ export const parseVCardData = (url: string) => {
     instagram: parts[5] || '',
     facebook: parts[6] || '',
     company: parts[7] || '',
+    photoUrl: parts[8] || '',
   };
 };
 
