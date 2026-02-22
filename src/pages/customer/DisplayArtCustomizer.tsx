@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Upload, Lock, CheckCircle, Loader2, Image as ImageIcon, ZoomIn, Palette } from 'lucide-react';
+import { ArrowLeft, Upload, Lock, CheckCircle, Loader2, Image as ImageIcon, ZoomIn, Palette, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -399,13 +399,31 @@ export default function DisplayArtCustomizer() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-muted-foreground">
-                  Sua arte foi finalizada e está aguardando produção.
+                  Sua arte foi finalizada e está aguardando produção. O arquivo SVG está pronto para impressão em alta qualidade (10cm × 15cm, 300dpi).
                 </p>
                 {displayArt?.final_svg && (
-                  <div
-                    className="w-full max-w-md mx-auto border border-border rounded-lg overflow-hidden bg-white p-4"
-                    dangerouslySetInnerHTML={{ __html: sanitizeSvg(displayArt.final_svg) }}
-                  />
+                  <>
+                    <div
+                      className="w-full max-w-md mx-auto border border-border rounded-lg overflow-hidden bg-white p-4"
+                      dangerouslySetInnerHTML={{ __html: sanitizeSvg(displayArt.final_svg) }}
+                    />
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        const blob = new Blob([displayArt.final_svg!], { type: 'image/svg+xml' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `display-art-${displayArt.id.slice(0, 8)}.svg`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Baixar SVG para Impressão (10×15cm)
+                    </Button>
+                  </>
                 )}
                 <Button onClick={() => navigate('/meus-pedidos')} className="w-full">
                   Voltar aos Meus Pedidos
