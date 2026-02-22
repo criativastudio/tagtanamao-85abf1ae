@@ -32,7 +32,8 @@ async function embedExternalImages(svg: string): Promise<string> {
         new Uint8Array(buf).reduce((data, byte) => data + String.fromCharCode(byte), "")
       );
       const dataUri = `data:${contentType};base64,${base64}`;
-      result = result.replace(match.full, `${match.prefix}href="${dataUri}"`);
+      // Use both href and xlink:href for maximum compatibility with SVG viewers/editors
+      result = result.replace(match.full, `${match.prefix}href="${dataUri}" xlink:href="${dataUri}"`);
     } catch (e) {
       console.warn("Could not embed image:", match.url, e);
     }
@@ -209,13 +210,17 @@ Deno.serve(async (req) => {
     const closingTagIndex = baseSvg.lastIndexOf("</svg>");
     let svgBody = baseSvg.substring(0, closingTagIndex);
 
-    // Replace/add width, height attributes for print dimensions
+    // Replace/add width, height attributes for print dimensions + add xlink namespace
     svgBody = svgBody.replace(
       /<svg([^>]*)>/,
       (match: string, attrs: string) => {
         let newAttrs = attrs
           .replace(/\s*width="[^"]*"/g, "")
           .replace(/\s*height="[^"]*"/g, "");
+        // Add xlink namespace if not present for compatibility with older SVG viewers
+        if (!newAttrs.includes('xmlns:xlink')) {
+          newAttrs += ' xmlns:xlink="http://www.w3.org/1999/xlink"';
+        }
         return `<svg${newAttrs} width="100mm" height="150mm">`;
       }
     );
@@ -229,7 +234,7 @@ Deno.serve(async (req) => {
           <circle cx="${logoPos.x + logoPos.width / 2}" cy="${logoPos.y + logoPos.height / 2}" r="${Math.min(logoPos.width, logoPos.height) / 2}" />
         </clipPath>
       </defs>
-      <image href="${logoDataUri}" x="${logoPos.x}" y="${logoPos.y}" width="${logoPos.width}" height="${logoPos.height}" preserveAspectRatio="xMidYMid meet" clip-path="url(#${clipId})" />
+      <image href="${logoDataUri}" xlink:href="${logoDataUri}" x="${logoPos.x}" y="${logoPos.y}" width="${logoPos.width}" height="${logoPos.height}" preserveAspectRatio="xMidYMid meet" clip-path="url(#${clipId})" />
     `;
 
     // Add company name
@@ -241,7 +246,7 @@ Deno.serve(async (req) => {
     // Add real QR Code image
     const qrPos = positions.qr_code || { x: svgWidth / 2 - 100, y: svgHeight / 2 - 100, width: 200, height: 200 };
     svgBody += `
-      <image href="${qrDataUri}" x="${qrPos.x}" y="${qrPos.y}" width="${qrPos.width}" height="${qrPos.height}" />
+      <image href="${qrDataUri}" xlink:href="${qrDataUri}" x="${qrPos.x}" y="${qrPos.y}" width="${qrPos.width}" height="${qrPos.height}" />
     `;
 
     // Add activation code (6 digits) below QR — white, bold
