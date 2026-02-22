@@ -10,7 +10,7 @@ import { Product } from "@/types/ecommerce";
 const pricingPlans = [
   {
     name: "1 Tag Pet",
-    price: "59,90",
+    price: "69,90",
     originalPrice: "79,90",
     description: "Perfeito para quem tem um pet",
     features: [
@@ -20,14 +20,14 @@ const pricingPlans = [
       "Notificações via WhatsApp",
       "Gestão centralizada",
       "Suporte",
-      "25,03% OFF por tempo limitado",
+      "12,00% OFF por tempo limitado",
     ],
     popular: false,
   },
   {
     name: "2 Tags Pet",
-    price: "99,90",
-    originalPrice: "159,80",
+    price: "119,90",
+    originalPrice: "139,80",
     description: "Ideal para famílias com 2 pets",
     features: [
       "2 Tags Pet QR Code Premium",
@@ -36,14 +36,14 @@ const pricingPlans = [
       "Notificação via WhatsApp",
       "Gestão centralizada",
       "Suporte",
-      "31,23% OFF por tempo limitado",
+      "14,00% OFF por tempo limitado",
     ],
     popular: true,
   },
   {
     name: "3 Tags Pet",
-    price: "129,90",
-    originalPrice: "239,70",
+    price: "159,90",
+    originalPrice: "209,70",
     description: "Melhor custo-benefício",
     features: [
       "3 Tags Pet QR Code Premium",
@@ -52,7 +52,7 @@ const pricingPlans = [
       "Notificações via WhatsApp",
       "Gestão centralizada",
       "Suporte",
-      "41,64% OFF por tempo limitado",
+      "23,00% OFF por tempo limitado",
     ],
     popular: false,
   },
