@@ -178,13 +178,24 @@ Deno.serve(async (req) => {
 
     const viewBoxMatch = baseSvg.match(/viewBox="([^"]+)"/);
     let svgWidth = 800,
-      svgHeight = 800;
+      svgHeight = 1200;
     if (viewBoxMatch) {
       const parts = viewBoxMatch[1].split(/[\s,]+/).map(Number);
       if (parts.length >= 4) {
         svgWidth = parts[2];
         svgHeight = parts[3];
       }
+    }
+
+    // Ensure viewBox matches the 2:3 aspect ratio (100mm x 150mm) for print
+    // If template has a square viewBox, extend height to match target ratio
+    const targetHeight = Math.round(svgWidth * 1.5); // 2:3 ratio
+    if (svgHeight < targetHeight) {
+      svgHeight = targetHeight;
+      baseSvg = baseSvg.replace(
+        /viewBox="[^"]+"/,
+        `viewBox="0 0 ${svgWidth} ${svgHeight}"`
+      );
     }
 
     // Embed logo as base64 data URI for self-contained SVG
