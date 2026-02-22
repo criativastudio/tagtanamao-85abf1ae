@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
     // Generate QR Code as PNG Data URI
     const qrTargetUrl = `https://tagtanamao.lovable.app/display/${activationCode}`;
     const qrDataUri = await QRCode.toDataURL(qrTargetUrl, {
-      width: 400,
+      width: 800,
       margin: 1,
       color: { dark: "#000000", light: "#FFFFFF" },
     });
@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Build final SVG
+    // Build final SVG — print-ready: 10cm (W) × 15cm (H) @ 300 DPI
     const template = displayArt.template;
     const positions = template?.element_positions || {};
     let baseSvg = template?.svg_content || '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800"></svg>';
@@ -151,10 +151,41 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Embed logo as base64 data URI for self-contained SVG
+    let logoDataUri = displayArt.logo_url || "";
+    if (logoDataUri && logoDataUri.startsWith("http")) {
+      try {
+        const logoResp = await fetch(logoDataUri);
+        if (logoResp.ok) {
+          const logoBlob = await logoResp.arrayBuffer();
+          const contentType = logoResp.headers.get("content-type") || "image/png";
+          const base64Logo = btoa(
+            new Uint8Array(logoBlob).reduce((data, byte) => data + String.fromCharCode(byte), "")
+          );
+          logoDataUri = `data:${contentType};base64,${base64Logo}`;
+        }
+      } catch (e) {
+        console.warn("Could not embed logo as base64, using URL:", e);
+      }
+    }
+
+    // Set physical dimensions for print: 100mm × 150mm (10cm × 15cm)
+    // At 300 DPI this equals 1181 × 1772 pixels
     const closingTagIndex = baseSvg.lastIndexOf("</svg>");
     let svgBody = baseSvg.substring(0, closingTagIndex);
 
-    // Add logo (circular clip)
+    // Replace/add width, height attributes for print dimensions
+    svgBody = svgBody.replace(
+      /<svg([^>]*)>/,
+      (match: string, attrs: string) => {
+        let newAttrs = attrs
+          .replace(/\s*width="[^"]*"/g, "")
+          .replace(/\s*height="[^"]*"/g, "");
+        return `<svg${newAttrs} width="100mm" height="150mm">`;
+      }
+    );
+
+    // Add logo (circular clip) with embedded base64
     const logoPos = positions.logo || { x: 50, y: 50, width: 120, height: 120 };
     const clipId = "logo-clip-final";
     svgBody += `
@@ -163,7 +194,7 @@ Deno.serve(async (req) => {
           <circle cx="${logoPos.x + logoPos.width / 2}" cy="${logoPos.y + logoPos.height / 2}" r="${Math.min(logoPos.width, logoPos.height) / 2}" />
         </clipPath>
       </defs>
-      <image href="${displayArt.logo_url}" x="${logoPos.x}" y="${logoPos.y}" width="${logoPos.width}" height="${logoPos.height}" preserveAspectRatio="xMidYMid meet" clip-path="url(#${clipId})" />
+      <image href="${logoDataUri}" x="${logoPos.x}" y="${logoPos.y}" width="${logoPos.width}" height="${logoPos.height}" preserveAspectRatio="xMidYMid meet" clip-path="url(#${clipId})" />
     `;
 
     // Add company name
@@ -178,7 +209,7 @@ Deno.serve(async (req) => {
       <image href="${qrDataUri}" x="${qrPos.x}" y="${qrPos.y}" width="${qrPos.width}" height="${qrPos.height}" />
     `;
 
-    // Add activation code (6 digits) below QR — white, bold, in place of the bold '#' code
+    // Add activation code (6 digits) below QR — white, bold
     svgBody += `
       <text x="${qrPos.x + qrPos.width / 2}" y="${qrPos.y + qrPos.height + 42}" text-anchor="middle" font-size="18" font-family="monospace" font-weight="bold" fill="white">${activationCode}</text>
     `;
