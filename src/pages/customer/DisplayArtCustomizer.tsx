@@ -636,7 +636,7 @@ export default function DisplayArtCustomizer() {
                           <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/30">
                             <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
                           </div>
-                          <div> 
+                          <div>
                             <p className="text-sm font-medium">{companyName || 'Nome da Empresa'}</p>
                             <p className="text-xs text-muted-foreground">Logo e nome aplicados na arte</p>
                           </div>
