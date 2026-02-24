@@ -9,15 +9,33 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { compressImage } from "@/lib/imageCompression";
 import {
-  Upload, X, Trash2, Plus, GripVertical, Image, Video, Film,
-  Loader2, Play, Youtube
+  Upload, X, Plus, Image, Film, Type,
+  Loader2, Play, Youtube, MousePointer, Navigation
 } from "lucide-react";
-import { motion, Reorder } from "framer-motion";
+import TemplateTextEditor from "./TemplateTextEditor";
+import TemplateHeroButtonsEditor from "./TemplateHeroButtonsEditor";
+import TemplateBottomNavEditor from "./TemplateBottomNavEditor";
 
 interface MediaItem {
   url: string;
   title?: string;
   type?: "image" | "video";
+  badge?: string;
+  bgColor?: string;
+}
+
+interface HeroButton {
+  label: string;
+  icon?: string;
+  url?: string;
+  action?: string;
+}
+
+interface BottomNavItem {
+  icon: string;
+  label: string;
+  url: string;
+  badgeCount?: number;
 }
 
 interface TemplateConfig {
@@ -26,9 +44,15 @@ interface TemplateConfig {
     items: MediaItem[];
     youtubeId?: string;
   };
+  headline?: string;
+  subheadline?: string;
+  heroSubtitle?: string;
+  tags?: string[];
+  heroButtons?: HeroButton[];
   covers?: MediaItem[];
   thumbnails?: MediaItem[];
   sections?: { title: string; itemIndexes: number[] }[];
+  bottomNav?: BottomNavItem[];
 }
 
 interface Props {
@@ -38,8 +62,8 @@ interface Props {
   onChange: (config: TemplateConfig) => void;
 }
 
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
-const MAX_VIDEO_SIZE = 30 * 1024 * 1024; // 30MB
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const MAX_VIDEO_SIZE = 30 * 1024 * 1024;
 
 export default function TemplateMediaEditor({ displayId, userId, config, onChange }: Props) {
   const { toast } = useToast();
@@ -63,7 +87,6 @@ export default function TemplateMediaEditor({ displayId, userId, config, onChang
     let uploadBlob: Blob = file;
     let ext = file.name.split(".").pop() || "jpg";
 
-    // Compress images
     if (!isVideo) {
       try {
         uploadBlob = await compressImage(file, "gallery");
@@ -106,7 +129,7 @@ export default function TemplateMediaEditor({ displayId, userId, config, onChang
       const updated = { ...config };
 
       if (uploadTarget === "hero") {
-        const heroType = newItems.some(i => i.type === "video") ? "video" : 
+        const heroType = newItems.some(i => i.type === "video") ? "video" :
           (updated.hero?.type === "carousel" || newItems.length > 1) ? "carousel" : "image";
         updated.hero = {
           type: heroType as any,
@@ -179,6 +202,14 @@ export default function TemplateMediaEditor({ displayId, userId, config, onChang
     onChange(updated);
   };
 
+  const updateCoverField = (section: "covers" | "thumbnails", index: number, field: string, value: string) => {
+    const updated = { ...config };
+    const arr = [...(updated[section] || [])];
+    arr[index] = { ...arr[index], [field]: value };
+    updated[section] = arr;
+    onChange(updated);
+  };
+
   const renderMediaGrid = (items: MediaItem[], section: "hero" | "covers" | "thumbnails") => (
     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
       {items.map((item, i) => (
@@ -197,12 +228,31 @@ export default function TemplateMediaEditor({ displayId, userId, config, onChang
           >
             <X className="w-3.5 h-3.5 text-white" />
           </button>
-          <Input
-            value={item.title || ""}
-            onChange={(e) => updateItemTitle(section, i, e.target.value)}
-            placeholder="Título (opcional)"
-            className="border-0 border-t border-border rounded-none text-xs h-8 bg-transparent"
-          />
+          <div className="p-1.5 space-y-1">
+            <Input
+              value={item.title || ""}
+              onChange={(e) => updateItemTitle(section, i, e.target.value)}
+              placeholder="Título"
+              className="border-0 text-xs h-7 bg-transparent px-1"
+            />
+            {(section === "covers" || section === "thumbnails") && (
+              <div className="flex gap-1">
+                <Input
+                  value={(item as any).badge || ""}
+                  onChange={(e) => updateCoverField(section, i, "badge", e.target.value)}
+                  placeholder="Badge (ex: NOVOS)"
+                  className="border-0 text-[10px] h-6 bg-transparent px-1 flex-1"
+                />
+                <input
+                  type="color"
+                  value={(item as any).bgColor || "#1a1a2e"}
+                  onChange={(e) => updateCoverField(section, i, "bgColor", e.target.value)}
+                  className="w-6 h-6 rounded cursor-pointer border-0"
+                  title="Cor de fundo"
+                />
+              </div>
+            )}
+          </div>
         </div>
       ))}
     </div>
@@ -212,12 +262,25 @@ export default function TemplateMediaEditor({ displayId, userId, config, onChang
     <div className="space-y-6">
       <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
 
-      <Tabs defaultValue="hero" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="hero" className="gap-1.5"><Film className="w-4 h-4" /> Hero</TabsTrigger>
-          <TabsTrigger value="covers" className="gap-1.5"><Image className="w-4 h-4" /> Capas</TabsTrigger>
-          <TabsTrigger value="thumbnails" className="gap-1.5"><Video className="w-4 h-4" /> Thumbs</TabsTrigger>
+      <Tabs defaultValue="texts" className="w-full">
+        <TabsList className="grid w-full grid-cols-5 text-[10px]">
+          <TabsTrigger value="texts" className="gap-1 text-[10px] px-1"><Type className="w-3.5 h-3.5" /> Textos</TabsTrigger>
+          <TabsTrigger value="hero" className="gap-1 text-[10px] px-1"><Film className="w-3.5 h-3.5" /> Hero</TabsTrigger>
+          <TabsTrigger value="covers" className="gap-1 text-[10px] px-1"><Image className="w-3.5 h-3.5" /> Capas</TabsTrigger>
+          <TabsTrigger value="buttons" className="gap-1 text-[10px] px-1"><MousePointer className="w-3.5 h-3.5" /> Botões</TabsTrigger>
+          <TabsTrigger value="navbar" className="gap-1 text-[10px] px-1"><Navigation className="w-3.5 h-3.5" /> Rodapé</TabsTrigger>
         </TabsList>
+
+        {/* Texts Tab */}
+        <TabsContent value="texts" className="space-y-4">
+          <TemplateTextEditor
+            headline={config.headline || ""}
+            subheadline={config.subheadline || ""}
+            heroSubtitle={config.heroSubtitle || ""}
+            tags={config.tags || []}
+            onChange={(data) => onChange({ ...config, ...data })}
+          />
+        </TabsContent>
 
         {/* Hero Tab */}
         <TabsContent value="hero" className="space-y-4">
@@ -226,9 +289,7 @@ export default function TemplateMediaEditor({ displayId, userId, config, onChang
               <CardTitle className="text-sm flex items-center justify-between">
                 <span>Mídia Principal (Hero)</span>
                 <Select value={config.hero?.type || "image"} onValueChange={setHeroType}>
-                  <SelectTrigger className="w-[140px] h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger className="w-[120px] h-8 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="image">Imagem</SelectItem>
                     <SelectItem value="video">Vídeo</SelectItem>
@@ -244,38 +305,23 @@ export default function TemplateMediaEditor({ displayId, userId, config, onChang
                   <Label className="text-xs flex items-center gap-1.5">
                     <Youtube className="w-4 h-4 text-red-500" /> URL do YouTube
                   </Label>
-                  <Input
-                    placeholder="https://youtube.com/watch?v=..."
-                    onChange={(e) => setYoutubeUrl(e.target.value)}
-                    className="text-sm"
-                  />
+                  <Input placeholder="https://youtube.com/watch?v=..." onChange={(e) => setYoutubeUrl(e.target.value)} className="text-sm" />
                   {config.hero.youtubeId && (
                     <div className="aspect-video rounded-lg overflow-hidden mt-2">
-                      <iframe
-                        src={`https://www.youtube.com/embed/${config.hero.youtubeId}`}
-                        className="w-full h-full border-0"
-                        allowFullScreen
-                      />
+                      <iframe src={`https://www.youtube.com/embed/${config.hero.youtubeId}`} className="w-full h-full border-0" allowFullScreen />
                     </div>
                   )}
                 </div>
               ) : (
                 <>
                   {(config.hero?.items || []).length > 0 && renderMediaGrid(config.hero!.items, "hero")}
-                  <Button
-                    variant="outline"
-                    className="w-full border-dashed"
-                    onClick={() => triggerUpload("hero", config.hero?.type === "video" ? "video/*" : "image/*,video/*")}
-                    disabled={!!uploading}
-                  >
+                  <Button variant="outline" className="w-full border-dashed" onClick={() => triggerUpload("hero", config.hero?.type === "video" ? "video/*" : "image/*,video/*")} disabled={!!uploading}>
                     {uploading === "hero" ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Upload className="w-4 h-4 mr-2" />}
                     Adicionar {config.hero?.type === "video" ? "Vídeo" : "Mídia"}
                   </Button>
                 </>
               )}
-              <p className="text-[11px] text-muted-foreground">
-                Imagens: máx 5MB • Vídeos: máx 30MB • Formatos: JPG, PNG, WebP, MP4
-              </p>
+              <p className="text-[11px] text-muted-foreground">Imagens: máx 5MB • Vídeos: máx 30MB</p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -284,46 +330,50 @@ export default function TemplateMediaEditor({ displayId, userId, config, onChang
         <TabsContent value="covers" className="space-y-4">
           <Card className="border-border bg-card">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Fotos de Capa</CardTitle>
-              <p className="text-xs text-muted-foreground">Exibidas em carrossel horizontal abaixo do hero</p>
+              <CardTitle className="text-sm">Capas (Carrossel Automático)</CardTitle>
+              <p className="text-xs text-muted-foreground">Carrossel com scroll automático, badge "N" e etiquetas</p>
             </CardHeader>
             <CardContent className="space-y-4">
               {(config.covers || []).length > 0 && renderMediaGrid(config.covers!, "covers")}
-              <Button
-                variant="outline"
-                className="w-full border-dashed"
-                onClick={() => triggerUpload("covers", "image/*")}
-                disabled={!!uploading}
-              >
+              <Button variant="outline" className="w-full border-dashed" onClick={() => triggerUpload("covers", "image/*")} disabled={!!uploading}>
                 {uploading === "covers" ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
                 Adicionar Capas
-              </Button>
-              <p className="text-[11px] text-muted-foreground">Proporção ideal: 16:9 • Máx 5MB por imagem</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Thumbnails Tab */}
-        <TabsContent value="thumbnails" className="space-y-4">
-          <Card className="border-border bg-card">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Thumbnails</CardTitle>
-              <p className="text-xs text-muted-foreground">Grid de miniaturas estilo catálogo</p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {(config.thumbnails || []).length > 0 && renderMediaGrid(config.thumbnails!, "thumbnails")}
-              <Button
-                variant="outline"
-                className="w-full border-dashed"
-                onClick={() => triggerUpload("thumbnails", "image/*")}
-                disabled={!!uploading}
-              >
-                {uploading === "thumbnails" ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-                Adicionar Thumbnails
               </Button>
               <p className="text-[11px] text-muted-foreground">Proporção ideal: 2:3 (retrato) • Máx 5MB por imagem</p>
             </CardContent>
           </Card>
+
+          {/* Thumbnails in same tab */}
+          <Card className="border-border bg-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">Thumbnails (Grid)</CardTitle>
+              <p className="text-xs text-muted-foreground">Grid 3 colunas estilo catálogo Netflix</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {(config.thumbnails || []).length > 0 && renderMediaGrid(config.thumbnails!, "thumbnails")}
+              <Button variant="outline" className="w-full border-dashed" onClick={() => triggerUpload("thumbnails", "image/*")} disabled={!!uploading}>
+                {uploading === "thumbnails" ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+                Adicionar Thumbnails
+              </Button>
+              <p className="text-[11px] text-muted-foreground">Proporção ideal: 2:3 (retrato) • Máx 5MB</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Hero Buttons Tab */}
+        <TabsContent value="buttons" className="space-y-4">
+          <TemplateHeroButtonsEditor
+            buttons={config.heroButtons || []}
+            onChange={(heroButtons) => onChange({ ...config, heroButtons })}
+          />
+        </TabsContent>
+
+        {/* Bottom Nav Tab */}
+        <TabsContent value="navbar" className="space-y-4">
+          <TemplateBottomNavEditor
+            items={config.bottomNav || []}
+            onChange={(bottomNav) => onChange({ ...config, bottomNav })}
+          />
         </TabsContent>
       </Tabs>
     </div>
