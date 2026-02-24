@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link as RouterLink } from "react-router-dom";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -339,6 +339,14 @@ const PublicPetPage = () => {
             <p className="text-sm text-white/40">
               Se você é o dono deste produto, acesse seu dashboard para ativar usando o código que veio no manual.
             </p>
+            <div className="flex flex-col gap-3 pt-2">
+              <Button variant="glow" size="lg" asChild>
+                <RouterLink to="/auth">Criar Conta</RouterLink>
+              </Button>
+              <Button variant="outline" size="lg" asChild>
+                <RouterLink to="/auth">Já tenho conta</RouterLink>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

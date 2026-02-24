@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -297,6 +297,14 @@ const PublicDisplayPage = () => {
             <p className="text-sm text-muted-foreground">
               Se você é o dono deste produto, acesse seu dashboard para ativar usando o código que veio no manual.
             </p>
+            <div className="flex flex-col gap-3 pt-2">
+              <Button variant="glow" size="lg" asChild>
+                <Link to="/auth">Criar Conta</Link>
+              </Button>
+              <Button variant="outline" size="lg" asChild>
+                <Link to="/auth">Já tenho conta</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
