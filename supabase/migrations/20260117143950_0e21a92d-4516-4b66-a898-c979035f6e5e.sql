@@ -64,7 +64,7 @@ CREATE TRIGGER on_auth_user_created
 -- ===========================================
 -- TABLE: products (e-commerce)
 -- ===========================================
-CREATE TABLE public.products (
+CREATE TABLE IF NOT EXISTS public.products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   description TEXT,
@@ -86,7 +86,7 @@ CREATE POLICY "Admins can manage products" ON public.products
 -- ===========================================
 -- TABLE: pet_tags
 -- ===========================================
-CREATE TABLE public.pet_tags (
+CREATE TABLE IF NOT EXISTS public.pet_tags (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
   qr_code TEXT UNIQUE NOT NULL DEFAULT gen_random_uuid()::text,
@@ -121,7 +121,7 @@ CREATE POLICY "Users can delete own pet tags" ON public.pet_tags
 -- ===========================================
 -- TABLE: business_displays
 -- ===========================================
-CREATE TABLE public.business_displays (
+CREATE TABLE IF NOT EXISTS public.business_displays (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
   qr_code TEXT UNIQUE NOT NULL DEFAULT gen_random_uuid()::text,
@@ -153,7 +153,7 @@ CREATE POLICY "Users can delete own displays" ON public.business_displays
 -- ===========================================
 -- TABLE: orders
 -- ===========================================
-CREATE TABLE public.orders (
+CREATE TABLE IF NOT EXISTS public.orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled')),
@@ -188,7 +188,7 @@ CREATE POLICY "Only admins can delete orders" ON public.orders
 -- ===========================================
 -- TABLE: order_items
 -- ===========================================
-CREATE TABLE public.order_items (
+CREATE TABLE IF NOT EXISTS public.order_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_id UUID REFERENCES public.orders(id) ON DELETE CASCADE,
   product_id UUID REFERENCES public.products(id),
@@ -217,7 +217,7 @@ CREATE POLICY "Admins can manage order items" ON public.order_items
 -- ===========================================
 -- TABLE: qr_scans (log de leituras)
 -- ===========================================
-CREATE TABLE public.qr_scans (
+CREATE TABLE IF NOT EXISTS public.qr_scans (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   pet_tag_id UUID REFERENCES public.pet_tags(id) ON DELETE CASCADE,
   display_id UUID REFERENCES public.business_displays(id) ON DELETE CASCADE,
