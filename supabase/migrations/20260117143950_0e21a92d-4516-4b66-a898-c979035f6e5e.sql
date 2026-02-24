@@ -28,17 +28,22 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
 CREATE POLICY "Users can view own profile" ON public.profiles
   FOR SELECT USING (auth.uid() = id OR is_admin());
 
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile" ON public.profiles
-  FOR UPDATE USING (auth.uid() = id);
+  FOR SELECT USING (auth.uid() = id OR is_admin());
 
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
 CREATE POLICY "Users can insert own profile" ON public.profiles
-  FOR INSERT WITH CHECK (auth.uid() = id);
+  FOR SELECT USING (auth.uid() = id OR is_admin());
 
+DROP POLICY IF EXISTS "Admins can do all on profiles" ON public.profiles;
 CREATE POLICY "Admins can do all on profiles" ON public.profiles
-  FOR ALL USING (is_admin());
+  FOR SELECT USING (auth.uid() = id OR is_admin());
+
 
 -- Trigger for profile creation on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
