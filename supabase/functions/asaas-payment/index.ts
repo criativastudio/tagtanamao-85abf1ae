@@ -25,6 +25,12 @@ function validateShippingMethod(method: string | null, cost: number | null, city
   if (!method) return "Método de envio não informado";
   if (cost === null || cost === undefined || cost < 0) return "Valor de frete inválido";
   
+  // Digital products (templates) skip shipping validation
+  if (method === "digital") {
+    if (cost !== 0) return "Produtos digitais não possuem frete";
+    return null;
+  }
+
   const localCfg = LOCAL_SHIPPING[method];
   if (localCfg) {
     if (Math.abs((cost || 0) - localCfg.price) > 0.01) return `Valor de frete inválido para ${method}`;
@@ -165,6 +171,50 @@ async function createPayment(customerId: string, amount: number, orderId: string
   return payment;
 }
 
+async function fulfillTemplatePurchase(supabase: any, orderId: string): Promise<void> {
+  try {
+    const { data: order } = await supabase
+      .from("orders")
+      .select("notes, user_id")
+      .eq("id", orderId)
+      .single();
+
+    if (!order?.notes || !order.user_id) return;
+
+    let meta: any;
+    try {
+      meta = JSON.parse(order.notes);
+    } catch {
+      return; // Not a JSON note, skip
+    }
+
+    if (meta?.type !== "template_purchase" || !meta?.template_id) return;
+
+    // Check if already fulfilled
+    const { data: existing } = await supabase
+      .from("user_templates")
+      .select("id")
+      .eq("user_id", order.user_id)
+      .eq("template_id", meta.template_id)
+      .maybeSingle();
+
+    if (existing) {
+      console.log("Template already fulfilled for order:", orderId);
+      return;
+    }
+
+    await supabase.from("user_templates").insert({
+      user_id: order.user_id,
+      template_id: meta.template_id,
+      order_id: orderId,
+    });
+
+    console.log(`Template ${meta.template_id} fulfilled for user ${order.user_id}`);
+  } catch (err) {
+    console.error("Error fulfilling template purchase:", err);
+  }
+}
+
 async function handleWebhook(supabase: any, payload: WebhookPayload): Promise<{ success: boolean; message: string }> {
   console.log("Processing webhook event:", payload.event);
   const { event, payment } = payload;
@@ -206,6 +256,9 @@ async function handleWebhook(supabase: any, payload: WebhookPayload): Promise<{ 
     const nextStatus = await getNextStatusAfterPayment(supabase, orderId);
     await supabase.from("orders").update({ status: nextStatus }).eq("id", orderId);
     console.log(`Auto-advanced order ${orderId} from 'paid' to '${nextStatus}'`);
+
+    // Fulfill template purchases if applicable
+    await fulfillTemplatePurchase(supabase, orderId);
   }
 
   console.log("Order updated:", { orderId, orderStatus, paymentStatus });

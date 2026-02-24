@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Package, MapPin, CreditCard, Truck, Loader2, Ticket, QrCode, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Package, MapPin, CreditCard, Truck, Loader2, Ticket, QrCode, AlertTriangle, Crown, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,8 +48,18 @@ interface AsaasPaymentData {
   status: string;
 }
 
+// Template purchase info
+interface TemplatePurchaseInfo {
+  id: string;
+  name: string;
+  price: number;
+  displayId: string;
+  preview_url: string | null;
+}
+
 export default function Checkout() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { user, profile } = useAuth();
   const { cart, getCartTotal, clearCart } = useCart();
@@ -61,6 +71,13 @@ export default function Checkout() {
   const [loadingShipping, setLoadingShipping] = useState(false);
 
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
+
+  // Template purchase mode
+  const templateId = searchParams.get("template_id");
+  const templateDisplayId = searchParams.get("display_id");
+  const [templatePurchase, setTemplatePurchase] = useState<TemplatePurchaseInfo | null>(null);
+  const [loadingTemplate, setLoadingTemplate] = useState(false);
+  const isTemplatePurchase = !!templateId && !!templateDisplayId;
 
   // Asaas payment data
   const [asaasPaymentData, setAsaasPaymentData] = useState<AsaasPaymentData | null>(null);
@@ -109,15 +126,41 @@ export default function Checkout() {
   const [pollingCount, setPollingCount] = useState(0);
   const MAX_POLLING = 30;
 
+  // Fetch template info if in template purchase mode
+  useEffect(() => {
+    if (!templateId || !templateDisplayId || !user) return;
+    setLoadingTemplate(true);
+    supabase
+      .from("display_templates")
+      .select("id, name, price, preview_url")
+      .eq("id", templateId)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setTemplatePurchase({
+            id: data.id,
+            name: data.name,
+            price: data.price,
+            displayId: templateDisplayId,
+            preview_url: data.preview_url,
+          });
+        }
+        setLoadingTemplate(false);
+      });
+  }, [templateId, templateDisplayId, user]);
+
   useEffect(() => {
     if (!user) {
-      navigate("/auth?from=shop&redirect=/loja/checkout");
+      const redirect = isTemplatePurchase
+        ? `/loja/checkout?template_id=${templateId}&display_id=${templateDisplayId}`
+        : "/loja/checkout";
+      navigate(`/auth?from=shop&redirect=${encodeURIComponent(redirect)}`);
       return;
     }
-    if (cart.length === 0 && step === "shipping") {
+    if (!isTemplatePurchase && cart.length === 0 && step === "shipping") {
       navigate("/");
     }
-  }, [user, cart, step]);
+  }, [user, cart, step, isTemplatePurchase]);
 
   useEffect(() => {
     if (profile) {
@@ -130,7 +173,10 @@ export default function Checkout() {
   }, [profile]);
 
 
+  const getTemplateTotal = () => templatePurchase?.price || 0;
+
   const getTotalWithShipping = () => {
+    if (isTemplatePurchase) return getTemplateTotal();
     return getCartTotal() - discountAmount + (selectedShipping?.price || 0);
   };
 
@@ -322,42 +368,37 @@ export default function Checkout() {
   };
 
   const validateShipping = () => {
+    // Template purchases skip shipping validation
+    if (isTemplatePurchase) {
+      if (!isCpfValid) {
+        toast({ title: "CPF/CNPJ inválido", description: "Informe um CPF ou CNPJ válido para continuar.", variant: "destructive" });
+        return false;
+      }
+      if (asaasBillingType === "CREDIT_CARD" && !isCardValid) {
+        toast({ title: "Dados do cartão inválidos", description: "Preencha corretamente os dados do cartão de crédito.", variant: "destructive" });
+        return false;
+      }
+      return true;
+    }
+
     const required = ["name", "phone", "zip", "address", "number", "city", "state"];
     for (const field of required) {
       if (!shippingData[field as keyof typeof shippingData]) {
-        toast({
-          title: "Campos obrigatórios",
-          description: "Preencha todos os campos de endereço.",
-          variant: "destructive",
-        });
+        toast({ title: "Campos obrigatórios", description: "Preencha todos os campos de endereço.", variant: "destructive" });
         return false;
       }
     }
     if (!selectedShipping) {
-      toast({
-        title: "Selecione o frete",
-        description: "Escolha uma opção de entrega.",
-        variant: "destructive",
-      });
+      toast({ title: "Selecione o frete", description: "Escolha uma opção de entrega.", variant: "destructive" });
       return false;
     }
-    // Validate CPF/CNPJ for Asaas payments
     if (paymentMethod === "asaas") {
       if (!isCpfValid) {
-        toast({
-          title: "CPF/CNPJ inválido",
-          description: "Informe um CPF ou CNPJ válido para continuar.",
-          variant: "destructive",
-        });
+        toast({ title: "CPF/CNPJ inválido", description: "Informe um CPF ou CNPJ válido para continuar.", variant: "destructive" });
         return false;
       }
-      // Validate card for credit card payment
       if (asaasBillingType === "CREDIT_CARD" && !isCardValid) {
-        toast({
-          title: "Dados do cartão inválidos",
-          description: "Preencha corretamente os dados do cartão de crédito.",
-          variant: "destructive",
-        });
+        toast({ title: "Dados do cartão inválidos", description: "Preencha corretamente os dados do cartão de crédito.", variant: "destructive" });
         return false;
       }
     }
@@ -379,30 +420,49 @@ export default function Checkout() {
     setLoading(true);
 
     try {
-      // Create order with payment method info
+      // Build order data - different for template vs physical products
+      const orderData: any = {
+        user_id: user?.id,
+        total_amount: getTotalWithShipping(),
+        status: "pending",
+        payment_status: "pending",
+        payment_method: asaasBillingType.toLowerCase(),
+      };
+
+      if (isTemplatePurchase && templatePurchase) {
+        // Digital product - no shipping
+        orderData.shipping_name = profile?.full_name || user?.email;
+        orderData.shipping_phone = profile?.phone || "N/A";
+        orderData.shipping_method = "digital";
+        orderData.shipping_cost = 0;
+        orderData.shipping_city = "Digital";
+        orderData.shipping_state = "XX";
+        orderData.notes = JSON.stringify({
+          type: "template_purchase",
+          template_id: templatePurchase.id,
+          template_name: templatePurchase.name,
+          display_id: templatePurchase.displayId,
+        });
+      } else {
+        // Physical product - full shipping info
+        orderData.shipping_name = shippingData.name;
+        orderData.shipping_phone = shippingData.phone;
+        orderData.shipping_address = `${shippingData.address}, ${shippingData.number}${shippingData.complement ? ` - ${shippingData.complement}` : ""} - ${shippingData.neighborhood}`;
+        orderData.shipping_city = shippingData.city;
+        orderData.shipping_state = shippingData.state;
+        orderData.shipping_zip = shippingData.zip;
+        orderData.shipping_cost = selectedShipping?.price || 0;
+        orderData.shipping_method = selectedShipping?.service;
+        orderData.shipping_carrier = (selectedShipping as any)?.carrier || null;
+        orderData.shipping_service_name = selectedShipping?.service || null;
+        orderData.shipping_delivery_time = selectedShipping?.delivery_time || null;
+        orderData.coupon_id = appliedCoupon?.id || null;
+        orderData.discount_amount = discountAmount;
+      }
+
       const { data: order, error: orderError } = await supabase
         .from("orders")
-        .insert({
-          user_id: user?.id,
-          total_amount: getTotalWithShipping(),
-          status: "pending",
-          payment_status: "pending",
-          payment_method: asaasBillingType.toLowerCase(),
-          shipping_name: shippingData.name,
-          shipping_phone: shippingData.phone,
-          shipping_address: `${shippingData.address}, ${shippingData.number}${shippingData.complement ? ` - ${shippingData.complement}` : ""} - ${shippingData.neighborhood}`,
-          shipping_city: shippingData.city,
-          shipping_state: shippingData.state,
-          shipping_zip: shippingData.zip,
-          shipping_cost: selectedShipping?.price || 0,
-          shipping_method: selectedShipping?.service,
-          shipping_carrier: (selectedShipping as any)?.carrier || null,
-          shipping_service_name: selectedShipping?.service || null,
-          shipping_delivery_time: selectedShipping?.delivery_time || null,
-          coupon_id: appliedCoupon?.id || null,
-          discount_amount: discountAmount,
-          notes: null,
-        })
+        .insert(orderData)
         .select()
         .single();
 
@@ -410,53 +470,58 @@ export default function Checkout() {
 
       setCurrentOrderId(order.id);
 
-      // Increment coupon usage atomically if applied
-      if (appliedCoupon) {
-        const { data: couponResult, error: couponError } = await supabase.rpc("increment_coupon_usage", {
-          coupon_uuid: appliedCoupon.id,
+      if (isTemplatePurchase && templatePurchase) {
+        // Create a single order item for the template
+        const { error: itemsError } = await supabase.from("order_items").insert({
+          order_id: order.id,
+          product_id: null,
+          quantity: 1,
+          unit_price: templatePurchase.price,
         });
-
-        // Check if coupon usage failed (e.g., limit exceeded during race condition)
-        if (couponError || !couponResult?.[0]?.success) {
-          // Rollback the order since coupon is no longer valid
-          await supabase.from("orders").delete().eq("id", order.id);
-          throw new Error(couponResult?.[0]?.message || "Limite de uso do cupom foi excedido");
-        }
-      }
-
-      // Create order items
-      const isValidUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-
-      const items = cart.map((item) => ({
-        order_id: order.id,
-        product_id: isValidUUID(item.product.id) ? item.product.id : null,
-        quantity: item.quantity,
-        unit_price: item.product.price,
-      }));
-
-      const { data: insertedItems, error: itemsError } = await supabase.from("order_items").insert(items).select();
-
-      if (itemsError) throw itemsError;
-
-      // Check if any item is a business_display product and create display_arts
-      const displayItems = cart.filter(
-        (item) => (item.product as any).type === "business_display" || (item.product as any).type === "display",
-      );
-
-      if (displayItems.length > 0 && insertedItems) {
-        for (const dItem of displayItems) {
-          const matchingOrderItem = insertedItems.find(
-            (oi: any) => oi.product_id === dItem.product.id || (!oi.product_id && !isValidUUID(dItem.product.id)),
-          );
-          await supabase.from("display_arts").insert({
-            order_id: order.id,
-            order_item_id: matchingOrderItem?.id || null,
-            user_id: user?.id,
+        if (itemsError) throw itemsError;
+      } else {
+        // Increment coupon usage atomically if applied
+        if (appliedCoupon) {
+          const { data: couponResult, error: couponError } = await supabase.rpc("increment_coupon_usage", {
+            coupon_uuid: appliedCoupon.id,
           });
+          if (couponError || !couponResult?.[0]?.success) {
+            await supabase.from("orders").delete().eq("id", order.id);
+            throw new Error(couponResult?.[0]?.message || "Limite de uso do cupom foi excedido");
+          }
         }
 
-        // Update order status to awaiting_customization
-        await supabase.from("orders").update({ status: "awaiting_customization" }).eq("id", order.id);
+        // Create order items from cart
+        const isValidUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+        const items = cart.map((item) => ({
+          order_id: order.id,
+          product_id: isValidUUID(item.product.id) ? item.product.id : null,
+          quantity: item.quantity,
+          unit_price: item.product.price,
+        }));
+
+        const { data: insertedItems, error: itemsError } = await supabase.from("order_items").insert(items).select();
+        if (itemsError) throw itemsError;
+
+        // Check if any item is a business_display product and create display_arts
+        const displayItems = cart.filter(
+          (item) => (item.product as any).type === "business_display" || (item.product as any).type === "display",
+        );
+
+        if (displayItems.length > 0 && insertedItems) {
+          for (const dItem of displayItems) {
+            const matchingOrderItem = insertedItems.find(
+              (oi: any) => oi.product_id === dItem.product.id || (!oi.product_id && !isValidUUID(dItem.product.id)),
+            );
+            await supabase.from("display_arts").insert({
+              order_id: order.id,
+              order_item_id: matchingOrderItem?.id || null,
+              user_id: user?.id,
+            });
+          }
+          await supabase.from("orders").update({ status: "awaiting_customization" }).eq("id", order.id);
+        }
       }
 
       if (asaasBillingType === "CREDIT_CARD" && cardData) {
@@ -469,17 +534,17 @@ export default function Checkout() {
           body: {
             orderId: order.id,
             amount: getTotalWithShipping(),
-            customerName: shippingData.name,
+            customerName: isTemplatePurchase ? (profile?.full_name || "Cliente") : shippingData.name,
             customerEmail: profile?.email || user?.email,
-            customerPhone: shippingData.phone,
+            customerPhone: isTemplatePurchase ? (profile?.phone || "00000000000") : shippingData.phone,
             customerCpfCnpj: customerCpfCnpj,
-            postalCode: shippingData.zip,
-            address: shippingData.address,
-            addressNumber: shippingData.number,
-            complement: shippingData.complement || "",
-            province: shippingData.neighborhood,
-            city: shippingData.city,
-            state: shippingData.state,
+            postalCode: isTemplatePurchase ? ((profile as any)?.cep || "00000000") : shippingData.zip,
+            address: isTemplatePurchase ? ((profile as any)?.endereco || "Digital") : shippingData.address,
+            addressNumber: isTemplatePurchase ? ((profile as any)?.numero || "0") : shippingData.number,
+            complement: isTemplatePurchase ? "" : (shippingData.complement || ""),
+            province: isTemplatePurchase ? ((profile as any)?.bairro || "Digital") : shippingData.neighborhood,
+            city: isTemplatePurchase ? ((profile as any)?.cidade || "Digital") : shippingData.city,
+            state: isTemplatePurchase ? ((profile as any)?.estado || "XX") : shippingData.state,
             cardHolderName: cardData.holderName,
             cardNumber: cardData.number,
             expiryMonth: cardData.expiryMonth,
@@ -497,7 +562,7 @@ export default function Checkout() {
         }
 
         if (cardResult?.success) {
-          clearCart();
+          if (!isTemplatePurchase) clearCart();
 
           const payStatus = String(cardResult.payment?.status || cardResult.status || "").toUpperCase();
           const mapped = String(cardResult.mappedPaymentStatus || "").toLowerCase();
@@ -505,11 +570,18 @@ export default function Checkout() {
           const isPending = payStatus === "PENDING" || mapped === "pending";
 
           if (isApproved) {
-            toast({
-              title: "Pagamento aprovado!",
-              description: "Seu pedido foi confirmado com sucesso.",
-            });
-            navigate('/meus-pedidos');
+            toast({ title: "Pagamento aprovado!", description: "Seu pedido foi confirmado com sucesso." });
+            if (isTemplatePurchase && templatePurchase) {
+              // Fulfill template immediately for card payments
+              await supabase.from("user_templates").insert({
+                user_id: user!.id,
+                template_id: templatePurchase.id,
+                order_id: order.id,
+              });
+              navigate(`/dashboard/displays/templates?display=${templatePurchase.displayId}`);
+            } else {
+              navigate('/meus-pedidos');
+            }
           } else if (isPending) {
             pollPaymentStatus(cardResult.payment?.id, order.id);
           } else {
@@ -526,9 +598,9 @@ export default function Checkout() {
           body: {
             orderId: order.id,
             amount: getTotalWithShipping(),
-            customerName: shippingData.name,
+            customerName: isTemplatePurchase ? (profile?.full_name || "Cliente") : shippingData.name,
             customerEmail: profile?.email || user?.email,
-            customerPhone: shippingData.phone,
+            customerPhone: isTemplatePurchase ? (profile?.phone || "00000000000") : shippingData.phone,
             customerCpfCnpj: customerCpfCnpj.replace(/\D/g, ""),
             billingType: asaasBillingType,
           },
@@ -542,7 +614,7 @@ export default function Checkout() {
         if (asaasResult?.success && asaasResult?.payment) {
           setAsaasPaymentData(asaasResult.payment);
           setCurrentOrderId(order.id);
-          clearCart();
+          if (!isTemplatePurchase) clearCart();
 
           // If PIX via Asaas, show waiting screen with QR code
           if (asaasBillingType === "PIX" && asaasResult.payment.pixQrCode) {
@@ -629,8 +701,18 @@ export default function Checkout() {
     }
   };
 
-  const handlePaymentConfirmed = () => {
-    navigate('/meus-pedidos');
+  const handlePaymentConfirmed = async () => {
+    if (isTemplatePurchase && templatePurchase) {
+      // Fulfill template purchase
+      await supabase.from("user_templates").insert({
+        user_id: user!.id,
+        template_id: templatePurchase.id,
+        order_id: currentOrderId,
+      });
+      navigate(`/dashboard/displays/templates?display=${templatePurchase.displayId}`);
+    } else {
+      navigate('/meus-pedidos');
+    }
   };
 
   return (
@@ -638,13 +720,13 @@ export default function Checkout() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-xl border-b border-border">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/loja")}>
+          <Button variant="ghost" size="icon" onClick={() => isTemplatePurchase ? navigate(-1) : navigate("/loja")}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-xl font-bold">Checkout</h1>
+            <h1 className="text-xl font-bold">{isTemplatePurchase ? "Comprar Template" : "Checkout"}</h1>
             <p className="text-sm text-muted-foreground">
-              {step === "shipping" && "Endereço e pagamento"}
+              {step === "shipping" && (isTemplatePurchase ? "Pagamento do template" : "Endereço e pagamento")}
               {step === "processing" && "Processando pagamento..."}
               
               {step === "awaiting_asaas" && "Aguardando pagamento"}
@@ -678,7 +760,105 @@ export default function Checkout() {
               </motion.div>
             )}
 
-            {step === "shipping" && (
+            {step === "shipping" && isTemplatePurchase && templatePurchase && (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                {/* Template Info Card */}
+                <Card className="glass-card overflow-hidden">
+                  <div className="flex items-start gap-4 p-6">
+                    <div className="w-24 h-16 rounded-lg bg-muted overflow-hidden flex-shrink-0">
+                      {templatePurchase.preview_url ? (
+                        <img src={templatePurchase.preview_url} alt={templatePurchase.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Crown className="w-8 h-8 text-primary" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Sparkles className="w-4 h-4 text-primary" />
+                        <h3 className="font-bold text-foreground">{templatePurchase.name}</h3>
+                      </div>
+                      <p className="text-sm text-muted-foreground">Template premium • Produto digital</p>
+                      <p className="text-lg font-bold text-primary mt-2">
+                        R$ {templatePurchase.price.toFixed(2).replace(".", ",")}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Payment Method */}
+                <Card className="glass-card">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <CreditCard className="w-5 h-5" />
+                      Forma de Pagamento
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <CPFInput
+                      value={customerCpfCnpj}
+                      onChange={setCustomerCpfCnpj}
+                      onValidChange={setIsCpfValid}
+                      required
+                    />
+
+                    <div className="space-y-2">
+                      <Label>Método</Label>
+                      <RadioGroup
+                        value={asaasBillingType}
+                        onValueChange={(value) => setAsaasBillingType(value as "PIX" | "BOLETO" | "CREDIT_CARD")}
+                        className="grid grid-cols-3 gap-2"
+                      >
+                        {[
+                          { value: "PIX", icon: QrCode, label: "PIX" },
+                          { value: "BOLETO", icon: Ticket, label: "Boleto" },
+                          { value: "CREDIT_CARD", icon: CreditCard, label: "Cartão" },
+                        ].map(({ value, icon: Icon, label }) => (
+                          <div
+                            key={value}
+                            className={`flex flex-col items-center p-3 rounded-lg border cursor-pointer transition-colors ${
+                              asaasBillingType === value
+                                ? "border-primary bg-primary/5"
+                                : "border-border hover:border-primary/50"
+                            }`}
+                            onClick={() => setAsaasBillingType(value as any)}
+                          >
+                            <RadioGroupItem value={value} className="sr-only" />
+                            <Icon className="w-5 h-5 mb-1" />
+                            <span className="text-xs">{label}</span>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    </div>
+
+                    {asaasBillingType === "CREDIT_CARD" && (
+                      <CreditCardForm
+                        onCardDataChange={handleCardDataChange}
+                        onValidChange={handleCardValidChange}
+                        disabled={loading}
+                      />
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={handleCreateOrder}
+                  disabled={loading || !isCpfValid || (asaasBillingType === "CREDIT_CARD" && !isCardValid)}
+                >
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <CreditCard className="w-4 h-4 mr-2" />
+                  )}
+                  Pagar R$ {templatePurchase.price.toFixed(2).replace(".", ",")}
+                </Button>
+              </motion.div>
+            )}
+
+            {step === "shipping" && !isTemplatePurchase && (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                 <Card className="glass-card">
                   <CardHeader>
@@ -1002,7 +1182,7 @@ export default function Checkout() {
           </div>
 
           {/* Order Summary */}
-          {step === "shipping" && (
+          {step === "shipping" && !isTemplatePurchase && (
             <div className="lg:col-span-1">
               <Card className="glass-card sticky top-24">
                 <CardHeader>
