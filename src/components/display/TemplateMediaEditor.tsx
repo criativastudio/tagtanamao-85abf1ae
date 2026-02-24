@@ -384,11 +384,22 @@ export default function TemplateMediaEditor({ displayId, userId, config, onChang
             </CardHeader>
             <CardContent className="space-y-4">
               {(config.thumbnails || []).length > 0 && renderMediaGrid(config.thumbnails!, "thumbnails")}
-              <Button variant="outline" className="w-full border-dashed" onClick={() => triggerUpload("thumbnails", "image/*")} disabled={!!uploading}>
+              <Button variant="outline" className="w-full border-dashed" onClick={() => triggerUpload("thumbnails", "image/*,video/*")} disabled={!!uploading}>
                 {uploading === "thumbnails" ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-                Adicionar Thumbnails
+                Adicionar Thumbnails (Upload)
               </Button>
-              <p className="text-[11px] text-muted-foreground">Proporção ideal: 2:3 (retrato) • Máx 5MB</p>
+              <div className="flex gap-2">
+                <Input
+                  value={reelUrl}
+                  onChange={(e) => setReelUrl(e.target.value)}
+                  placeholder="https://www.instagram.com/reel/ABC123/"
+                  className="text-xs h-9 flex-1"
+                />
+                <Button variant="secondary" size="sm" className="h-9 whitespace-nowrap" onClick={() => addInstagramReel("thumbnails")} disabled={!reelUrl.trim()}>
+                  <Plus className="w-3.5 h-3.5 mr-1" /> Reel
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground">Proporção ideal: 2:3 (retrato) • Máx 5MB • Ou cole link de Reels</p>
             </CardContent>
           </Card>
         </TabsContent>
