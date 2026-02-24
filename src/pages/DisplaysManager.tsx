@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Building2, 
-  ArrowLeft, 
-  Eye, 
-  Edit2, 
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Building2,
+  ArrowLeft,
+  Eye,
+  Edit2,
   Save,
   X,
   ExternalLink,
@@ -19,17 +19,17 @@ import {
   User,
   AlertTriangle,
   Lock,
-  RefreshCw
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { ImageUpload } from '@/components/bio/ImageUpload';
+  RefreshCw,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { ImageUpload } from "@/components/bio/ImageUpload";
 import {
   Dialog,
   DialogContent,
@@ -37,7 +37,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 
 // Simple button type for displays (different from BioButton)
 interface DisplayButton {
@@ -68,14 +68,14 @@ interface ScanInfo {
 }
 
 const ICON_OPTIONS = [
-  { id: 'link', label: 'Link' },
-  { id: 'instagram', label: 'Instagram' },
-  { id: 'whatsapp', label: 'WhatsApp' },
-  { id: 'phone', label: 'Telefone' },
-  { id: 'email', label: 'Email' },
-  { id: 'website', label: 'Website' },
-  { id: 'facebook', label: 'Facebook' },
-  { id: 'youtube', label: 'YouTube' },
+  { id: "link", label: "Link" },
+  { id: "instagram", label: "Instagram" },
+  { id: "whatsapp", label: "WhatsApp" },
+  { id: "phone", label: "Telefone" },
+  { id: "email", label: "Email" },
+  { id: "website", label: "Website" },
+  { id: "facebook", label: "Facebook" },
+  { id: "youtube", label: "YouTube" },
 ];
 
 // Password validation is now done via backend edge function
@@ -84,29 +84,29 @@ export default function DisplaysManager() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   const [displays, setDisplays] = useState<BusinessDisplay[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDisplay, setSelectedDisplay] = useState<BusinessDisplay | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [scanStats, setScanStats] = useState<Record<string, ScanInfo>>({});
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  
+
   // Bulk delete state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
-  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState("");
   const [deletingBulk, setDeletingBulk] = useState(false);
-  
+
   // Form state
   const [formData, setFormData] = useState({
-    business_name: '',
-    logo_url: '',
-    description: '',
-    theme_color: '#10b981',
-    buttons: [] as DisplayButton[]
+    business_name: "",
+    logo_url: "",
+    description: "",
+    theme_color: "#10b981",
+    buttons: [] as DisplayButton[],
   });
 
   useEffect(() => {
@@ -117,191 +117,188 @@ export default function DisplaysManager() {
 
   const fetchDisplays = async () => {
     setLoading(true);
-    
+
     try {
       // Build query - admins see all, users see only their own
-      let query = supabase
-        .from('business_displays')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
+      let query = supabase.from("business_displays").select("*").order("created_at", { ascending: false });
+
       // Filter by user_id for non-admin users
       if (!profile?.is_admin) {
-        query = query.eq('user_id', user?.id);
+        query = query.eq("user_id", user?.id);
       }
-      
+
       const { data, error } = await query;
-      
+
       if (error) {
-        console.error('Error fetching displays:', error);
+        console.error("Error fetching displays:", error);
         toast({
-          title: 'Erro ao carregar displays',
+          title: "Erro ao carregar displays",
           description: error.message,
-          variant: 'destructive'
+          variant: "destructive",
         });
         setLoading(false);
         return;
       }
-      
+
       if (data) {
         // Parse buttons JSONB field safely
-        const parsedDisplays = data.map(d => {
+        const parsedDisplays = data.map((d) => {
           let parsedButtons: DisplayButton[] = [];
           if (Array.isArray(d.buttons)) {
             parsedButtons = (d.buttons as unknown[]).map((btn: unknown) => {
               const b = btn as Record<string, unknown>;
               return {
                 id: String(b.id || crypto.randomUUID()),
-                label: String(b.label || ''),
-                url: String(b.url || ''),
-                icon: String(b.icon || 'link')
+                label: String(b.label || ""),
+                url: String(b.url || ""),
+                icon: String(b.icon || "link"),
               };
             });
           }
           return {
             ...d,
-            buttons: parsedButtons
+            buttons: parsedButtons,
           };
         });
         setDisplays(parsedDisplays);
-        
+
         // Fetch all scan stats in one query for better performance
-        const displayIds = parsedDisplays.map(d => d.id);
+        const displayIds = parsedDisplays.map((d) => d.id);
         if (displayIds.length > 0) {
           const { data: scans, error: scansError } = await supabase
-            .from('qr_scans')
-            .select('display_id, scanned_at, city, country')
-            .in('display_id', displayIds)
-            .order('scanned_at', { ascending: false });
-          
+            .from("qr_scans")
+            .select("display_id, scanned_at, city, country")
+            .in("display_id", displayIds)
+            .order("scanned_at", { ascending: false });
+
           if (scansError) {
-            console.error('Error fetching scans:', scansError);
+            console.error("Error fetching scans:", scansError);
           }
-          
+
           // Process scans into stats
           const stats: Record<string, ScanInfo> = {};
           const countMap: Record<string, number> = {};
           const lastScanMap: Record<string, { scanned_at: string; city: string | null; country: string | null }> = {};
-          
-          (scans || []).forEach(scan => {
+
+          (scans || []).forEach((scan) => {
             if (!scan.display_id) return;
             countMap[scan.display_id] = (countMap[scan.display_id] || 0) + 1;
             if (!lastScanMap[scan.display_id]) {
               lastScanMap[scan.display_id] = scan;
             }
           });
-          
-          parsedDisplays.forEach(display => {
+
+          parsedDisplays.forEach((display) => {
             const lastScan = lastScanMap[display.id];
             stats[display.id] = {
               count: countMap[display.id] || 0,
               lastScan: lastScan?.scanned_at || null,
-              lastLocation: lastScan?.city ? `${lastScan.city}, ${lastScan.country}` : null
+              lastLocation: lastScan?.city ? `${lastScan.city}, ${lastScan.country}` : null,
             };
           });
-          
+
           setScanStats(stats);
         }
       }
     } catch (err) {
-      console.error('Error in fetchDisplays:', err);
+      console.error("Error in fetchDisplays:", err);
       toast({
-        title: 'Erro ao carregar',
-        description: 'Não foi possível carregar os displays.',
-        variant: 'destructive'
+        title: "Erro ao carregar",
+        description: "Não foi possível carregar os displays.",
+        variant: "destructive",
       });
     }
-    
+
     setLoading(false);
   };
 
   const handleSelectDisplay = (display: BusinessDisplay) => {
     setSelectedDisplay(display);
     setFormData({
-      business_name: display.business_name || '',
-      logo_url: display.logo_url || '',
-      description: display.description || '',
-      theme_color: display.theme_color || '#10b981',
-      buttons: display.buttons || []
+      business_name: display.business_name || "",
+      logo_url: display.logo_url || "",
+      description: display.description || "",
+      theme_color: display.theme_color || "#10b981",
+      buttons: display.buttons || [],
     });
     setEditMode(false);
   };
 
   const handleSave = async () => {
     if (!selectedDisplay) return;
-    
+
     if (!user) {
       toast({
-        title: 'Erro',
-        description: 'Você precisa estar logado para salvar.',
-        variant: 'destructive'
+        title: "Erro",
+        description: "Você precisa estar logado para salvar.",
+        variant: "destructive",
       });
       return;
     }
-    
+
     setSaving(true);
-    
+
     // Prepare buttons for storage - ensure proper JSON format
-    const buttonsToSave = formData.buttons.map(btn => ({
+    const buttonsToSave = formData.buttons.map((btn) => ({
       id: btn.id,
       label: btn.label,
       url: btn.url,
-      icon: btn.icon
+      icon: btn.icon,
     }));
-    
+
     const updateData = {
       business_name: formData.business_name?.trim() || null,
       logo_url: formData.logo_url?.trim() || null,
       description: formData.description?.trim() || null,
-      theme_color: formData.theme_color || '#10b981',
+      theme_color: formData.theme_color || "#10b981",
       buttons: buttonsToSave,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
-    console.log('User ID:', user.id);
-    console.log('Display ID:', selectedDisplay.id);
-    console.log('Display user_id:', selectedDisplay);
-    console.log('Update data:', JSON.stringify(updateData, null, 2));
-    
+    console.log("User ID:", user.id);
+    console.log("Display ID:", selectedDisplay.id);
+    console.log("Display user_id:", selectedDisplay);
+    console.log("Update data:", JSON.stringify(updateData, null, 2));
+
     try {
       const { data, error } = await supabase
-        .from('business_displays')
+        .from("business_displays")
         .update(updateData)
-        .eq('id', selectedDisplay.id)
+        .eq("id", selectedDisplay.id)
         .select();
-      
-      console.log('Supabase response - data:', data);
-      console.log('Supabase response - error:', error);
-      
+
+      console.log("Supabase response - data:", data);
+      console.log("Supabase response - error:", error);
+
       if (error) {
-        console.error('Error saving display:', error);
+        console.error("Error saving display:", error);
         toast({
-          title: 'Erro ao salvar',
+          title: "Erro ao salvar",
           description: error.message,
-          variant: 'destructive'
+          variant: "destructive",
         });
       } else if (!data || data.length === 0) {
-        console.warn('No rows updated - RLS may be blocking the update');
+        console.warn("No rows updated - RLS may be blocking the update");
         toast({
-          title: 'Erro ao salvar',
-          description: 'Não foi possível atualizar. Você pode não ter permissão para editar este display.',
-          variant: 'destructive'
+          title: "Erro ao salvar",
+          description: "Não foi possível atualizar. Você pode não ter permissão para editar este display.",
+          variant: "destructive",
         });
       } else {
         // Verify the data was actually saved
         const savedData = data[0];
-        console.log('Saved data from DB:', savedData);
-        
+        console.log("Saved data from DB:", savedData);
+
         if (savedData.business_name !== updateData.business_name) {
-          console.warn('Data mismatch! Expected:', updateData.business_name, 'Got:', savedData.business_name);
+          console.warn("Data mismatch! Expected:", updateData.business_name, "Got:", savedData.business_name);
         }
-        
+
         toast({
-          title: 'Display atualizado!',
-          description: 'As informações foram salvas com sucesso.'
+          title: "Display atualizado!",
+          description: "As informações foram salvas com sucesso.",
         });
         setEditMode(false);
-        
+
         // Parse the returned buttons properly
         let parsedButtons: DisplayButton[] = [];
         if (Array.isArray(savedData.buttons)) {
@@ -309,86 +306,81 @@ export default function DisplaysManager() {
             const b = btn as Record<string, unknown>;
             return {
               id: String(b.id || crypto.randomUUID()),
-              label: String(b.label || ''),
-              url: String(b.url || ''),
-              icon: String(b.icon || 'link')
+              label: String(b.label || ""),
+              url: String(b.url || ""),
+              icon: String(b.icon || "link"),
             };
           });
         }
-        
+
         // Update local state with the returned data
         const updatedDisplay: BusinessDisplay = {
           ...savedData,
-          buttons: parsedButtons
+          buttons: parsedButtons,
         };
-        
+
         setSelectedDisplay(updatedDisplay);
-        
+
         // Update the displays list with the new data
-        setDisplays(prev => prev.map(d => 
-          d.id === updatedDisplay.id ? updatedDisplay : d
-        ));
+        setDisplays((prev) => prev.map((d) => (d.id === updatedDisplay.id ? updatedDisplay : d)));
       }
     } catch (err) {
-      console.error('Unexpected error:', err);
+      console.error("Unexpected error:", err);
       toast({
-        title: 'Erro inesperado',
-        description: 'Ocorreu um erro ao salvar. Tente novamente.',
-        variant: 'destructive'
+        title: "Erro inesperado",
+        description: "Ocorreu um erro ao salvar. Tente novamente.",
+        variant: "destructive",
       });
     }
-    
+
     setSaving(false);
   };
 
   const handleLogoUpload = (url: string) => {
-    setFormData(prev => ({ ...prev, logo_url: url }));
+    setFormData((prev) => ({ ...prev, logo_url: url }));
   };
 
   const handleLogoRemove = () => {
-    setFormData(prev => ({ ...prev, logo_url: '' }));
+    setFormData((prev) => ({ ...prev, logo_url: "" }));
   };
 
   const handleAddButton = () => {
     const newButton: DisplayButton = {
       id: crypto.randomUUID(),
-      label: 'Novo Botão',
-      url: '',
-      icon: 'link'
+      label: "Novo Botão",
+      url: "",
+      icon: "link",
     };
-    setFormData(prev => ({ ...prev, buttons: [...prev.buttons, newButton] }));
+    setFormData((prev) => ({ ...prev, buttons: [...prev.buttons, newButton] }));
   };
 
   const handleUpdateButton = (id: string, updates: Partial<DisplayButton>) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      buttons: prev.buttons.map(btn => btn.id === id ? { ...btn, ...updates } : btn)
+      buttons: prev.buttons.map((btn) => (btn.id === id ? { ...btn, ...updates } : btn)),
     }));
   };
 
   const handleRemoveButton = (id: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      buttons: prev.buttons.filter(btn => btn.id !== id)
+      buttons: prev.buttons.filter((btn) => btn.id !== id),
     }));
   };
 
   const handleDelete = async (displayId: string) => {
-    const { error } = await supabase
-      .from('business_displays')
-      .delete()
-      .eq('id', displayId);
+    const { error } = await supabase.from("business_displays").delete().eq("id", displayId);
 
     if (error) {
       toast({
-        title: 'Erro ao excluir',
+        title: "Erro ao excluir",
         description: error.message,
-        variant: 'destructive'
+        variant: "destructive",
       });
     } else {
       toast({
-        title: 'Display excluído',
-        description: 'O display foi removido com sucesso.'
+        title: "Display excluído",
+        description: "O display foi removido com sucesso.",
       });
       if (selectedDisplay?.id === displayId) {
         setSelectedDisplay(null);
@@ -400,7 +392,7 @@ export default function DisplaysManager() {
 
   // Toggle selection for bulk delete
   const toggleSelection = (id: string) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
         newSet.delete(id);
@@ -416,7 +408,7 @@ export default function DisplaysManager() {
     if (selectedIds.size === filteredDisplays.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredDisplays.map(d => d.id)));
+      setSelectedIds(new Set(filteredDisplays.map((d) => d.id)));
     }
   };
 
@@ -424,30 +416,33 @@ export default function DisplaysManager() {
   const handleBulkDelete = async () => {
     if (!passwordInput) {
       toast({
-        title: 'Senha obrigatória',
-        description: 'Digite a senha de confirmação.',
-        variant: 'destructive'
+        title: "Senha obrigatória",
+        description: "Digite a senha de confirmação.",
+        variant: "destructive",
       });
       return;
     }
 
     setDeletingBulk(true);
-    
+
     try {
       // Validate password via backend
-      const { data: validationResult, error: validationError } = await supabase.functions.invoke('validate-admin-password', {
-        body: { password: passwordInput }
-      });
+      const { data: validationResult, error: validationError } = await supabase.functions.invoke(
+        "validate-admin-password",
+        {
+          body: { password: passwordInput },
+        },
+      );
 
       if (validationError) {
-        throw new Error('Erro ao validar senha');
+        throw new Error("Erro ao validar senha");
       }
 
       if (!validationResult?.valid) {
         toast({
-          title: 'Senha incorreta',
-          description: validationResult?.error || 'A senha de confirmação está incorreta.',
-          variant: 'destructive'
+          title: "Senha incorreta",
+          description: validationResult?.error || "A senha de confirmação está incorreta.",
+          variant: "destructive",
         });
         setDeletingBulk(false);
         return;
@@ -455,22 +450,19 @@ export default function DisplaysManager() {
 
       // Password is valid, proceed with deletion
       const idsToDelete = Array.from(selectedIds);
-      
-      const { error } = await supabase
-        .from('business_displays')
-        .delete()
-        .in('id', idsToDelete);
+
+      const { error } = await supabase.from("business_displays").delete().in("id", idsToDelete);
 
       if (error) {
         toast({
-          title: 'Erro ao excluir',
+          title: "Erro ao excluir",
           description: error.message,
-          variant: 'destructive'
+          variant: "destructive",
         });
       } else {
         toast({
-          title: 'Displays excluídos',
-          description: `${idsToDelete.length} displays foram removidos com sucesso.`
+          title: "Displays excluídos",
+          description: `${idsToDelete.length} displays foram removidos com sucesso.`,
         });
         if (selectedDisplay && selectedIds.has(selectedDisplay.id)) {
           setSelectedDisplay(null);
@@ -480,32 +472,29 @@ export default function DisplaysManager() {
       }
     } catch (error: any) {
       toast({
-        title: 'Erro',
-        description: error.message || 'Erro ao processar exclusão.',
-        variant: 'destructive'
+        title: "Erro",
+        description: error.message || "Erro ao processar exclusão.",
+        variant: "destructive",
       });
     }
-    
+
     setDeletingBulk(false);
     setBulkDeleteOpen(false);
-    setPasswordInput('');
+    setPasswordInput("");
   };
 
   // Filter displays based on search term
-  const filteredDisplays = displays.filter(display => {
+  const filteredDisplays = displays.filter((display) => {
     const term = searchTerm.toLowerCase();
     return (
       display.qr_code.toLowerCase().includes(term) ||
       display.id.toLowerCase().includes(term) ||
-      (display.business_name || '').toLowerCase().includes(term) ||
-      (display.description || '').toLowerCase().includes(term)
+      (display.business_name || "").toLowerCase().includes(term) ||
+      (display.description || "").toLowerCase().includes(term)
     );
   });
 
-  const themeColors = [
-    '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', 
-    '#f59e0b', '#ef4444', '#06b6d4', '#84cc16'
-  ];
+  const themeColors = ["#10b981", "#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#ef4444", "#06b6d4", "#84cc16"];
 
   if (loading) {
     return (
@@ -521,7 +510,7 @@ export default function DisplaysManager() {
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div className="flex items-center gap-3">
@@ -532,20 +521,22 @@ export default function DisplaysManager() {
                 <h1 className="text-lg font-bold text-foreground">Displays Empresariais</h1>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span>{displays.length} displays</span>
-                  <span className="text-blue-400">• {displays.filter(d => d.is_activated).length} ativos</span>
-                  <span className="text-muted-foreground">• {displays.filter(d => !d.is_activated).length} inativos</span>
+                  <span className="text-blue-400">• {displays.filter((d) => d.is_activated).length} ativos</span>
+                  <span className="text-muted-foreground">
+                    • {displays.filter((d) => !d.is_activated).length} inativos
+                  </span>
                 </div>
               </div>
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => fetchDisplays()}
             disabled={loading}
             title="Atualizar lista"
           >
-            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
           </Button>
         </div>
       </header>
@@ -558,17 +549,13 @@ export default function DisplaysManager() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-semibold text-muted-foreground">SEUS DISPLAYS</h2>
                 {profile?.is_admin && selectedIds.size > 0 && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setBulkDeleteOpen(true)}
-                  >
+                  <Button variant="destructive" size="sm" onClick={() => setBulkDeleteOpen(true)}>
                     <Trash2 className="w-4 h-4 mr-1" />
                     Excluir ({selectedIds.size})
                   </Button>
                 )}
               </div>
-              
+
               {/* Search Input */}
               <div className="relative mb-4">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -579,7 +566,7 @@ export default function DisplaysManager() {
                   className="pl-10"
                 />
               </div>
-              
+
               {/* Select All (Admin only) */}
               {profile?.is_admin && filteredDisplays.length > 0 && (
                 <div className="flex items-center gap-2 mb-3 p-2 rounded-lg bg-muted/30">
@@ -593,17 +580,12 @@ export default function DisplaysManager() {
                   </Label>
                 </div>
               )}
-              
+
               {displays.length === 0 ? (
                 <div className="text-center py-8">
                   <Building2 className="w-12 h-12 mx-auto text-muted-foreground/50 mb-2" />
                   <p className="text-muted-foreground">Nenhum display cadastrado</p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="mt-4"
-                    onClick={() => navigate('/dashboard/activate')}
-                  >
+                  <Button variant="outline" size="sm" className="mt-4" onClick={() => navigate("/dashboard/activate")}>
                     Ativar Display
                   </Button>
                 </div>
@@ -620,11 +602,11 @@ export default function DisplaysManager() {
                       key={display.id}
                       whileHover={{ scale: 1.02 }}
                       className={`relative flex items-center gap-2 p-3 rounded-lg transition-colors ${
-                        selectedDisplay?.id === display.id 
-                          ? 'bg-blue-500/20 border border-blue-500/30' 
+                        selectedDisplay?.id === display.id
+                          ? "bg-blue-500/20 border border-blue-500/30"
                           : selectedIds.has(display.id)
-                            ? 'bg-destructive/10 border border-destructive/30'
-                            : 'bg-muted/30 hover:bg-muted/50'
+                            ? "bg-destructive/10 border border-destructive/30"
+                            : "bg-muted/30 hover:bg-muted/50"
                       }`}
                     >
                       {/* Checkbox for bulk selection (Admin only) */}
@@ -635,28 +617,28 @@ export default function DisplaysManager() {
                           className="shrink-0"
                         />
                       )}
-                      
+
                       <button
                         onClick={() => handleSelectDisplay(display)}
                         className="flex items-center gap-3 flex-1 text-left"
                       >
                         {display.logo_url ? (
-                          <img 
-                            src={display.logo_url} 
-                            alt={display.business_name || 'Logo'}
+                          <img
+                            src={display.logo_url}
+                            alt={display.business_name || "Logo"}
                             className="w-12 h-12 rounded-lg object-cover"
                           />
                         ) : (
-                          <div 
+                          <div
                             className="w-12 h-12 rounded-lg flex items-center justify-center"
                             style={{ backgroundColor: `${display.theme_color}20` }}
                           >
-                            <Building2 className="w-6 h-6" style={{ color: display.theme_color || '#3b82f6' }} />
+                            <Building2 className="w-6 h-6" style={{ color: display.theme_color || "#3b82f6" }} />
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-foreground truncate">
-                            {display.business_name || 'Empresa sem nome'}
+                            {display.business_name || "Empresa sem nome"}
                           </p>
                           <p className="text-xs text-muted-foreground font-mono">{display.qr_code}</p>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -665,7 +647,7 @@ export default function DisplaysManager() {
                           </div>
                         </div>
                       </button>
-                      
+
                       {/* Delete button */}
                       {deleteConfirm === display.id ? (
                         <div className="flex items-center gap-1">
@@ -696,13 +678,13 @@ export default function DisplaysManager() {
                           <Trash2 className="w-3 h-3" />
                         </Button>
                       )}
-                      
-                      <div className={`w-2 h-2 rounded-full ${display.is_activated ? 'bg-blue-400' : 'bg-muted'}`} />
+
+                      <div className={`w-2 h-2 rounded-full ${display.is_activated ? "bg-blue-400" : "bg-muted"}`} />
                     </motion.div>
                   ))}
                 </div>
               )}
-              
+
               {/* Results count */}
               {searchTerm && filteredDisplays.length > 0 && (
                 <p className="text-xs text-muted-foreground mt-3 text-center">
@@ -724,21 +706,21 @@ export default function DisplaysManager() {
                   className="glass-card rounded-xl overflow-hidden"
                 >
                   {/* Display Header */}
-                  <div 
+                  <div
                     className="relative h-48"
-                    style={{ 
-                      background: `linear-gradient(135deg, ${formData.theme_color}40, ${formData.theme_color}10)` 
+                    style={{
+                      background: `linear-gradient(135deg, ${formData.theme_color}40, ${formData.theme_color}10)`,
                     }}
                   >
                     <div className="absolute inset-0 flex items-center justify-center">
                       {formData.logo_url ? (
-                        <img 
-                          src={formData.logo_url} 
-                          alt={formData.business_name || 'Logo'}
+                        <img
+                          src={formData.logo_url}
+                          alt={formData.business_name || "Logo"}
                           className="w-28 h-28 rounded-xl object-cover border-4 border-background shadow-xl"
                         />
                       ) : (
-                        <div 
+                        <div
                           className="w-28 h-28 rounded-xl flex items-center justify-center border-4 border-background shadow-xl"
                           style={{ backgroundColor: `${formData.theme_color}30` }}
                         >
@@ -746,14 +728,14 @@ export default function DisplaysManager() {
                         </div>
                       )}
                     </div>
-                    
+
                     {/* Actions */}
                     <div className="absolute top-4 right-4 flex gap-2">
                       <Button
                         variant="secondary"
                         size="sm"
                         onClick={() => {
-                          window.open(`/display/${selectedDisplay.qr_code}`, '_blank');
+                          window.open(`/display/${selectedDisplay.qr_code}`, "_blank");
                         }}
                       >
                         <ExternalLink className="w-4 h-4 mr-2" />
@@ -784,16 +766,17 @@ export default function DisplaysManager() {
                     <div className="grid grid-cols-3 gap-4 mb-6">
                       <div className="text-center p-4 rounded-lg bg-muted/30">
                         <Eye className="w-5 h-5 mx-auto mb-1 text-blue-400" />
-                        <p className="text-2xl font-bold text-foreground">{scanStats[selectedDisplay.id]?.count || 0}</p>
+                        <p className="text-2xl font-bold text-foreground">
+                          {scanStats[selectedDisplay.id]?.count || 0}
+                        </p>
                         <p className="text-xs text-muted-foreground">Leituras</p>
                       </div>
                       <div className="text-center p-4 rounded-lg bg-muted/30">
                         <Clock className="w-5 h-5 mx-auto mb-1 text-purple-400" />
                         <p className="text-sm font-medium text-foreground">
-                          {scanStats[selectedDisplay.id]?.lastScan 
-                            ? new Date(scanStats[selectedDisplay.id].lastScan!).toLocaleDateString('pt-BR')
-                            : '-'
-                          }
+                          {scanStats[selectedDisplay.id]?.lastScan
+                            ? new Date(scanStats[selectedDisplay.id].lastScan!).toLocaleDateString("pt-BR")
+                            : "-"}
                         </p>
                         <p className="text-xs text-muted-foreground">Última leitura</p>
                       </div>
@@ -812,23 +795,6 @@ export default function DisplaysManager() {
                         <p className="font-mono text-sm text-foreground">{selectedDisplay.qr_code}</p>
                       </div>
                     </div>
-
-                    {/* Advanced Customization - Premium Templates */}
-                    {selectedDisplay.is_activated && (
-                      <div className="mb-6">
-                        <Button
-                          variant="hero"
-                          className="w-full"
-                          onClick={() => navigate(`/dashboard/displays/templates?display=${selectedDisplay.id}`)}
-                        >
-                          <Palette className="w-4 h-4 mr-2" />
-                          Personalizar (modo avançado)
-                        </Button>
-                        <p className="text-xs text-muted-foreground text-center mt-1.5">
-                          Templates premium estilo Netflix, portfólio e mais
-                        </p>
-                      </div>
-                    )}
 
                     {/* Form */}
                     <div className="space-y-4">
@@ -850,7 +816,7 @@ export default function DisplaysManager() {
                         <Input
                           id="business_name"
                           value={formData.business_name}
-                          onChange={(e) => setFormData(prev => ({ ...prev, business_name: e.target.value }))}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, business_name: e.target.value }))}
                           disabled={!editMode}
                           placeholder="Ex: Minha Empresa"
                         />
@@ -861,7 +827,7 @@ export default function DisplaysManager() {
                         <Textarea
                           id="description"
                           value={formData.description}
-                          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                           disabled={!editMode}
                           placeholder="Breve descrição da empresa"
                           rows={3}
@@ -876,22 +842,21 @@ export default function DisplaysManager() {
                         </Label>
                         {editMode ? (
                           <div className="flex gap-2 flex-wrap">
-                            {themeColors.map(color => (
+                            {themeColors.map((color) => (
                               <button
                                 key={color}
-                                onClick={() => setFormData(prev => ({ ...prev, theme_color: color }))}
+                                onClick={() => setFormData((prev) => ({ ...prev, theme_color: color }))}
                                 className={`w-8 h-8 rounded-full transition-transform ${
-                                  formData.theme_color === color ? 'ring-2 ring-offset-2 ring-offset-background scale-110' : ''
+                                  formData.theme_color === color
+                                    ? "ring-2 ring-offset-2 ring-offset-background scale-110"
+                                    : ""
                                 }`}
                                 style={{ backgroundColor: color }}
                               />
                             ))}
                           </div>
                         ) : (
-                          <div 
-                            className="w-8 h-8 rounded-full" 
-                            style={{ backgroundColor: formData.theme_color }}
-                          />
+                          <div className="w-8 h-8 rounded-full" style={{ backgroundColor: formData.theme_color }} />
                         )}
                       </div>
 
@@ -909,26 +874,23 @@ export default function DisplaysManager() {
                             </Button>
                           )}
                         </div>
-                        
+
                         {formData.buttons.length === 0 ? (
-                          <p className="text-sm text-muted-foreground text-center py-4">
-                            Nenhum botão configurado
-                          </p>
+                          <p className="text-sm text-muted-foreground text-center py-4">Nenhum botão configurado</p>
                         ) : (
                           <div className="space-y-3">
                             {formData.buttons.map((button) => (
-                              <div 
-                                key={button.id}
-                                className="flex items-center gap-3 p-3 rounded-lg bg-background/50"
-                              >
+                              <div key={button.id} className="flex items-center gap-3 p-3 rounded-lg bg-background/50">
                                 <select
                                   value={button.icon}
                                   onChange={(e) => handleUpdateButton(button.id, { icon: e.target.value })}
                                   disabled={!editMode}
                                   className="w-24 p-2 rounded bg-muted/50 text-sm"
                                 >
-                                  {ICON_OPTIONS.map(icon => (
-                                    <option key={icon.id} value={icon.id}>{icon.label}</option>
+                                  {ICON_OPTIONS.map((icon) => (
+                                    <option key={icon.id} value={icon.id}>
+                                      {icon.label}
+                                    </option>
                                   ))}
                                 </select>
                                 <Input
@@ -946,11 +908,7 @@ export default function DisplaysManager() {
                                   className="flex-1"
                                 />
                                 {editMode && (
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon"
-                                    onClick={() => handleRemoveButton(button.id)}
-                                  >
+                                  <Button variant="ghost" size="icon" onClick={() => handleRemoveButton(button.id)}>
                                     <Trash2 className="w-4 h-4 text-destructive" />
                                   </Button>
                                 )}
@@ -965,13 +923,13 @@ export default function DisplaysManager() {
                         <p className="text-sm text-muted-foreground mb-2">
                           Para uma página mais completa com galeria e temas personalizados:
                         </p>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => navigate(`/dashboard/bio?displayId=${selectedDisplay.id}`)}
                         >
                           <ExternalLink className="w-4 h-4 mr-2" />
-                          Personalizar (modo avançado)
+                          Personalizar (TEMPLATE PADRÃO)
                         </Button>
                       </div>
                     </div>
@@ -1007,7 +965,7 @@ export default function DisplaysManager() {
               Esta ação é irreversível. Digite a senha de administrador para confirmar a exclusão.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="py-4">
             <Label htmlFor="password-displays">Senha de confirmação</Label>
             <div className="relative mt-2">
@@ -1022,19 +980,18 @@ export default function DisplaysManager() {
               />
             </div>
           </div>
-          
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setBulkDeleteOpen(false);
-              setPasswordInput('');
-            }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setBulkDeleteOpen(false);
+                setPasswordInput("");
+              }}
+            >
               Cancelar
             </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleBulkDelete}
-              disabled={deletingBulk || !passwordInput}
-            >
+            <Button variant="destructive" onClick={handleBulkDelete} disabled={deletingBulk || !passwordInput}>
               {deletingBulk ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
