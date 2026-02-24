@@ -1,75 +1,86 @@
 
 
-# Diagnostico: Artes de Display funcionam no Lovable mas nao no ambiente publicado (VPS)
+## Gerenciar Secoes do Site - Pagina Dedicada
 
-## Problema identificado
+### Resumo
+Criar uma pagina dedicada `/admin/secoes` para gerenciar secoes dinamicas da landing page, com formulario completo para criar/editar secoes, suporte a upload de video e link do YouTube, e edicao inline de todos os campos.
 
-Existem **dois pontos criticos** que explicam por que as alteracoes funcionam dentro do Lovable mas nao no ambiente publicado na VPS:
+### O que muda
 
----
+**1. Banco de dados**
+- Criar bucket de storage `site-videos` para uploads de video direto
+- Adicionar colunas `description` (TEXT) e `media_url` (TEXT) na tabela `site_sections` para armazenar descricao e URL de midia (video uploaded ou YouTube)
 
-## 1. Edge Functions NAO sao enviadas pelo GitHub
+**2. Nova pagina `src/pages/admin/SiteSectionsPage.tsx`**
+- Pagina completa acessada via `/admin/secoes`
+- Header com botao voltar e "Adicionar nova secao"
+- Lista de secoes existentes em cards editaveis
+- Cada card mostra: titulo, descricao, tipo, midia (preview de video/YouTube), status ativo/inativo, botoes de reordenar e excluir
+- Edicao inline: clicar em um card abre formulario de edicao com todos os campos
+- Formulario de criacao em Dialog com campos: titulo, descricao, tipo de secao, midia (upload de video OU link YouTube), autoplay (toggle)
 
-**Este e o problema principal.** A Edge Function `finalize-display-art` (que gera o SVG final com imagens base64, QR code, etc.) roda no **Supabase**, nao no frontend. 
+**3. Formulario de nova secao**
+- Campo titulo (texto)
+- Campo descricao (textarea)
+- Tipo de secao (video / pet_slides)
+- Para tipo video: opcao de colar link YouTube OU fazer upload direto de arquivo de video (armazenado no bucket `site-videos`)
+- Toggle autoplay
+- O config JSONB armazenara: `{ videoUrl, youtubeUrl, autoplay, description }`
 
-- No Lovable Cloud, as Edge Functions sao deployadas automaticamente no Supabase conectado ao projeto Lovable.
-- Na sua VPS, voce usa um **Supabase externo**. O codigo das Edge Functions esta na pasta `supabase/functions/` no repositorio GitHub, mas **elas nao se deployam sozinhas** -- voce precisa fazer o deploy manualmente no seu Supabase externo usando o Supabase CLI.
+**4. Integracao no painel admin**
+- Adicionar item "Secoes do Site" no array `adminSettingsItems` em `UserSettings.tsx` com icone `Layout` apontando para `/admin/secoes`
+- Remover o `<SiteSectionsManager />` embutido diretamente na aba Admin (substituido pelo link para a pagina dedicada)
+- Adicionar rota `/admin/secoes` em `App.tsx`
 
-**Ou seja:** todas as correcoes feitas na `finalize-display-art` (embed de imagens base64, xlink:href, correcao de viewBox 2:3) **existem apenas no Supabase do Lovable**, nao no seu Supabase externo.
+**5. Edicao inline**
+- Cada secao na lista tera botao "Editar" que expande um formulario inline ou abre Dialog
+- Permitir alterar titulo, descricao, midia, tipo e autoplay
+- Salvar alteracoes via update no banco
 
-### Como resolver
+### Detalhes tecnicos
 
-Voce precisa fazer o deploy das Edge Functions no seu Supabase externo. No terminal da VPS (ou qualquer maquina com o Supabase CLI instalado):
+**Arquivos modificados:**
+- `src/App.tsx` - nova rota `/admin/secoes`
+- `src/pages/customer/UserSettings.tsx` - adicionar item no menu admin, remover SiteSectionsManager inline
+- `supabase/migrations/` - nova migration para colunas description e media_url + bucket site-videos
 
-```text
-# 1. Certifique-se de ter o Supabase CLI instalado
-npx supabase --version
+**Arquivos criados:**
+- `src/pages/admin/SiteSectionsPage.tsx` - pagina completa
 
-# 2. Faca login (se ainda nao fez)
-npx supabase login
+**Migration SQL:**
+```sql
+-- Adicionar colunas a site_sections
+ALTER TABLE public.site_sections
+  ADD COLUMN IF NOT EXISTS description TEXT,
+  ADD COLUMN IF NOT EXISTS media_url TEXT;
 
-# 3. Vincule ao seu projeto Supabase externo
-npx supabase link --project-ref SEU_PROJECT_REF
+-- Bucket para videos
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('site-videos', 'site-videos', true)
+ON CONFLICT (id) DO NOTHING;
 
-# 4. Deploy de todas as Edge Functions
-npx supabase functions deploy finalize-display-art --no-verify-jwt
+-- Policies para o bucket
+CREATE POLICY "Admins can upload site videos"
+ON storage.objects FOR INSERT
+WITH CHECK (bucket_id = 'site-videos' AND public.is_admin());
 
-# Ou deploy de todas de uma vez:
-npx supabase functions deploy --no-verify-jwt
+CREATE POLICY "Admins can delete site videos"
+ON storage.objects FOR DELETE
+USING (bucket_id = 'site-videos' AND public.is_admin());
+
+CREATE POLICY "Anyone can view site videos"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'site-videos');
 ```
 
-Voce tambem precisa garantir que os **secrets** (ASAAS_API_KEY, EVOLUTION_API_KEY, etc.) estejam configurados no seu Supabase externo.
+**Upload de video:**
+- Usa Supabase Storage (`site-videos` bucket)
+- Limite de 50MB por arquivo
+- Aceita formatos mp4, webm, mov
+- Apos upload, salva a URL publica no campo `media_url` e no `config.videoUrl`
 
----
-
-## 2. Arquivo `sanitize.ts` -- este VAI pelo GitHub (sem problemas)
-
-O arquivo `src/lib/sanitize.ts` (que corrigimos para permitir `data:` URIs e `xlink:href` no DOMPurify) **e um arquivo frontend**. Ele vai normalmente no commit para o GitHub e e incluido no build da VPS. Portanto, essa correcao **ja esta funcionando** no ambiente publicado.
-
----
-
-## 3. Arquivo `.env` NAO e enviado pelo GitHub
-
-O `.gitignore` contem a linha `.env`, entao o arquivo `.env` com as variaveis `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, etc. **nao e enviado para o GitHub**.
-
-Porem, isso provavelmente ja esta coberto no seu setup, pois:
-- O `docker-compose.yml` passa essas variaveis como build args
-- O `runtime-client.ts` tem fallback hardcoded para o Supabase do Lovable
-
-**Atencao:** Se na VPS voce aponta para um Supabase diferente, certifique-se de que o `.env` na VPS contem as credenciais corretas do seu Supabase externo, e nao as do Lovable.
-
----
-
-## Resumo
-
-| Item | Vai pelo GitHub? | Funciona na VPS? | Acao necessaria |
-|------|-----------------|-------------------|-----------------|
-| `src/lib/sanitize.ts` | Sim | Sim | Nenhuma |
-| `supabase/functions/finalize-display-art/` | Sim (codigo) | **Nao** (precisa deploy) | Deploy via Supabase CLI |
-| `.env` | **Nao** (.gitignore) | Depende | Verificar variaveis na VPS |
-| Outras Edge Functions | Sim (codigo) | **Nao** (precisa deploy) | Deploy via Supabase CLI |
-
-## Conclusao
-
-O problema principal e que as **Edge Functions precisam ser deployadas separadamente** no seu Supabase externo. O GitHub recebe o codigo, mas o Supabase nao executa automaticamente o que esta na pasta `supabase/functions/` -- e necessario usar o `supabase functions deploy` via CLI.
+**YouTube:**
+- Aceita URLs no formato `youtube.com/watch?v=` ou `youtu.be/`
+- Extrai o video ID e salva no `config.youtubeUrl`
+- Preview usa iframe embed do YouTube
 
