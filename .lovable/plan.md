@@ -1,64 +1,33 @@
 
 
-## Renderizar Secoes Dinamicas na Landing Page
+## Adicionar Botões "Criar Conta" e "Login" nas Páginas de QR Code Não Ativado
 
 ### Resumo
-Fazer com que as secoes cadastradas no banco (`site_sections`) sejam renderizadas automaticamente na landing page, de forma que qualquer secao criada, editada ou reordenada no painel admin apareca imediatamente no site.
+Adicionar botões de "Criar Conta" e "Login" abaixo da mensagem "Aguardando Ativação" nas páginas públicas de Pet Tag e Business Display. Os botões só aparecem quando o produto não está ativado e desaparecem automaticamente após a ativação (pois o bloco inteiro de "Aguardando Ativação" deixa de ser renderizado).
 
-### Como funciona hoje
-- A landing page (`Index.tsx`) tem componentes estaticos fixos: Hero, Features, Products, HowItWorks, Pricing, Testimonials, FAQ, CTA, Footer
-- O admin gerencia secoes no banco `site_sections` mas elas nao aparecem no site
+### Páginas afetadas
 
-### O que muda
+**1. `src/pages/PublicPetPage.tsx` (linhas 327-346)**
+- Bloco `if (!pet.is_activated)` — adicionar dois botões (`Link` do react-router-dom) após o texto existente:
+  - "Criar Conta" → `/auth` (botão primário/glow)
+  - "Já tenho conta" → `/auth` (botão outline)
 
-**1. Novo componente `src/components/DynamicSections.tsx`**
-- Componente que busca todas as secoes ativas do banco (`is_active = true`), ordenadas por `position`
-- Para cada secao, renderiza o conteudo apropriado baseado no `section_type`:
-  - **video**: Exibe video do YouTube (iframe embed com autoplay se configurado) ou video uploaded (`<video>` tag)
-  - **pet_slides**: Exibe carrossel com fotos de pets encontrados (busca dados da tabela `qr_scans` ou `pet_tags` com fotos disponiveis)
-- Cada secao mostra titulo e descricao (se houver)
-- Usa `useQuery` do TanStack para cache e revalidacao automatica
+**2. `src/pages/PublicDisplayPage.tsx` (linhas 282-304)**
+- Bloco `if (!display.is_activated)` — mesma lógica, mesmos botões
 
-**2. Modificacao em `src/pages/Index.tsx`**
-- Importar e incluir `<DynamicSections />` entre os componentes existentes (apos Hero, antes de Features)
-- As secoes estaticas existentes (Features, Products, etc.) continuam iguais - nada muda nelas
+**3. `src/pages/PublicBioPage.tsx`**
+- Não se aplica — bio pages usam `is_active` (publicação) e não `is_activated` (ativação de produto físico). Não há tela de "Aguardando Ativação" nesta página.
 
-**3. Renderizacao por tipo**
+### Comportamento
+- Quando `is_activated = false`: mostra mensagem + botões de conta
+- Quando `is_activated = true`: o bloco inteiro não renderiza (já funciona assim), então os botões desaparecem automaticamente
+- Os botões levam à página `/auth` que já suporta login e cadastro
 
-Para tipo `video`:
-- Se `config.youtubeId` existe: renderiza iframe do YouTube com embed, autoplay opcional via `config.autoplay`
-- Se `media_url` ou `config.videoUrl` existe: renderiza tag `<video>` com controls e autoplay opcional
-- Container com aspect-ratio 16:9, max-width centralizado
-
-Para tipo `pet_slides`:
-- Busca pet tags com foto (`pet_photo_url IS NOT NULL`) que foram escaneadas (pets encontrados)
-- Renderiza carrossel usando Embla Carousel (ja instalado no projeto)
-- Mostra foto do pet, nome e um badge "Encontrado via Tag"
-- Se nao houver dados, a secao nao aparece
-
-### Detalhes tecnicos
-
-**Arquivos criados:**
-- `src/components/DynamicSections.tsx` - componente que busca e renderiza secoes
+### Detalhes técnicos
 
 **Arquivos modificados:**
-- `src/pages/Index.tsx` - adiciona `<DynamicSections />` no layout
+- `src/pages/PublicPetPage.tsx` — import `Link` de react-router-dom, adicionar botões no bloco de não ativado
+- `src/pages/PublicDisplayPage.tsx` — mesma alteração
 
-**Busca de dados:**
-```typescript
-const { data: sections } = useQuery({
-  queryKey: ['site-sections-public'],
-  queryFn: async () => {
-    const { data } = await supabase
-      .from('site_sections')
-      .select('*')
-      .eq('is_active', true)
-      .order('position', { ascending: true });
-    return data;
-  }
-});
-```
+Ambos já importam `Button` e `Link` (PublicPetPage importa `Link` via react-router-dom). Nenhuma dependência nova necessária.
 
-**Nenhuma alteracao de banco necessaria** - a tabela `site_sections` ja tem RLS para leitura publica de secoes ativas.
-
-**Resultado:** Ao criar ou editar uma secao no admin e ativar, ela aparece automaticamente na landing page na proxima visita (ou ao recarregar). A ordem segue o campo `position` definido no painel.
