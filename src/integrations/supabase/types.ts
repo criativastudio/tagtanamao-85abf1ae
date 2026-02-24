@@ -1042,6 +1042,39 @@ export type Database = {
           },
         ]
       }
+      site_sections: {
+        Row: {
+          config: Json
+          created_at: string
+          id: string
+          is_active: boolean
+          position: number
+          section_type: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          position?: number
+          section_type: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          position?: number
+          section_type?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
