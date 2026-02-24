@@ -148,9 +148,6 @@ export default function SiteSectionsManager() {
             <CardTitle className="text-lg">Seções do Site</CardTitle>
             <CardDescription>Gerencie as seções dinâmicas da landing page</CardDescription>
           </div>
-          <h2 className="text-4xl md:text-5xl font-display font-bold mb-4">
-            Tecnologia que <span className="text-gradient">protege</span>
-          </h2>
           <Button variant="hero" size="sm" onClick={() => setShowCreateDialog(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Nova Seção
