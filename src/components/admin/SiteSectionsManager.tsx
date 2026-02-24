@@ -152,6 +152,9 @@ export default function SiteSectionsManager() {
             <Plus className="w-4 h-4 mr-2" />
             Nova Seção
           </Button>
+          <h2 className="text-4xl md:text-5xl font-display font-bold mb-4">
+            Tecnologia que <span className="text-gradient">protege</span>
+          </h2>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
