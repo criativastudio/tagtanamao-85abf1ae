@@ -6,9 +6,14 @@ import { Button } from "@/components/ui/button";
 interface MediaItem {
   url: string;
   title?: string;
-  type?: "image" | "video";
+  type?: "image" | "video" | "instagram";
   badge?: string;
   bgColor?: string;
+}
+
+function extractReelId(url: string): string | null {
+  const match = url.match(/(?:instagram\.com\/(?:reel|reels|p)\/|instagr\.am\/)([a-zA-Z0-9_-]+)/);
+  return match ? match[1] : null;
 }
 
 interface HeroButton {
@@ -295,7 +300,14 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
                     <span className="text-[#e50914] font-black text-2xl leading-none" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>N</span>
                   </div>
 
-                  {cover.type === "video" ? (
+                  {cover.type === "instagram" && extractReelId(cover.url) ? (
+                    <iframe
+                      src={`https://www.instagram.com/reel/${extractReelId(cover.url)}/embed/`}
+                      className="w-full aspect-[2/3] border-0"
+                      allowFullScreen
+                      scrolling="no"
+                    />
+                  ) : cover.type === "video" ? (
                     <video
                       src={cover.url}
                       className="w-full aspect-[2/3] object-cover"
@@ -353,7 +365,14 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
                     <span className="text-[#e50914] font-black text-lg" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>N</span>
                   </div>
 
-                  {thumb.type === "video" ? (
+                  {thumb.type === "instagram" && extractReelId(thumb.url) ? (
+                    <iframe
+                      src={`https://www.instagram.com/reel/${extractReelId(thumb.url)}/embed/`}
+                      className="w-full aspect-[2/3] border-0"
+                      allowFullScreen
+                      scrolling="no"
+                    />
+                  ) : thumb.type === "video" ? (
                     <video
                       src={thumb.url}
                       className="w-full aspect-[2/3] object-cover"

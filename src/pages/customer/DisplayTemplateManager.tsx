@@ -28,11 +28,11 @@ interface DisplayTemplate {
 interface TemplateConfig {
   hero?: {
     type: "video" | "image" | "carousel" | "youtube";
-    items: { url: string; title?: string; type?: "image" | "video" }[];
+    items: { url: string; title?: string; type?: "image" | "video" | "instagram" }[];
     youtubeId?: string;
   };
-  covers?: { url: string; title?: string; type?: "image" | "video" }[];
-  thumbnails?: { url: string; title?: string; type?: "image" | "video" }[];
+  covers?: { url: string; title?: string; type?: "image" | "video" | "instagram" }[];
+  thumbnails?: { url: string; title?: string; type?: "image" | "video" | "instagram" }[];
   sections?: { title: string; itemIndexes: number[] }[];
 }
 
