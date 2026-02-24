@@ -19,7 +19,7 @@ import TemplateBottomNavEditor from "./TemplateBottomNavEditor";
 interface MediaItem {
   url: string;
   title?: string;
-  type?: "image" | "video";
+  type?: "image" | "video" | "instagram";
   badge?: string;
   bgColor?: string;
 }
@@ -70,6 +70,21 @@ export default function TemplateMediaEditor({ displayId, userId, config, onChang
   const [uploading, setUploading] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadTarget, setUploadTarget] = useState<"hero" | "covers" | "thumbnails">("hero");
+  const [reelUrl, setReelUrl] = useState("");
+
+  const addInstagramReel = (section: "covers" | "thumbnails") => {
+    const match = reelUrl.match(/(?:instagram\.com\/(?:reel|reels|p)\/|instagr\.am\/)([a-zA-Z0-9_-]+)/);
+    if (!match) {
+      toast({ title: "URL inválida", description: "Cole um link válido de Instagram Reels.", variant: "destructive" });
+      return;
+    }
+    const newItem: MediaItem = { url: reelUrl.trim(), type: "instagram", title: "" };
+    const updated = { ...config };
+    updated[section] = [...(updated[section] || []), newItem];
+    onChange(updated);
+    setReelUrl("");
+    toast({ title: "Reel adicionado!", description: "O vídeo do Instagram foi adicionado." });
+  };
 
   const uploadFile = async (file: File, folder: string): Promise<string | null> => {
     const isVideo = file.type.startsWith("video/");
@@ -214,7 +229,14 @@ export default function TemplateMediaEditor({ displayId, userId, config, onChang
     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
       {items.map((item, i) => (
         <div key={i} className="relative group rounded-lg overflow-hidden border border-border bg-muted/30">
-          {item.type === "video" ? (
+          {item.type === "instagram" ? (
+            <div className="aspect-video bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 flex items-center justify-center">
+              <div className="text-center text-white">
+                <svg className="w-8 h-8 mx-auto mb-1" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                <span className="text-[10px] font-medium">Reel</span>
+              </div>
+            </div>
+          ) : item.type === "video" ? (
             <div className="aspect-video bg-black flex items-center justify-center">
               <video src={item.url} className="w-full h-full object-cover" muted />
               <Play className="absolute w-8 h-8 text-white/80" />
@@ -337,9 +359,20 @@ export default function TemplateMediaEditor({ displayId, userId, config, onChang
               {(config.covers || []).length > 0 && renderMediaGrid(config.covers!, "covers")}
               <Button variant="outline" className="w-full border-dashed" onClick={() => triggerUpload("covers", "image/*,video/*")} disabled={!!uploading}>
                 {uploading === "covers" ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-                Adicionar Capas
+                Adicionar Capas (Upload)
               </Button>
-              <p className="text-[11px] text-muted-foreground">Proporção ideal: 2:3 (retrato) • Fotos: máx 5MB • Vídeos: máx 30MB</p>
+              <div className="flex gap-2">
+                <Input
+                  value={reelUrl}
+                  onChange={(e) => setReelUrl(e.target.value)}
+                  placeholder="https://www.instagram.com/reel/ABC123/"
+                  className="text-xs h-9 flex-1"
+                />
+                <Button variant="secondary" size="sm" className="h-9 whitespace-nowrap" onClick={() => addInstagramReel("covers")} disabled={!reelUrl.trim()}>
+                  <Plus className="w-3.5 h-3.5 mr-1" /> Reel
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground">Proporção ideal: 2:3 (retrato) • Fotos: máx 5MB • Vídeos: máx 30MB • Ou cole link de Reels</p>
             </CardContent>
           </Card>
 
