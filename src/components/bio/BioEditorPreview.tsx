@@ -9,17 +9,19 @@ interface BioEditorPreviewProps {
 
 export const BioEditorPreview = ({ bioPage }: BioEditorPreviewProps) => {
   const theme = bioPage.theme || DEFAULT_THEME;
-  const activeButtons = (bioPage.buttons || []).filter((b) => b.enabled).sort((a, b) => a.order - b.order);
+  const activeButtons = (bioPage.buttons || [])
+    .filter((b) => b.enabled)
+    .sort((a, b) => a.order - b.order);
 
   const handleButtonClick = (button: BioButton) => {
     // Preview mode - just show what would happen
-    console.log("Button clicked:", button);
+    console.log('Button clicked:', button);
   };
 
   return (
-    <div
+    <div 
       className="min-h-full py-8 px-4 relative overflow-hidden"
-      style={{
+      style={{ 
         backgroundColor: `hsl(${theme.backgroundColor})`,
         color: `hsl(${theme.textColor})`,
       }}
@@ -43,13 +45,13 @@ export const BioEditorPreview = ({ bioPage }: BioEditorPreviewProps) => {
       `}</style>
       {/* Background Effects */}
       <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
-      <div
+      <div 
         className="absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full opacity-20 blur-3xl pointer-events-none"
         style={{ backgroundColor: `hsl(${theme.primaryColor})` }}
       />
 
       <div className="relative z-10 max-w-sm mx-auto space-y-6">
-        <BioPageHeader
+        <BioPageHeader 
           title={bioPage.title || "Minha Bio"}
           subtitle={bioPage.subtitle}
           photoUrl={bioPage.profile_photo_url}
@@ -60,9 +62,15 @@ export const BioEditorPreview = ({ bioPage }: BioEditorPreviewProps) => {
           <BioPageGallery photos={bioPage.gallery_photos} theme={theme} />
         )}
 
-        <BioPageButtons buttons={activeButtons} theme={theme} onButtonClick={handleButtonClick} />
+        <BioPageButtons 
+          buttons={activeButtons}
+          theme={theme}
+          onButtonClick={handleButtonClick}
+        />
 
-        <p className="text-center text-xs opacity-50 pt-4">Tag Tá Na Mão</p>
+        <p className="text-center text-xs opacity-50 pt-4">
+          Powered by TagNaMão
+        </p>
       </div>
     </div>
   );
