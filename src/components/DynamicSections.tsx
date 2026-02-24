@@ -142,7 +142,7 @@ const DynamicSections = () => {
       {sections.map((section) => (
         <section key={section.id} className="py-16 px-4">
           <div className="max-w-6xl mx-auto text-center mb-8">
-            <h2 className="text-3xl font-bold text-foreground mb-2">{section.title}</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-2">{section.title}</h2>
             {section.description && (
               <p className="text-muted-foreground max-w-2xl mx-auto">{section.description}</p>
             )}
