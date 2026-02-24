@@ -331,56 +331,23 @@ export default function SiteSectionsPage() {
   };
 
   return (
-<motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="mb-4">
-              <img src={logoHorizontal} alt="Tag Tá Na Mão" className="h-8" />
-            </div>
-            <p className="text-muted-foreground text-sm mb-4">
-              Tecnologia que protege quem você ama. Tags e Displays inteligentes com QR Code.
-            </p>
-            <div className="flex gap-3">
-              <a
-                href="https://www.instagram.com/tagtanamao"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center hover:bg-primary/20 transition-colors"
-              >
-                <Instagram className="w-4 h-4" />
-              </a>
-
-              <a
-                href="https://www.facebook.com/tagtanamao"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center hover:bg-primary/20 transition-colors"
-              >
-                <Facebook className="w-4 h-4" />
-              </a>
-
-              <a
-                href="https://wa.me/556993248849"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center hover:bg-primary/20 transition-colors"
-              >
-                <MessageCircle className="w-4 h-4" />
-              </a>
-
-              <a
-                href="https://www.tiktok.com/@tagtanamao"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center hover:bg-primary/20 transition-colors"
-              >
-                <Music className="w-4 h-4" />
-              </a>
-            </div>
-          </motion.div>
+    <div className="min-h-screen bg-background p-4 md:p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/configuracoes')}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold text-foreground">Gerenciar Seções do Site</h1>
+            <p className="text-sm text-muted-foreground">Controle as seções dinâmicas da landing page</p>
+          </div>
+        </div>
+        <Button onClick={() => setShowCreateDialog(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          Nova Seção
+        </Button>
+      </div>
 
       {/* Section List */}
       {loading ? (
