@@ -30,6 +30,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ImageUpload } from "@/components/bio/ImageUpload";
+import DisplayTemplateSelector from "@/components/display/DisplayTemplateSelector";
 import {
   Dialog,
   DialogContent,
@@ -917,6 +918,15 @@ export default function DisplaysManager() {
                           </div>
                         )}
                       </div>
+
+                      {/* Templates Premium */}
+                      {user && (
+                        <DisplayTemplateSelector
+                          displayId={selectedDisplay.id}
+                          userId={user.id}
+                          onTemplateChange={() => fetchDisplays()}
+                        />
+                      )}
 
                       {/* Link to Bio Editor */}
                       <div className="p-4 rounded-lg border border-primary/30 bg-primary/5">
