@@ -1046,8 +1046,10 @@ export type Database = {
         Row: {
           config: Json
           created_at: string
+          description: string | null
           id: string
           is_active: boolean
+          media_url: string | null
           position: number
           section_type: string
           title: string
@@ -1056,8 +1058,10 @@ export type Database = {
         Insert: {
           config?: Json
           created_at?: string
+          description?: string | null
           id?: string
           is_active?: boolean
+          media_url?: string | null
           position?: number
           section_type: string
           title: string
@@ -1066,8 +1070,10 @@ export type Database = {
         Update: {
           config?: Json
           created_at?: string
+          description?: string | null
           id?: string
           is_active?: boolean
+          media_url?: string | null
           position?: number
           section_type?: string
           title?: string

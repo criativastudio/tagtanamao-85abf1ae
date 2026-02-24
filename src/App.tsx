@@ -33,6 +33,7 @@ import CouponsManager from "./pages/admin/CouponsManager";
 import RolesManager from "./pages/admin/RolesManager";
 import FinancialDashboard from "./pages/admin/FinancialDashboard";
 import UsersManager from "./pages/admin/UsersManager";
+import SiteSectionsPage from "./pages/admin/SiteSectionsPage";
 import ThankYou from "./pages/ThankYou";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
@@ -142,6 +143,7 @@ const App = () => (
               <Route path="/admin/funcoes" element={<ProtectedRoute><RolesManager /></ProtectedRoute>} />
               <Route path="/admin/financeiro" element={<ProtectedRoute><FinancialDashboard /></ProtectedRoute>} />
               <Route path="/admin/usuarios" element={<ProtectedRoute><UsersManager /></ProtectedRoute>} />
+              <Route path="/admin/secoes" element={<ProtectedRoute><SiteSectionsPage /></ProtectedRoute>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
