@@ -39,36 +39,38 @@ const VideoSection = ({ section }: { section: SiteSection }) => {
   const videoUrl = section.media_url || config.videoUrl;
   const autoplay = config.autoplay ? 1 : 0;
 
-  if (youtubeId) {
-    return (
-      <div className="w-full max-w-4xl mx-auto aspect-video rounded-xl overflow-hidden shadow-lg">
-        <iframe
-          src={`https://www.youtube.com/embed/${youtubeId}?autoplay=${autoplay}&mute=${autoplay}&rel=0`}
-          title={section.title}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          className="w-full h-full border-0"
-        />
+  return (
+    <>
+      <div className="max-w-6xl mx-auto text-center mb-8">
+        <h2 className="text-3xl font-bold text-foreground mb-2">{section.title}</h2>
+        {section.description && (
+          <p className="text-muted-foreground max-w-2xl mx-auto">{section.description}</p>
+        )}
       </div>
-    );
-  }
-
-  if (videoUrl) {
-    return (
-      <div className="w-full max-w-4xl mx-auto aspect-video rounded-xl overflow-hidden shadow-lg">
-        <video
-          src={videoUrl}
-          controls
-          autoPlay={config.autoplay}
-          muted={config.autoplay}
-          loop
-          className="w-full h-full object-cover"
-        />
-      </div>
-    );
-  }
-
-  return null;
+      {youtubeId ? (
+        <div className="w-full max-w-4xl mx-auto aspect-video rounded-xl overflow-hidden shadow-lg">
+          <iframe
+            src={`https://www.youtube.com/embed/${youtubeId}?autoplay=${autoplay}&mute=${autoplay}&rel=0`}
+            title={section.title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="w-full h-full border-0"
+          />
+        </div>
+      ) : videoUrl ? (
+        <div className="w-full max-w-4xl mx-auto aspect-video rounded-xl overflow-hidden shadow-lg">
+          <video
+            src={videoUrl}
+            controls
+            autoPlay={config.autoplay}
+            muted={config.autoplay}
+            loop
+            className="w-full h-full object-cover"
+          />
+        </div>
+      ) : null}
+    </>
+  );
 };
 
 const PetSlidesSection = () => {
@@ -141,12 +143,14 @@ const DynamicSections = () => {
     <>
       {sections.map((section) => (
         <section key={section.id} className="py-16 px-4">
-          <div className="max-w-6xl mx-auto text-center mb-8">
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-2">{section.title}</h2>
-            {section.description && (
-              <p className="text-muted-foreground max-w-2xl mx-auto">{section.description}</p>
-            )}
-          </div>
+          {section.section_type !== "video" && (
+            <div className="max-w-6xl mx-auto text-center mb-8">
+              <h2 className="text-3xl font-bold text-foreground mb-2">{section.title}</h2>
+              {section.description && (
+                <p className="text-muted-foreground max-w-2xl mx-auto">{section.description}</p>
+              )}
+            </div>
+          )}
           {section.section_type === "video" && <VideoSection section={section} />}
           {section.section_type === "pet_slides" && <PetSlidesSection />}
         </section>
