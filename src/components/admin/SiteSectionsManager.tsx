@@ -151,7 +151,6 @@ export default function SiteSectionsManager() {
           <Button variant="hero" size="sm" onClick={() => setShowCreateDialog(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Nova Seção
-            <p className="text-muted-foreground text-sm mb-4">Tag Pet Video.</p>
           </Button>
         </div>
       </CardHeader>
