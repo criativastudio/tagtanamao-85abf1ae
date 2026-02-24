@@ -185,10 +185,26 @@ export default function SiteSectionsManager() {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-semibold text-foreground truncate">{section.title}</h4>
-                  <p className="text-xs text-muted-foreground">
-                    {typeInfo?.label} · Posição {section.position}
-                  </p>
+                  <section className="relative py-8 overflow-hidden">
+                    {/* Efeitos de fundo */}
+                    <div className="absolute inset-0 bg-grid opacity-10" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/5 to-transparent" />
+
+                    <div className="relative z-10 text-center">
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.6 }}
+                        className="mb-4"
+                      >
+                        <span className="inline-block px-4 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-2">
+                          {typeInfo?.label}
+                        </span>
+                        <h2 className="text-2xl md:text-3xl font-display font-bold mb-2">{section.title}</h2>
+                      </motion.div>
+                    </div>
+                  </section>
                 </div>
 
                 <div className="flex items-center gap-2 flex-shrink-0">
