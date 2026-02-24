@@ -77,8 +77,20 @@ CREATE TABLE IF NOT EXISTS public.products (
 
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Anyone can view active products" ON public.products
-  FOR SELECT USING (is_active = true OR is_admin());
+DO $$ 
+BEGIN
+   IF NOT EXISTS (
+      SELECT 1 FROM pg_policies 
+      WHERE policyname = 'Anyone can view active products'
+      AND tablename = 'products'
+   ) THEN
+      CREATE POLICY "Anyone can view active products"
+      ON public.products
+      FOR SELECT
+      USING (is_active = true OR is_admin());
+   END IF;
+END
+$$;
 
 CREATE POLICY "Admins can manage products" ON public.products
   FOR ALL USING (is_admin());
