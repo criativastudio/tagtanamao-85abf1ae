@@ -65,7 +65,13 @@ function LucideIcon({ name, className, size = 20 }: { name: string; className?: 
   return <IconComponent className={className} size={size} />;
 }
 
-export default function NetflixTemplate({ businessName, description, logoUrl, themeColor = "#e50914", config }: NetflixTemplateProps) {
+export default function NetflixTemplate({
+  businessName,
+  description,
+  logoUrl,
+  themeColor = "#e50914",
+  config,
+}: NetflixTemplateProps) {
   const [heroIndex, setHeroIndex] = useState(0);
   const [muted, setMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -104,16 +110,20 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
   const heroPrev = () => setHeroIndex((prev) => (prev - 1 + heroItems.length) % heroItems.length);
   const currentHero = heroItems[heroIndex];
 
-  const displaySections = sections.length > 0
-    ? sections
-    : thumbnails.length > 0
-      ? [{ title: "Destaques", itemIndexes: thumbnails.map((_, i) => i) }]
-      : [];
+  const displaySections =
+    sections.length > 0
+      ? sections
+      : thumbnails.length > 0
+        ? [{ title: "Destaques", itemIndexes: thumbnails.map((_, i) => i) }]
+        : [];
 
   const hasBottomNav = bottomNav.length > 0;
 
   return (
-    <div className="min-h-screen bg-[#141414] text-white font-sans" style={{ paddingBottom: hasBottomNav ? "72px" : 0 }}>
+    <div
+      className="min-h-screen bg-[#0a0a0a] text-white font-sans"
+      style={{ paddingBottom: hasBottomNav ? "72px" : 0 }}
+    >
       {/* Inject carousel keyframes */}
       <style>{`
         @keyframes netflix-scroll {
@@ -165,12 +175,15 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
               transition={{ duration: 0.8 }}
               className="absolute inset-0"
             >
-              {(currentHero.type === "video" || config.hero?.type === "video") ? (
+              {currentHero.type === "video" || config.hero?.type === "video" ? (
                 <video
                   ref={videoRef}
                   src={currentHero.url}
                   className="w-full h-full object-cover"
-                  autoPlay loop muted={muted} playsInline
+                  autoPlay
+                  loop
+                  muted={muted}
+                  playsInline
                 />
               ) : config.hero?.type === "youtube" && config.hero.youtubeId ? (
                 <iframe
@@ -180,15 +193,19 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
                   allowFullScreen
                 />
               ) : (
-                <img src={currentHero.url} alt={currentHero.title || businessName} className="w-full h-full object-cover" />
+                <img
+                  src={currentHero.url}
+                  alt={currentHero.title || businessName}
+                  className="w-full h-full object-cover"
+                />
               )}
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* Gradient overlays */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-[#141414]/20 to-black/30" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#141414]/60 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/20 to-black/30" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/60 via-transparent to-transparent" />
 
         {/* Hero Content */}
         <div className="absolute bottom-[4%] left-0 right-0 px-6 z-10 text-center">
@@ -202,11 +219,7 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
             {headline}
           </h1>
 
-          {heroSubtitle && (
-            <p className="text-sm md:text-base text-white/70 mb-4 tracking-wide">
-              {heroSubtitle}
-            </p>
-          )}
+          {heroSubtitle && <p className="text-sm md:text-base text-white/70 mb-4 tracking-wide">{heroSubtitle}</p>}
 
           {/* Tags */}
           {tags.length > 0 && (
@@ -249,12 +262,7 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
           {/* Mute toggle for video/youtube */}
           {(config.hero?.type === "video" || config.hero?.type === "youtube") && (
             <div className="mt-4">
-              <Button
-                onClick={() => setMuted(!muted)}
-                className="rounded-full"
-                size="icon"
-                variant="ghost"
-              >
+              <Button onClick={() => setMuted(!muted)} className="rounded-full" size="icon" variant="ghost">
                 {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
               </Button>
             </div>
@@ -264,15 +272,25 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
         {/* Carousel Controls */}
         {config.hero?.type === "carousel" && heroItems.length > 1 && (
           <>
-            <button onClick={heroPrev} className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 rounded-full p-2 transition">
+            <button
+              onClick={heroPrev}
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 rounded-full p-2 transition"
+            >
               <ChevronLeft className="w-6 h-6" />
             </button>
-            <button onClick={heroNext} className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 rounded-full p-2 transition">
+            <button
+              onClick={heroNext}
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 rounded-full p-2 transition"
+            >
               <ChevronRight className="w-6 h-6" />
             </button>
             <div className="absolute bottom-4 right-4 z-10 flex gap-1.5">
               {heroItems.map((_, i) => (
-                <button key={i} onClick={() => setHeroIndex(i)} className={`w-2.5 h-2.5 rounded-full transition ${i === heroIndex ? "bg-white scale-110" : "bg-white/40"}`} />
+                <button
+                  key={i}
+                  onClick={() => setHeroIndex(i)}
+                  className={`w-2.5 h-2.5 rounded-full transition ${i === heroIndex ? "bg-white scale-110" : "bg-white/40"}`}
+                />
               ))}
             </div>
           </>
@@ -297,7 +315,12 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
                 >
                   {/* Netflix N badge */}
                   <div className="absolute top-1.5 left-1.5 z-10 w-6 h-8 flex items-center justify-center">
-                    <span className="text-[#e50914] font-black text-2xl leading-none" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>N</span>
+                    <span
+                      className="text-[#e50914] font-black text-2xl leading-none"
+                      style={{ fontFamily: "'Bebas Neue', sans-serif" }}
+                    >
+                      N
+                    </span>
                   </div>
 
                   {cover.type === "instagram" && extractReelId(cover.url) ? (
@@ -312,7 +335,7 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
                           left: "-100%",
                           transform: "scale(0.5)",
                           transformOrigin: "center center",
-                          pointerEvents: "none"
+                          pointerEvents: "none",
                         }}
                         allow="autoplay; encrypted-media"
                         allowFullScreen
@@ -323,7 +346,10 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
                     <video
                       src={cover.url}
                       className="w-full aspect-[2/3] object-cover"
-                      autoPlay loop muted playsInline
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
                     />
                   ) : (
                     <img
@@ -374,7 +400,12 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
                 >
                   {/* N badge */}
                   <div className="absolute top-1.5 left-1.5 z-10">
-                    <span className="text-[#e50914] font-black text-lg" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>N</span>
+                    <span
+                      className="text-[#e50914] font-black text-lg"
+                      style={{ fontFamily: "'Bebas Neue', sans-serif" }}
+                    >
+                      N
+                    </span>
                   </div>
 
                   {thumb.type === "instagram" && extractReelId(thumb.url) ? (
@@ -389,7 +420,7 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
                           left: "-100%",
                           transform: "scale(0.5)",
                           transformOrigin: "center center",
-                          pointerEvents: "none"
+                          pointerEvents: "none",
                         }}
                         allow="autoplay; encrypted-media"
                         allowFullScreen
@@ -400,7 +431,10 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
                     <video
                       src={thumb.url}
                       className="w-full aspect-[2/3] object-cover"
-                      autoPlay loop muted playsInline
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
                     />
                   ) : (
                     <img
