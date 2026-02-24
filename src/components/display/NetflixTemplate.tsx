@@ -123,7 +123,15 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
         }
         .netflix-headline {
           font-family: 'Bebas Neue', sans-serif;
-          text-shadow: 0 2px 20px rgba(0,0,0,0.7), 0 0 40px rgba(0,0,0,0.3);
+          text-shadow: 0 4px 30px rgba(0,0,0,0.9), 0 2px 10px rgba(0,0,0,0.8), 0 0 60px rgba(0,0,0,0.5);
+        }
+        .netflix-thumb-overlay {
+          transform: translateY(100%);
+          transition: transform 0.35s cubic-bezier(0.4,0,0.2,1), box-shadow 0.35s ease;
+        }
+        .netflix-thumb:hover .netflix-thumb-overlay {
+          transform: translateY(0);
+          box-shadow: 0 -8px 24px rgba(0,0,0,0.5);
         }
       `}</style>
 
@@ -178,7 +186,7 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
         <div className="absolute inset-0 bg-gradient-to-r from-[#141414]/60 via-transparent to-transparent" />
 
         {/* Hero Content */}
-        <div className="absolute bottom-[12%] left-0 right-0 px-6 z-10 text-center">
+        <div className="absolute bottom-[4%] left-0 right-0 px-6 z-10 text-center">
           {subheadline && (
             <p className="text-xs md:text-sm uppercase tracking-[0.3em] text-white/80 mb-2 font-medium">
               {subheadline}
@@ -279,23 +287,34 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
               {[...covers, ...(covers.length > 2 ? covers : [])].map((cover, i) => (
                 <div
                   key={i}
-                  className="flex-none w-[150px] md:w-[180px] rounded-lg overflow-hidden relative group cursor-pointer"
+                  className="flex-none w-[150px] md:w-[180px] rounded-lg overflow-hidden relative group cursor-pointer netflix-thumb"
                   style={{ backgroundColor: cover.bgColor || "#1a1a2e" }}
                 >
                   {/* Netflix N badge */}
-                  <div className="absolute top-1 left-1 z-10 w-5 h-7 flex items-center justify-center">
-                    <span className="text-[#e50914] font-black text-lg leading-none" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>N</span>
+                  <div className="absolute top-1.5 left-1.5 z-10 w-6 h-8 flex items-center justify-center">
+                    <span className="text-[#e50914] font-black text-2xl leading-none" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>N</span>
                   </div>
 
-                  <img
-                    src={cover.url}
-                    alt={cover.title || ""}
-                    className="w-full aspect-[2/3] object-cover"
-                    loading="lazy"
-                  />
+                  {cover.type === "video" ? (
+                    <video
+                      src={cover.url}
+                      className="w-full aspect-[2/3] object-cover"
+                      autoPlay loop muted playsInline
+                    />
+                  ) : (
+                    <img
+                      src={cover.url}
+                      alt={cover.title || ""}
+                      className="w-full aspect-[2/3] object-cover"
+                      loading="lazy"
+                    />
+                  )}
 
-                  {/* Gradient + Title overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-2">
+                  {/* Static gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+
+                  {/* Hover overlay - slides up */}
+                  <div className="netflix-thumb-overlay absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/90 to-transparent p-3 pt-8">
                     {cover.title && (
                       <span className="text-xs font-bold uppercase tracking-wide text-white">{cover.title}</span>
                     )}
@@ -303,7 +322,7 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
 
                   {/* Badge (e.g., "NOVOS EPISÓDIOS") */}
                   {cover.badge && (
-                    <div className="absolute bottom-0 left-0 right-0 bg-[#e50914] text-white text-[9px] font-bold text-center py-0.5 tracking-wider uppercase">
+                    <div className="absolute bottom-0 left-0 right-0 z-10 bg-[#e50914] text-white text-[9px] font-bold text-center py-0.5 tracking-wider uppercase">
                       {cover.badge}
                     </div>
                   )}
@@ -326,27 +345,41 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
                 <motion.div
                   key={idx}
                   whileHover={{ scale: 1.05 }}
-                  className="rounded-lg overflow-hidden cursor-pointer relative group"
+                  className="rounded-lg overflow-hidden cursor-pointer relative netflix-thumb"
                   style={{ backgroundColor: thumb.bgColor || "#1a1a2e" }}
                 >
                   {/* N badge */}
-                  <div className="absolute top-1 left-1 z-10">
-                    <span className="text-[#e50914] font-black text-sm" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>N</span>
+                  <div className="absolute top-1.5 left-1.5 z-10">
+                    <span className="text-[#e50914] font-black text-lg" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>N</span>
                   </div>
 
-                  <img
-                    src={thumb.url}
-                    alt={thumb.title || ""}
-                    className="w-full aspect-[2/3] object-cover"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-2">
+                  {thumb.type === "video" ? (
+                    <video
+                      src={thumb.url}
+                      className="w-full aspect-[2/3] object-cover"
+                      autoPlay loop muted playsInline
+                    />
+                  ) : (
+                    <img
+                      src={thumb.url}
+                      alt={thumb.title || ""}
+                      className="w-full aspect-[2/3] object-cover"
+                      loading="lazy"
+                    />
+                  )}
+
+                  {/* Static gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+
+                  {/* Hover overlay - slides up */}
+                  <div className="netflix-thumb-overlay absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/90 to-transparent p-2 pt-6">
                     {thumb.title && (
                       <span className="text-[10px] md:text-xs font-bold uppercase text-white">{thumb.title}</span>
                     )}
                   </div>
+
                   {thumb.badge && (
-                    <div className="absolute bottom-0 left-0 right-0 bg-[#e50914] text-white text-[8px] font-bold text-center py-0.5 tracking-wider uppercase">
+                    <div className="absolute bottom-0 left-0 right-0 z-10 bg-[#e50914] text-white text-[8px] font-bold text-center py-0.5 tracking-wider uppercase">
                       {thumb.badge}
                     </div>
                   )}

@@ -121,7 +121,7 @@ export default function TemplateMediaEditor({ displayId, userId, config, onChang
       const isVideo = file.type.startsWith("video/");
       const url = await uploadFile(file, uploadTarget);
       if (url) {
-        newItems.push({ url, title: file.name.replace(/\.[^.]+$/, ""), type: isVideo ? "video" : "image" });
+        newItems.push({ url, title: "", type: isVideo ? "video" : "image" });
       }
     }
 
@@ -335,11 +335,11 @@ export default function TemplateMediaEditor({ displayId, userId, config, onChang
             </CardHeader>
             <CardContent className="space-y-4">
               {(config.covers || []).length > 0 && renderMediaGrid(config.covers!, "covers")}
-              <Button variant="outline" className="w-full border-dashed" onClick={() => triggerUpload("covers", "image/*")} disabled={!!uploading}>
+              <Button variant="outline" className="w-full border-dashed" onClick={() => triggerUpload("covers", "image/*,video/*")} disabled={!!uploading}>
                 {uploading === "covers" ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
                 Adicionar Capas
               </Button>
-              <p className="text-[11px] text-muted-foreground">Proporção ideal: 2:3 (retrato) • Máx 5MB por imagem</p>
+              <p className="text-[11px] text-muted-foreground">Proporção ideal: 2:3 (retrato) • Fotos: máx 5MB • Vídeos: máx 30MB</p>
             </CardContent>
           </Card>
 
