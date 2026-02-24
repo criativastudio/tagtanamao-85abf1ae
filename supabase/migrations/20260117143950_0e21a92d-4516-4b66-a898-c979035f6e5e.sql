@@ -257,24 +257,17 @@ CREATE TABLE IF NOT EXISTS public.qr_scans (
 
 ALTER TABLE public.qr_scans ENABLE ROW LEVEL SECURITY;
 
--- Constraints protegidas
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'valid_latitude') THEN
-    ALTER TABLE public.qr_scans
-    ADD CONSTRAINT valid_latitude
-    CHECK (latitude IS NULL OR (latitude >= -90 AND latitude <= 90));
-  END IF;
-END $$;
+-- Remove constraints safely (garante zero conflito)
+ALTER TABLE public.qr_scans DROP CONSTRAINT IF EXISTS valid_latitude;
+ALTER TABLE public.qr_scans DROP CONSTRAINT IF EXISTS valid_longitude;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'valid_longitude') THEN
-    ALTER TABLE public.qr_scans
-    ADD CONSTRAINT valid_longitude
-    CHECK (longitude IS NULL OR (longitude >= -180 AND longitude <= 180));
-  END IF;
-END $$;
+ALTER TABLE public.qr_scans
+ADD CONSTRAINT valid_latitude
+CHECK (latitude IS NULL OR (latitude >= -90 AND latitude <= 90));
+
+ALTER TABLE public.qr_scans
+ADD CONSTRAINT valid_longitude
+CHECK (longitude IS NULL OR (longitude >= -180 AND longitude <= 180));
 
 DROP POLICY IF EXISTS "Users view own scans" ON public.qr_scans;
 CREATE POLICY "Users view own scans"
