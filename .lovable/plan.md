@@ -1,56 +1,41 @@
 
 
-## Reprodução automática de Reels nas capas — Limitação técnica e alternativa
+## Mover Seleção de Templates para Dentro da Página de Edição do Display
 
-### Problema
-O Instagram **não oferece uma API pública** para obter o vídeo bruto (MP4) de um Reel apenas com a URL. O embed via `<iframe>` mostra a interface completa do Instagram (comentários, likes, botões) e **não permite controlar autoplay, mute ou tela cheia** — é uma limitação imposta pelo Instagram.
+### Situação Atual
+- A seleção de templates fica em uma página separada (`/dashboard/displays/templates` via `DisplayTemplateManager.tsx`)
+- O usuário precisa navegar para outra tela para gerenciar templates
+- Na tela de edição do display, existe apenas um link "Personalizar (TEMPLATE PADRÃO)" que leva ao editor de bio
 
-Para reproduzir um vídeo do Instagram como se fosse um vídeo nativo (autoplay, mudo, fullscreen na capa), seria necessário extrair a URL direta do MP4, o que:
-- Viola os Termos de Serviço do Instagram
-- Requer scraping server-side que quebra frequentemente
-- Links diretos expiram rapidamente
+### Plano
 
-### Alternativa viável: melhorar o iframe existente
+#### 1. Criar componente `DisplayTemplateSelector`
+Novo componente reutilizável que encapsula a lógica de browse/ativação de templates, extraída do `DisplayTemplateManager.tsx`:
+- Recebe `displayId` e `userId` como props
+- Busca templates disponíveis (`display_templates`), templates comprados (`user_templates`), e o `active_template_id` do display
+- Mostra grid de templates com cards (preview, preço, badge "Ativo", badge "Premium")
+- Botões: "Adquirir" (grátis), "Comprar" (pago), "Ativar" (já comprado), "Desativar" (ativo)
+- Quando um template é ativado, mostra botão para abrir o editor de conteúdo (navega para `/dashboard/displays/templates?display=ID`) para edição avançada de mídia
 
-Podemos melhorar significativamente a experiência do iframe atual:
+#### 2. Integrar na página `DisplaysManager.tsx`
+- Adicionar uma nova seção **"Templates Premium"** no painel de edição do display (após a seção de botões/links e antes do link ao bio editor)
+- Renderizar o `DisplayTemplateSelector` quando um display está selecionado
+- Visível tanto em modo de visualização quanto em modo de edição
 
-1. **Esconder a UI do Instagram ao máximo** — usar CSS para esconder elementos do iframe (limitado por cross-origin, mas podemos escalar/cortar o iframe para mostrar apenas o vídeo)
-2. **Escalar o iframe para "tela cheia"** — usar `transform: scale()` e `overflow: hidden` no container para ampliar apenas a área do vídeo do Reel, cortando a interface ao redor
-3. **Estilo Netflix** — manter o aspect-ratio 2:3, com gradiente escuro por cima para integrar ao design
+#### 3. Manter a página `DisplayTemplateManager` para edição de conteúdo
+- A página separada continua existindo para o editor de mídia (capas, thumbnails, Reels)
+- O botão "Editar Conteúdo" no novo componente navega para ela
 
-### Mudanças em `NetflixTemplate.tsx`
+### Arquivos
+- **Criar**: `src/components/display/DisplayTemplateSelector.tsx` — componente com grid de templates, lógica de compra/ativação
+- **Editar**: `src/pages/DisplaysManager.tsx` — importar e renderizar o novo componente dentro do painel de detalhes do display selecionado (linha ~920, após a seção de botões)
 
-Para os itens `type === "instagram"` nas covers e thumbnails:
-
-```tsx
-<div className="w-full aspect-[2/3] overflow-hidden relative">
-  <iframe
-    src={`https://www.instagram.com/reel/${id}/embed/?autoplay=1&mute=1`}
-    className="absolute border-0"
-    style={{
-      width: "300%",
-      height: "300%",
-      top: "-100%",
-      left: "-100%",
-      transform: "scale(0.5)",
-      transformOrigin: "center center",
-      pointerEvents: "none"
-    }}
-    allow="autoplay; encrypted-media"
-    allowFullScreen
-    scrolling="no"
-  />
-</div>
+### Detalhes Técnicos
+O componente `DisplayTemplateSelector` fará queries independentes:
 ```
-
-- `pointerEvents: "none"` para que o hover do Netflix funcione por cima
-- Container com `overflow: hidden` corta a UI extra do Instagram
-- Parâmetros `autoplay=1&mute=1` na URL do embed (o Instagram nem sempre respeita, mas vale tentar)
-- Gradiente escuro por cima para disfarçar bordas
-
-### Arquivos modificados
-- **`src/components/display/NetflixTemplate.tsx`**: atualizar renderização de `type === "instagram"` nas covers e thumbnails para usar iframe escalado com autoplay/mute e overflow hidden
-
-### Limitação importante
-Mesmo com essas melhorias, o embed do Instagram **não garante autoplay silencioso** — depende do navegador e das políticas do Instagram. Para reprodução perfeita, a recomendação é que o usuário faça **upload direto do vídeo** (que já é suportado), o que dá controle total sobre autoplay, mute e tela cheia.
+display_templates (is_active = true)
+user_templates (user_id = current user)
+business_displays (para ler active_template_id)
+```
+Ao ativar/desativar template, atualiza `business_displays.active_template_id` diretamente. Sem migração de banco necessária.
 
