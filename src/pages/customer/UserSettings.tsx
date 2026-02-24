@@ -63,7 +63,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import SiteSectionsManager from '@/components/admin/SiteSectionsManager';
+
 
 interface AdminMenuItem {
   id: string;
@@ -182,6 +182,14 @@ const adminSettingsItems: AdminMenuItem[] = [
     icon: Users,
     path: '/admin/usuarios',
     color: 'text-cyan-400'
+  },
+  {
+    id: 'site-sections',
+    title: 'Seções do Site',
+    description: 'Gerencie seções da landing page.',
+    icon: Layout,
+    path: '/admin/secoes',
+    color: 'text-pink-400'
   },
 ];
 
@@ -1021,8 +1029,7 @@ export default function UserSettings() {
                 </div>
               </motion.div>
 
-              {/* Site Sections Manager */}
-              <SiteSectionsManager />
+              {/* Site Sections Manager removed - now at /admin/secoes */}
             </div>
           </TabsContent>
         )}
