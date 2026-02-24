@@ -14,7 +14,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 -- ===========================================
 -- TABLE: profiles (user data)
 -- ===========================================
-CREATE TABLE public.profiles (
+CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT,
   full_name TEXT,
