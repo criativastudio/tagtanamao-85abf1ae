@@ -10,6 +10,7 @@ import { BioPageGallery } from "@/components/bio/BioPageGallery";
 import { BioPageButtons } from "@/components/bio/BioPageButtons";
 import { WifiModal, PixModal } from "@/components/bio/SpecialButtonModals";
 import { generateVCard, downloadVCard, parseWifiData, parsePixData, parseVCardData } from "@/lib/buttonActions";
+import NetflixTemplate from "@/components/display/NetflixTemplate";
 import { 
   AlertTriangle, 
   Building2, 
@@ -39,6 +40,8 @@ interface BusinessDisplay {
   buttons: DisplayButton[];
   theme_color: string | null;
   is_activated: boolean | null;
+  active_template_id: string | null;
+  template_config: any;
 }
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -308,6 +311,20 @@ const PublicDisplayPage = () => {
           </CardContent>
         </Card>
       </div>
+    );
+  }
+
+  // If display has an active premium template, render it
+  if (display.active_template_id && display.template_config) {
+    const tplConfig = typeof display.template_config === "object" ? display.template_config : {};
+    return (
+      <NetflixTemplate
+        businessName={display.business_name || "Empresa"}
+        description={display.description}
+        logoUrl={display.logo_url}
+        themeColor={display.theme_color || "#e50914"}
+        config={tplConfig}
+      />
     );
   }
 
