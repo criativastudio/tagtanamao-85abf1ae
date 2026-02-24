@@ -1,54 +1,56 @@
 
 
-## Suporte a Instagram Reels nas Capas do Template Netflix
+## Reprodução automática de Reels nas capas — Limitação técnica e alternativa
 
 ### Problema
-Atualmente, as capas do carrossel só aceitam upload de arquivos (fotos/vídeos). O usuário quer colar um link de Instagram Reels e ter o vídeo reproduzido diretamente como capa, sem upload.
+O Instagram **não oferece uma API pública** para obter o vídeo bruto (MP4) de um Reel apenas com a URL. O embed via `<iframe>` mostra a interface completa do Instagram (comentários, likes, botões) e **não permite controlar autoplay, mute ou tela cheia** — é uma limitação imposta pelo Instagram.
 
-### Abordagem
-Instagram não permite embed direto de vídeo via URL simples — é necessário usar um `<iframe>` com o embed oficial (`https://www.instagram.com/reel/{ID}/embed/`). Vamos adicionar um novo `type: "instagram"` ao `MediaItem` e um campo de input no editor para colar links de Reels.
+Para reproduzir um vídeo do Instagram como se fosse um vídeo nativo (autoplay, mudo, fullscreen na capa), seria necessário extrair a URL direta do MP4, o que:
+- Viola os Termos de Serviço do Instagram
+- Requer scraping server-side que quebra frequentemente
+- Links diretos expiram rapidamente
 
-### Mudanças
+### Alternativa viável: melhorar o iframe existente
 
-#### 1. Interfaces — adicionar tipo `"instagram"` ao `MediaItem`
-Em ambos os arquivos (`NetflixTemplate.tsx` e `TemplateMediaEditor.tsx`), expandir:
-```typescript
-type?: "image" | "video" | "instagram";
-```
+Podemos melhorar significativamente a experiência do iframe atual:
 
-#### 2. `TemplateMediaEditor.tsx` — botão "Adicionar Reels do Instagram"
-Na aba **Capas**, adicionar abaixo do botão de upload:
-- Um campo de input com placeholder `https://www.instagram.com/reel/ABC123/`
-- Botão "Adicionar Reel"
-- Ao clicar, extrair o ID do Reel via regex (`/reel\/([a-zA-Z0-9_-]+)/`) e criar um `MediaItem` com:
-  - `url`: a URL completa do Reel
-  - `type: "instagram"`
-  - `title: ""`
-- Adicionar ao array `config.covers`
-- No `renderMediaGrid`, quando `item.type === "instagram"`, renderizar um preview com ícone do Instagram em vez de `<img>` ou `<video>`
+1. **Esconder a UI do Instagram ao máximo** — usar CSS para esconder elementos do iframe (limitado por cross-origin, mas podemos escalar/cortar o iframe para mostrar apenas o vídeo)
+2. **Escalar o iframe para "tela cheia"** — usar `transform: scale()` e `overflow: hidden` no container para ampliar apenas a área do vídeo do Reel, cortando a interface ao redor
+3. **Estilo Netflix** — manter o aspect-ratio 2:3, com gradiente escuro por cima para integrar ao design
 
-#### 3. `NetflixTemplate.tsx` — renderizar iframe de Instagram Reels
-No carrossel de covers e no grid de thumbnails, adicionar condição:
+### Mudanças em `NetflixTemplate.tsx`
+
+Para os itens `type === "instagram"` nas covers e thumbnails:
+
 ```tsx
-cover.type === "instagram" ? (
+<div className="w-full aspect-[2/3] overflow-hidden relative">
   <iframe
-    src={`https://www.instagram.com/reel/${extractReelId(cover.url)}/embed/`}
-    className="w-full aspect-[2/3] border-0"
+    src={`https://www.instagram.com/reel/${id}/embed/?autoplay=1&mute=1`}
+    className="absolute border-0"
+    style={{
+      width: "300%",
+      height: "300%",
+      top: "-100%",
+      left: "-100%",
+      transform: "scale(0.5)",
+      transformOrigin: "center center",
+      pointerEvents: "none"
+    }}
+    allow="autoplay; encrypted-media"
     allowFullScreen
     scrolling="no"
   />
-) : cover.type === "video" ? ...
+</div>
 ```
-- Criar helper `extractReelId(url)` que extrai o ID do Reel da URL
-- O iframe do Instagram renderiza o vídeo embutido diretamente
 
-#### 4. Mesmo suporte nos Thumbnails
-Aplicar a mesma lógica de renderização condicional no grid de thumbnails para que Reels também funcionem ali.
+- `pointerEvents: "none"` para que o hover do Netflix funcione por cima
+- Container com `overflow: hidden` corta a UI extra do Instagram
+- Parâmetros `autoplay=1&mute=1` na URL do embed (o Instagram nem sempre respeita, mas vale tentar)
+- Gradiente escuro por cima para disfarçar bordas
 
 ### Arquivos modificados
-- **`src/components/display/NetflixTemplate.tsx`**: novo tipo na interface, helper `extractReelId`, renderização condicional de `<iframe>` para Instagram Reels nas covers e thumbnails
-- **`src/components/display/TemplateMediaEditor.tsx`**: novo tipo na interface, input para URL de Reels na aba Capas, preview com ícone Instagram no grid de mídia
+- **`src/components/display/NetflixTemplate.tsx`**: atualizar renderização de `type === "instagram"` nas covers e thumbnails para usar iframe escalado com autoplay/mute e overflow hidden
 
-### Sem migração de banco
-O `template_config` é JSONB livre — basta salvar `type: "instagram"` nos items.
+### Limitação importante
+Mesmo com essas melhorias, o embed do Instagram **não garante autoplay silencioso** — depende do navegador e das políticas do Instagram. Para reprodução perfeita, a recomendação é que o usuário faça **upload direto do vídeo** (que já é suportado), o que dá controle total sobre autoplay, mute e tela cheia.
 
