@@ -1,12 +1,28 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, ChevronLeft, ChevronRight, Volume2, VolumeX, Info } from "lucide-react";
+import { ChevronLeft, ChevronRight, Volume2, VolumeX, icons } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface MediaItem {
   url: string;
   title?: string;
   type?: "image" | "video";
+  badge?: string;
+  bgColor?: string;
+}
+
+interface HeroButton {
+  label: string;
+  icon?: string;
+  url?: string;
+  action?: string;
+}
+
+interface BottomNavItem {
+  icon: string;
+  label: string;
+  url: string;
+  badgeCount?: number;
 }
 
 interface TemplateConfig {
@@ -15,9 +31,15 @@ interface TemplateConfig {
     items: MediaItem[];
     youtubeId?: string;
   };
+  headline?: string;
+  subheadline?: string;
+  heroSubtitle?: string;
+  tags?: string[];
+  heroButtons?: HeroButton[];
   covers?: MediaItem[];
   thumbnails?: MediaItem[];
   sections?: { title: string; itemIndexes: number[] }[];
+  bottomNav?: BottomNavItem[];
 }
 
 interface NetflixTemplateProps {
@@ -28,19 +50,41 @@ interface NetflixTemplateProps {
   config: TemplateConfig;
 }
 
-const extractYoutubeId = (url: string): string | null => {
-  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
-  return match ? match[1] : null;
-};
+// Dynamic Lucide icon renderer
+function LucideIcon({ name, className, size = 20 }: { name: string; className?: string; size?: number }) {
+  const IconComponent = (icons as any)[name];
+  if (!IconComponent) {
+    const Fallback = (icons as any)["Home"];
+    return Fallback ? <Fallback className={className} size={size} /> : null;
+  }
+  return <IconComponent className={className} size={size} />;
+}
 
 export default function NetflixTemplate({ businessName, description, logoUrl, themeColor = "#e50914", config }: NetflixTemplateProps) {
   const [heroIndex, setHeroIndex] = useState(0);
   const [muted, setMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
+
   const heroItems = config.hero?.items || [];
   const covers = config.covers || [];
   const thumbnails = config.thumbnails || [];
   const sections = config.sections || [];
+  const headline = config.headline || businessName;
+  const subheadline = config.subheadline || "";
+  const heroSubtitle = config.heroSubtitle || "";
+  const tags = config.tags || [];
+  const heroButtons = config.heroButtons || [];
+  const bottomNav = config.bottomNav || [];
+
+  // Inject Bebas Neue font
+  useEffect(() => {
+    if (!document.querySelector('link[href*="Bebas+Neue"]')) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap";
+      document.head.appendChild(link);
+    }
+  }, []);
 
   // Auto-rotate hero carousel
   useEffect(() => {
@@ -53,35 +97,51 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
 
   const heroNext = () => setHeroIndex((prev) => (prev + 1) % heroItems.length);
   const heroPrev = () => setHeroIndex((prev) => (prev - 1 + heroItems.length) % heroItems.length);
-
   const currentHero = heroItems[heroIndex];
 
-  // Build sections from thumbnails if no custom sections defined
   const displaySections = sections.length > 0
     ? sections
     : thumbnails.length > 0
       ? [{ title: "Destaques", itemIndexes: thumbnails.map((_, i) => i) }]
       : [];
 
+  const hasBottomNav = bottomNav.length > 0;
+
   return (
-    <div className="min-h-screen bg-[#141414] text-white font-sans">
-      {/* Nav Bar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/80 to-transparent px-4 py-3 md:px-8">
+    <div className="min-h-screen bg-[#141414] text-white font-sans" style={{ paddingBottom: hasBottomNav ? "72px" : 0 }}>
+      {/* Inject carousel keyframes */}
+      <style>{`
+        @keyframes netflix-scroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .netflix-carousel {
+          animation: netflix-scroll 30s linear infinite;
+        }
+        .netflix-carousel:hover {
+          animation-play-state: paused;
+        }
+        .netflix-headline {
+          font-family: 'Bebas Neue', sans-serif;
+          text-shadow: 0 2px 20px rgba(0,0,0,0.7), 0 0 40px rgba(0,0,0,0.3);
+        }
+      `}</style>
+
+      {/* Top Nav */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/80 to-transparent px-4 py-3">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center gap-4">
-            {logoUrl ? (
-              <img src={logoUrl} alt={businessName} className="h-8 md:h-10 object-contain" />
-            ) : (
-              <span className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: themeColor }}>
-                {businessName}
-              </span>
-            )}
-          </div>
+          {logoUrl ? (
+            <img src={logoUrl} alt={businessName} className="h-8 md:h-10 object-contain" />
+          ) : (
+            <span className="text-xl font-bold tracking-tight" style={{ color: themeColor }}>
+              {businessName}
+            </span>
+          )}
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="relative w-full aspect-[16/9] max-h-[80vh] overflow-hidden">
+      <section className="relative w-full aspect-[9/16] max-h-[85vh] overflow-hidden">
         <AnimatePresence mode="wait">
           {currentHero && (
             <motion.div
@@ -97,10 +157,7 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
                   ref={videoRef}
                   src={currentHero.url}
                   className="w-full h-full object-cover"
-                  autoPlay
-                  loop
-                  muted={muted}
-                  playsInline
+                  autoPlay loop muted={muted} playsInline
                 />
               ) : config.hero?.type === "youtube" && config.hero.youtubeId ? (
                 <iframe
@@ -110,124 +167,189 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
                   allowFullScreen
                 />
               ) : (
-                <img
-                  src={currentHero.url}
-                  alt={currentHero.title || businessName}
-                  className="w-full h-full object-cover"
-                />
+                <img src={currentHero.url} alt={currentHero.title || businessName} className="w-full h-full object-cover" />
               )}
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Hero Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-black/40" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#141414]/80 via-transparent to-transparent" />
+        {/* Gradient overlays */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-[#141414]/20 to-black/30" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#141414]/60 via-transparent to-transparent" />
 
         {/* Hero Content */}
-        <div className="absolute bottom-[15%] left-4 md:left-12 max-w-lg z-10">
-          {logoUrl && (
-            <h1 className="text-3xl md:text-5xl font-bold mb-3 drop-shadow-lg">
-              {businessName}
-            </h1>
-          )}
-          {description && (
-            <p className="text-sm md:text-base text-gray-200 line-clamp-3 mb-4 drop-shadow">
-              {description}
+        <div className="absolute bottom-[12%] left-0 right-0 px-6 z-10 text-center">
+          {subheadline && (
+            <p className="text-xs md:text-sm uppercase tracking-[0.3em] text-white/80 mb-2 font-medium">
+              {subheadline}
             </p>
           )}
-          <div className="flex items-center gap-3">
-            {(config.hero?.type === "video" || config.hero?.type === "youtube") && (
+
+          <h1 className="netflix-headline text-6xl md:text-8xl leading-none mb-1" style={{ color: "white" }}>
+            {headline}
+          </h1>
+
+          {heroSubtitle && (
+            <p className="text-sm md:text-base text-white/70 mb-4 tracking-wide">
+              {heroSubtitle}
+            </p>
+          )}
+
+          {/* Tags */}
+          {tags.length > 0 && (
+            <div className="flex items-center justify-center gap-2 mb-5 flex-wrap">
+              {tags.map((tag, i) => (
+                <span key={i} className="flex items-center gap-2 text-xs text-white/60">
+                  {i > 0 && <span className="text-white/30">·</span>}
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Hero Buttons */}
+          {heroButtons.length > 0 && (
+            <div className="flex items-center justify-center gap-3 flex-wrap">
+              {heroButtons.map((btn, i) => (
+                <a
+                  key={i}
+                  href={btn.url || "#"}
+                  onClick={(e) => {
+                    if (btn.action === "scroll") {
+                      e.preventDefault();
+                      document.getElementById("covers-section")?.scrollIntoView({ behavior: "smooth" });
+                    }
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-semibold transition-all ${
+                    i === 0
+                      ? "bg-white text-black hover:bg-white/90"
+                      : "bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm"
+                  }`}
+                >
+                  {btn.icon && <LucideIcon name={btn.icon} size={16} />}
+                  {btn.label}
+                </a>
+              ))}
+            </div>
+          )}
+
+          {/* Mute toggle for video/youtube */}
+          {(config.hero?.type === "video" || config.hero?.type === "youtube") && (
+            <div className="mt-4">
               <Button
                 onClick={() => setMuted(!muted)}
                 className="rounded-full"
                 size="icon"
                 variant="ghost"
-                style={{ borderColor: themeColor }}
               >
                 {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
               </Button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Carousel Controls */}
         {config.hero?.type === "carousel" && heroItems.length > 1 && (
           <>
-            <button
-              onClick={heroPrev}
-              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 rounded-full p-2 transition"
-            >
+            <button onClick={heroPrev} className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 rounded-full p-2 transition">
               <ChevronLeft className="w-6 h-6" />
             </button>
-            <button
-              onClick={heroNext}
-              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 rounded-full p-2 transition"
-            >
+            <button onClick={heroNext} className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 rounded-full p-2 transition">
               <ChevronRight className="w-6 h-6" />
             </button>
             <div className="absolute bottom-4 right-4 z-10 flex gap-1.5">
               {heroItems.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setHeroIndex(i)}
-                  className={`w-2.5 h-2.5 rounded-full transition ${i === heroIndex ? "bg-white scale-110" : "bg-white/40"}`}
-                />
+                <button key={i} onClick={() => setHeroIndex(i)} className={`w-2.5 h-2.5 rounded-full transition ${i === heroIndex ? "bg-white scale-110" : "bg-white/40"}`} />
               ))}
             </div>
           </>
         )}
       </section>
 
-      {/* Cover Photos Row */}
+      {/* Auto-scrolling Covers Carousel */}
       {covers.length > 0 && (
-        <section className="px-4 md:px-12 py-6 -mt-12 relative z-10">
-          <h2 className="text-lg md:text-xl font-semibold mb-4 text-white/90">Em Destaque</h2>
-          <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
-            {covers.map((cover, i) => (
-              <motion.div
-                key={i}
-                whileHover={{ scale: 1.05, zIndex: 10 }}
-                className="flex-none w-[280px] md:w-[320px] rounded-md overflow-hidden cursor-pointer relative group"
-              >
-                <img
-                  src={cover.url}
-                  alt={cover.title || `Capa ${i + 1}`}
-                  className="w-full aspect-[16/9] object-cover"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
-                  <span className="text-sm font-medium">{cover.title || `Destaque ${i + 1}`}</span>
+        <section id="covers-section" className="py-6 -mt-8 relative z-10 overflow-hidden">
+          <h2 className="text-base md:text-lg font-semibold mb-4 text-white/90 px-4">Em Destaque</h2>
+          <div className="overflow-hidden">
+            <div
+              className="netflix-carousel flex gap-3"
+              style={{ width: covers.length > 2 ? "max-content" : undefined }}
+            >
+              {/* Duplicate items for seamless loop */}
+              {[...covers, ...(covers.length > 2 ? covers : [])].map((cover, i) => (
+                <div
+                  key={i}
+                  className="flex-none w-[150px] md:w-[180px] rounded-lg overflow-hidden relative group cursor-pointer"
+                  style={{ backgroundColor: cover.bgColor || "#1a1a2e" }}
+                >
+                  {/* Netflix N badge */}
+                  <div className="absolute top-1 left-1 z-10 w-5 h-7 flex items-center justify-center">
+                    <span className="text-[#e50914] font-black text-lg leading-none" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>N</span>
+                  </div>
+
+                  <img
+                    src={cover.url}
+                    alt={cover.title || ""}
+                    className="w-full aspect-[2/3] object-cover"
+                    loading="lazy"
+                  />
+
+                  {/* Gradient + Title overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-2">
+                    {cover.title && (
+                      <span className="text-xs font-bold uppercase tracking-wide text-white">{cover.title}</span>
+                    )}
+                  </div>
+
+                  {/* Badge (e.g., "NOVOS EPISÓDIOS") */}
+                  {cover.badge && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-[#e50914] text-white text-[9px] font-bold text-center py-0.5 tracking-wider uppercase">
+                      {cover.badge}
+                    </div>
+                  )}
                 </div>
-              </motion.div>
-            ))}
+              ))}
+            </div>
           </div>
         </section>
       )}
 
       {/* Thumbnail Sections */}
       {displaySections.map((section, si) => (
-        <section key={si} className="px-4 md:px-12 py-4">
-          <h2 className="text-lg md:text-xl font-semibold mb-4 text-white/90">{section.title}</h2>
-          <div className="flex gap-2 md:gap-3 overflow-x-auto pb-4 scrollbar-hide">
+        <section key={si} className="px-4 py-4">
+          <h2 className="text-base md:text-lg font-semibold mb-3 text-white/90">{section.title}</h2>
+          <div className="grid grid-cols-3 gap-2">
             {section.itemIndexes.map((idx) => {
               const thumb = thumbnails[idx];
               if (!thumb) return null;
               return (
                 <motion.div
                   key={idx}
-                  whileHover={{ scale: 1.08, zIndex: 10 }}
-                  className="flex-none w-[140px] md:w-[180px] rounded overflow-hidden cursor-pointer relative group"
+                  whileHover={{ scale: 1.05 }}
+                  className="rounded-lg overflow-hidden cursor-pointer relative group"
+                  style={{ backgroundColor: thumb.bgColor || "#1a1a2e" }}
                 >
+                  {/* N badge */}
+                  <div className="absolute top-1 left-1 z-10">
+                    <span className="text-[#e50914] font-black text-sm" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>N</span>
+                  </div>
+
                   <img
                     src={thumb.url}
-                    alt={thumb.title || `Item ${idx + 1}`}
+                    alt={thumb.title || ""}
                     className="w-full aspect-[2/3] object-cover"
                     loading="lazy"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2">
-                    <span className="text-xs font-medium line-clamp-2">{thumb.title || ""}</span>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-2">
+                    {thumb.title && (
+                      <span className="text-[10px] md:text-xs font-bold uppercase text-white">{thumb.title}</span>
+                    )}
                   </div>
+                  {thumb.badge && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-[#e50914] text-white text-[8px] font-bold text-center py-0.5 tracking-wider uppercase">
+                      {thumb.badge}
+                    </div>
+                  )}
                 </motion.div>
               );
             })}
@@ -235,12 +357,42 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
         </section>
       ))}
 
+      {/* Spacer if no content */}
+      {covers.length === 0 && thumbnails.length === 0 && (
+        <div className="px-6 py-20 text-center text-white/30 text-sm">
+          Adicione capas e thumbnails no editor para preencher esta área
+        </div>
+      )}
+
       {/* Footer */}
-      <footer className="px-4 md:px-12 py-8 border-t border-white/10 mt-8">
-        <p className="text-center text-xs text-gray-500">
-          Powered by TagNaMão
-        </p>
+      <footer className="px-4 py-6 text-center">
+        <p className="text-[10px] text-gray-600">Powered by TagNaMão</p>
       </footer>
+
+      {/* Fixed Bottom Nav */}
+      {hasBottomNav && (
+        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-xl border-t border-white/10">
+          <div className="flex items-center justify-around py-2 px-2 max-w-lg mx-auto">
+            {bottomNav.slice(0, 5).map((item, i) => (
+              <a
+                key={i}
+                href={item.url || "#"}
+                target={item.url?.startsWith("http") ? "_blank" : undefined}
+                rel={item.url?.startsWith("http") ? "noopener noreferrer" : undefined}
+                className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-white/10 transition-colors relative min-w-[48px]"
+              >
+                <LucideIcon name={item.icon || "Home"} size={22} className="text-white/80" />
+                {item.badgeCount && item.badgeCount > 0 && (
+                  <span className="absolute -top-0.5 right-0.5 bg-[#e50914] text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                    {item.badgeCount}
+                  </span>
+                )}
+                <span className="text-[9px] text-white/50 leading-tight">{item.label}</span>
+              </a>
+            ))}
+          </div>
+        </nav>
+      )}
     </div>
   );
 }
