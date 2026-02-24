@@ -26,6 +26,7 @@ import MyOrders from "./pages/customer/MyOrders";
 import DisplaysOrderManager from "./pages/customer/DisplaysOrderManager";
 import DisplayArtCustomizer from "./pages/customer/DisplayArtCustomizer";
 import UserSettings from "./pages/customer/UserSettings";
+import DisplayTemplateManager from "./pages/customer/DisplayTemplateManager";
 import ProductsManager from "./pages/admin/ProductsManager";
 import OrdersManager from "./pages/admin/OrdersManager";
 import TemplatesManager from "./pages/admin/TemplatesManager";
@@ -135,6 +136,7 @@ const App = () => (
               <Route path="/arte/:templateId/:artId" element={<ProtectedRoute><ArtCustomizer /></ProtectedRoute>} />
               <Route path="/personalizar-display" element={<ProtectedRoute><DisplaysOrderManager /></ProtectedRoute>} />
               <Route path="/personalizar-display/:displayArtId" element={<ProtectedRoute><DisplayArtCustomizer /></ProtectedRoute>} />
+              <Route path="/dashboard/displays/templates" element={<ProtectedRoute><DisplayTemplateManager /></ProtectedRoute>} />
               {/* Admin routes */}
               <Route path="/admin/pedidos" element={<ProtectedRoute><OrdersManager /></ProtectedRoute>} />
               <Route path="/admin/templates" element={<ProtectedRoute><TemplatesManager /></ProtectedRoute>} />

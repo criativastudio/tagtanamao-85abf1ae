@@ -813,6 +813,23 @@ export default function DisplaysManager() {
                       </div>
                     </div>
 
+                    {/* Advanced Customization - Premium Templates */}
+                    {selectedDisplay.is_activated && (
+                      <div className="mb-6">
+                        <Button
+                          variant="hero"
+                          className="w-full"
+                          onClick={() => navigate(`/dashboard/displays/templates?display=${selectedDisplay.id}`)}
+                        >
+                          <Palette className="w-4 h-4 mr-2" />
+                          Personalizar (modo avançado)
+                        </Button>
+                        <p className="text-xs text-muted-foreground text-center mt-1.5">
+                          Templates premium estilo Netflix, portfólio e mais
+                        </p>
+                      </div>
+                    )}
+
                     {/* Form */}
                     <div className="space-y-4">
                       {editMode && user && (

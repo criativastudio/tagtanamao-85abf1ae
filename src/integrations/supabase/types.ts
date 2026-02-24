@@ -205,6 +205,7 @@ export type Database = {
       }
       business_displays: {
         Row: {
+          active_template_id: string | null
           business_name: string | null
           buttons: Json | null
           created_at: string | null
@@ -214,11 +215,13 @@ export type Database = {
           logo_url: string | null
           qr_code: string
           slug: string | null
+          template_config: Json | null
           theme_color: string | null
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
+          active_template_id?: string | null
           business_name?: string | null
           buttons?: Json | null
           created_at?: string | null
@@ -228,11 +231,13 @@ export type Database = {
           logo_url?: string | null
           qr_code?: string
           slug?: string | null
+          template_config?: Json | null
           theme_color?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
+          active_template_id?: string | null
           business_name?: string | null
           buttons?: Json | null
           created_at?: string | null
@@ -242,11 +247,19 @@ export type Database = {
           logo_url?: string | null
           qr_code?: string
           slug?: string | null
+          template_config?: Json | null
           theme_color?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "business_displays_active_template_id_fkey"
+            columns: ["active_template_id"]
+            isOneToOne: false
+            referencedRelation: "display_templates"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "business_displays_user_id_fkey"
             columns: ["user_id"]
@@ -454,6 +467,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      display_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          features: Json | null
+          id: string
+          is_active: boolean | null
+          name: string
+          preview_url: string | null
+          price: number
+          template_key: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          preview_url?: string | null
+          price?: number
+          template_key: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          preview_url?: string | null
+          price?: number
+          template_key?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       order_items: {
         Row: {
@@ -1104,6 +1156,45 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_templates: {
+        Row: {
+          id: string
+          order_id: string | null
+          purchased_at: string
+          template_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          order_id?: string | null
+          purchased_at?: string
+          template_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          order_id?: string | null
+          purchased_at?: string
+          template_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_templates_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_templates_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "display_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
