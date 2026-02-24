@@ -1,27 +1,21 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Plus, GripVertical, Video, ImageIcon, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { Plus, GripVertical, Video, ImageIcon, Trash2, ArrowUp, ArrowDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SiteSection {
   id: string;
   title: string;
-  section_type: 'video' | 'pet_slides';
+  section_type: "video" | "pet_slides";
   is_active: boolean;
   position: number;
   config: Record<string, any>;
@@ -30,8 +24,12 @@ interface SiteSection {
 }
 
 const SECTION_TYPE_LABELS: Record<string, { label: string; icon: React.ElementType; description: string }> = {
-  video: { label: 'Vídeo de Apresentação', icon: Video, description: 'Vídeo grande em destaque' },
-  pet_slides: { label: 'Slides de Pets Encontrados', icon: ImageIcon, description: 'Carrossel com fotos de pets encontrados via tag' },
+  video: { label: "Vídeo de Apresentação", icon: Video, description: "Vídeo grande em destaque" },
+  pet_slides: {
+    label: "Slides de Pets Encontrados",
+    icon: ImageIcon,
+    description: "Carrossel com fotos de pets encontrados via tag",
+  },
 };
 
 export default function SiteSectionsManager() {
@@ -42,9 +40,9 @@ export default function SiteSectionsManager() {
   const [saving, setSaving] = useState(false);
 
   // New section form
-  const [newTitle, setNewTitle] = useState('');
-  const [newType, setNewType] = useState<string>('video');
-  const [newConfig, setNewConfig] = useState('');
+  const [newTitle, setNewTitle] = useState("");
+  const [newType, setNewType] = useState<string>("video");
+  const [newConfig, setNewConfig] = useState("");
 
   useEffect(() => {
     fetchSections();
@@ -52,13 +50,10 @@ export default function SiteSectionsManager() {
 
   const fetchSections = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('site_sections')
-      .select('*')
-      .order('position', { ascending: true });
+    const { data, error } = await supabase.from("site_sections").select("*").order("position", { ascending: true });
 
     if (error) {
-      toast({ title: 'Erro ao carregar seções', description: error.message, variant: 'destructive' });
+      toast({ title: "Erro ao carregar seções", description: error.message, variant: "destructive" });
     } else {
       setSections((data as SiteSection[]) || []);
     }
@@ -74,15 +69,15 @@ export default function SiteSectionsManager() {
       try {
         config = JSON.parse(newConfig);
       } catch {
-        toast({ title: 'JSON inválido no campo config', variant: 'destructive' });
+        toast({ title: "JSON inválido no campo config", variant: "destructive" });
         setSaving(false);
         return;
       }
     }
 
-    const maxPosition = sections.length > 0 ? Math.max(...sections.map(s => s.position)) + 1 : 0;
+    const maxPosition = sections.length > 0 ? Math.max(...sections.map((s) => s.position)) + 1 : 0;
 
-    const { error } = await supabase.from('site_sections').insert({
+    const { error } = await supabase.from("site_sections").insert({
       title: newTitle.trim(),
       section_type: newType,
       position: maxPosition,
@@ -90,12 +85,12 @@ export default function SiteSectionsManager() {
     });
 
     if (error) {
-      toast({ title: 'Erro ao criar seção', description: error.message, variant: 'destructive' });
+      toast({ title: "Erro ao criar seção", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: 'Seção criada!' });
-      setNewTitle('');
-      setNewType('video');
-      setNewConfig('');
+      toast({ title: "Seção criada!" });
+      setNewTitle("");
+      setNewType("video");
+      setNewConfig("");
       setShowCreateDialog(false);
       fetchSections();
     }
@@ -104,21 +99,21 @@ export default function SiteSectionsManager() {
 
   const toggleActive = async (section: SiteSection) => {
     const { error } = await supabase
-      .from('site_sections')
+      .from("site_sections")
       .update({ is_active: !section.is_active })
-      .eq('id', section.id);
+      .eq("id", section.id);
 
     if (error) {
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      setSections(prev => prev.map(s => s.id === section.id ? { ...s, is_active: !s.is_active } : s));
+      setSections((prev) => prev.map((s) => (s.id === section.id ? { ...s, is_active: !s.is_active } : s)));
     }
   };
 
-  const moveSection = async (sectionId: string, direction: 'up' | 'down') => {
-    const idx = sections.findIndex(s => s.id === sectionId);
+  const moveSection = async (sectionId: string, direction: "up" | "down") => {
+    const idx = sections.findIndex((s) => s.id === sectionId);
     if (idx === -1) return;
-    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
     if (swapIdx < 0 || swapIdx >= sections.length) return;
 
     const updated = [...sections];
@@ -130,18 +125,18 @@ export default function SiteSectionsManager() {
 
     // Persist both position changes
     await Promise.all([
-      supabase.from('site_sections').update({ position: updated[idx].position }).eq('id', updated[idx].id),
-      supabase.from('site_sections').update({ position: updated[swapIdx].position }).eq('id', updated[swapIdx].id),
+      supabase.from("site_sections").update({ position: updated[idx].position }).eq("id", updated[idx].id),
+      supabase.from("site_sections").update({ position: updated[swapIdx].position }).eq("id", updated[swapIdx].id),
     ]);
   };
 
   const deleteSection = async (id: string) => {
-    const { error } = await supabase.from('site_sections').delete().eq('id', id);
+    const { error } = await supabase.from("site_sections").delete().eq("id", id);
     if (error) {
-      toast({ title: 'Erro ao excluir', description: error.message, variant: 'destructive' });
+      toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
     } else {
-      setSections(prev => prev.filter(s => s.id !== id));
-      toast({ title: 'Seção excluída!' });
+      setSections((prev) => prev.filter((s) => s.id !== id));
+      toast({ title: "Seção excluída!" });
     }
   };
 
@@ -156,6 +151,7 @@ export default function SiteSectionsManager() {
           <Button variant="hero" size="sm" onClick={() => setShowCreateDialog(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Nova Seção
+            <p className="text-muted-foreground text-sm mb-4">Tag Pet Video.</p>
           </Button>
         </div>
       </CardHeader>
@@ -180,9 +176,7 @@ export default function SiteSectionsManager() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05 }}
                 className={`flex items-center gap-3 p-4 rounded-lg border transition-all ${
-                  section.is_active
-                    ? 'bg-card/50 border-border'
-                    : 'bg-muted/20 border-border/50 opacity-60'
+                  section.is_active ? "bg-card/50 border-border" : "bg-muted/20 border-border/50 opacity-60"
                 }`}
               >
                 <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
@@ -193,20 +187,39 @@ export default function SiteSectionsManager() {
 
                 <div className="flex-1 min-w-0">
                   <h4 className="text-sm font-semibold text-foreground truncate">{section.title}</h4>
-                  <p className="text-xs text-muted-foreground">{typeInfo?.label} · Posição {section.position}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {typeInfo?.label} · Posição {section.position}
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <Button variant="ghost" size="icon" className="h-7 w-7" disabled={idx === 0} onClick={() => moveSection(section.id, 'up')}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    disabled={idx === 0}
+                    onClick={() => moveSection(section.id, "up")}
+                  >
                     <ArrowUp className="w-3.5 h-3.5" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" disabled={idx === sections.length - 1} onClick={() => moveSection(section.id, 'down')}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    disabled={idx === sections.length - 1}
+                    onClick={() => moveSection(section.id, "down")}
+                  >
                     <ArrowDown className="w-3.5 h-3.5" />
                   </Button>
 
                   <Switch checked={section.is_active} onCheckedChange={() => toggleActive(section)} />
 
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => deleteSection(section.id)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-destructive hover:text-destructive"
+                    onClick={() => deleteSection(section.id)}
+                  >
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                 </div>
@@ -226,13 +239,19 @@ export default function SiteSectionsManager() {
           <div className="space-y-4 mt-4">
             <div className="space-y-2">
               <Label>Título</Label>
-              <Input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Ex: Vídeo Institucional" />
+              <Input
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="Ex: Vídeo Institucional"
+              />
             </div>
 
             <div className="space-y-2">
               <Label>Tipo de Seção</Label>
               <Select value={newType} onValueChange={setNewType}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   {Object.entries(SECTION_TYPE_LABELS).map(([key, val]) => (
                     <SelectItem key={key} value={key}>
@@ -244,16 +263,14 @@ export default function SiteSectionsManager() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                {SECTION_TYPE_LABELS[newType]?.description}
-              </p>
+              <p className="text-xs text-muted-foreground">{SECTION_TYPE_LABELS[newType]?.description}</p>
             </div>
 
             <div className="space-y-2">
               <Label>Configuração (JSON opcional)</Label>
               <Textarea
                 value={newConfig}
-                onChange={e => setNewConfig(e.target.value)}
+                onChange={(e) => setNewConfig(e.target.value)}
                 placeholder='{"videoUrl": "https://...", "autoplay": true}'
                 rows={3}
                 className="font-mono text-xs"
@@ -264,9 +281,11 @@ export default function SiteSectionsManager() {
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Cancelar</Button>
+              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+                Cancelar
+              </Button>
               <Button onClick={createSection} disabled={!newTitle.trim() || saving}>
-                {saving ? 'Criando...' : 'Criar Seção'}
+                {saving ? "Criando..." : "Criar Seção"}
               </Button>
             </div>
           </div>
