@@ -19,6 +19,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardAnalytics from "@/components/dashboard/DashboardAnalytics";
+import DashboardTemplates from "@/components/dashboard/DashboardTemplates";
 interface PetTag {
   id: string;
   pet_name: string | null;
@@ -327,6 +328,18 @@ export default function Dashboard() {
           <h2 className="text-xl font-semibold text-foreground mb-4">Analytics</h2>
           <DashboardAnalytics petTagIds={petTags.map((t) => t.id)} displayIds={displays.map((d) => d.id)} />
         </motion.div>
+
+        {/* Templates Section */}
+        {user && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45 }}
+            className="mb-8"
+          >
+            <DashboardTemplates userId={user.id} />
+          </motion.div>
+        )}
 
         {/* Recent Products */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
