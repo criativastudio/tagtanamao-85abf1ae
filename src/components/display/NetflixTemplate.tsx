@@ -301,12 +301,24 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
                   </div>
 
                   {cover.type === "instagram" && extractReelId(cover.url) ? (
-                    <iframe
-                      src={`https://www.instagram.com/reel/${extractReelId(cover.url)}/embed/`}
-                      className="w-full aspect-[2/3] border-0"
-                      allowFullScreen
-                      scrolling="no"
-                    />
+                    <div className="w-full aspect-[2/3] overflow-hidden relative">
+                      <iframe
+                        src={`https://www.instagram.com/reel/${extractReelId(cover.url)}/embed/?autoplay=1&mute=1`}
+                        className="absolute border-0"
+                        style={{
+                          width: "300%",
+                          height: "300%",
+                          top: "-100%",
+                          left: "-100%",
+                          transform: "scale(0.5)",
+                          transformOrigin: "center center",
+                          pointerEvents: "none"
+                        }}
+                        allow="autoplay; encrypted-media"
+                        allowFullScreen
+                        scrolling="no"
+                      />
+                    </div>
                   ) : cover.type === "video" ? (
                     <video
                       src={cover.url}
@@ -366,12 +378,24 @@ export default function NetflixTemplate({ businessName, description, logoUrl, th
                   </div>
 
                   {thumb.type === "instagram" && extractReelId(thumb.url) ? (
-                    <iframe
-                      src={`https://www.instagram.com/reel/${extractReelId(thumb.url)}/embed/`}
-                      className="w-full aspect-[2/3] border-0"
-                      allowFullScreen
-                      scrolling="no"
-                    />
+                    <div className="w-full aspect-[2/3] overflow-hidden relative">
+                      <iframe
+                        src={`https://www.instagram.com/reel/${extractReelId(thumb.url)}/embed/?autoplay=1&mute=1`}
+                        className="absolute border-0"
+                        style={{
+                          width: "300%",
+                          height: "300%",
+                          top: "-100%",
+                          left: "-100%",
+                          transform: "scale(0.5)",
+                          transformOrigin: "center center",
+                          pointerEvents: "none"
+                        }}
+                        allow="autoplay; encrypted-media"
+                        allowFullScreen
+                        scrolling="no"
+                      />
+                    </div>
                   ) : thumb.type === "video" ? (
                     <video
                       src={thumb.url}
