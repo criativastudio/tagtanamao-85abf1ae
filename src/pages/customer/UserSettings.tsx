@@ -63,6 +63,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import SiteSectionsManager from '@/components/admin/SiteSectionsManager';
 
 interface AdminMenuItem {
   id: string;
@@ -1019,6 +1020,9 @@ export default function UserSettings() {
                   ))}
                 </div>
               </motion.div>
+
+              {/* Site Sections Manager */}
+              <SiteSectionsManager />
             </div>
           </TabsContent>
         )}
