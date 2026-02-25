@@ -88,8 +88,6 @@ export default function DashboardTemplates({ userId }: DashboardTemplatesProps) 
   const handleBuy = (template: DisplayTemplate) => {
     const params = new URLSearchParams();
     params.set("template_id", template.id);
-    if (displayId) params.set("display_id", displayId);
-    if (hasDisplay) params.set("order_bump", "true");
     navigate(`/loja/checkout?${params.toString()}`);
   };
 

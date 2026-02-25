@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Paintbrush } from "lucide-react";
+import { Paintbrush, Crown } from "lucide-react";
 import { ArrowLeft, Package, Truck, Clock, CheckCircle, XCircle, ExternalLink, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -168,8 +168,9 @@ export default function MyOrders() {
             {orders.map((order, index) => {
               const normalizedStatus = order.status ? order.status.toLowerCase() : "pending";
               const status = statusConfig[normalizedStatus] || statusConfig["pending"];
+              const isDigitalOrder = order.shipping_method === "digital";
               const hasDisplay =
-                order.items?.some((item: any) => item.product?.type === "business_display") ?? false;
+                !isDigitalOrder && (order.items?.some((item: any) => item.product?.type === "business_display") ?? false);
               const StatusIcon = status.icon;
 
               return (
@@ -203,9 +204,24 @@ export default function MyOrders() {
                           </AccordionTrigger>
                           <AccordionContent>
                             <div className="space-y-4 pt-2">
-                              {/* Production stepper */}
-                              {normalizedStatus !== "cancelled" && (
+                            {/* Production stepper — skip for digital orders */}
+                              {normalizedStatus !== "cancelled" && !isDigitalOrder && (
                                 <OrderProductionStepper status={normalizedStatus} hasDisplay={hasDisplay} />
+                              )}
+                              {normalizedStatus !== "cancelled" && isDigitalOrder && (
+                                <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                                  <Crown className="w-5 h-5 text-primary shrink-0" />
+                                  <div>
+                                    <p className="font-semibold text-sm text-foreground">
+                                      {normalizedStatus === "paid" ? "Template Liberado" : "Aguardando Pagamento"}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {normalizedStatus === "paid"
+                                        ? "Seu template premium já está disponível no dashboard."
+                                        : "O template será liberado assim que o pagamento for confirmado."}
+                                    </p>
+                                  </div>
+                                </div>
                               )}
                               {normalizedStatus === "cancelled" && (
                                 <div className="flex items-center gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400">

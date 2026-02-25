@@ -77,7 +77,7 @@ export default function Checkout() {
   const templateDisplayId = searchParams.get("display_id");
   const [templatePurchase, setTemplatePurchase] = useState<TemplatePurchaseInfo | null>(null);
   const [loadingTemplate, setLoadingTemplate] = useState(false);
-  const isTemplatePurchase = !!templateId && !!templateDisplayId;
+  const isTemplatePurchase = !!templateId;
 
   // Asaas payment data
   const [asaasPaymentData, setAsaasPaymentData] = useState<AsaasPaymentData | null>(null);
@@ -128,7 +128,7 @@ export default function Checkout() {
 
   // Fetch template info if in template purchase mode
   useEffect(() => {
-    if (!templateId || !templateDisplayId || !user) return;
+    if (!templateId || !user) return;
     setLoadingTemplate(true);
     supabase
       .from("display_templates")
@@ -141,18 +141,18 @@ export default function Checkout() {
             id: data.id,
             name: data.name,
             price: data.price,
-            displayId: templateDisplayId,
+            displayId: templateDisplayId || "",
             preview_url: data.preview_url,
           });
         }
         setLoadingTemplate(false);
       });
-  }, [templateId, templateDisplayId, user]);
+  }, [templateId, user]);
 
   useEffect(() => {
     if (!user) {
       const redirect = isTemplatePurchase
-        ? `/loja/checkout?template_id=${templateId}&display_id=${templateDisplayId}`
+        ? `/loja/checkout?template_id=${templateId}${templateDisplayId ? `&display_id=${templateDisplayId}` : ""}`
         : "/loja/checkout";
       navigate(`/auth?from=shop&redirect=${encodeURIComponent(redirect)}`);
       return;
@@ -437,12 +437,13 @@ export default function Checkout() {
         orderData.shipping_cost = 0;
         orderData.shipping_city = "Digital";
         orderData.shipping_state = "XX";
-        orderData.notes = JSON.stringify({
+        const notesObj: any = {
           type: "template_purchase",
           template_id: templatePurchase.id,
           template_name: templatePurchase.name,
-          display_id: templatePurchase.displayId,
-        });
+        };
+        if (templatePurchase.displayId) notesObj.display_id = templatePurchase.displayId;
+        orderData.notes = JSON.stringify(notesObj);
       } else {
         // Physical product - full shipping info
         orderData.shipping_name = shippingData.name;
@@ -578,7 +579,7 @@ export default function Checkout() {
                 template_id: templatePurchase.id,
                 order_id: order.id,
               });
-              navigate(`/dashboard/displays/templates?display=${templatePurchase.displayId}`);
+              navigate('/dashboard');
             } else {
               navigate('/meus-pedidos');
             }

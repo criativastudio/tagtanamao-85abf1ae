@@ -76,6 +76,20 @@ async function validateOrderAmount(supabase: any, orderId: string, frontendAmoun
  * - Apenas pet_tag ou outros → processing
  */
 async function getNextStatusAfterPayment(supabase: any, orderId: string): Promise<string> {
+  // Check if this is a template purchase — stay at "paid"
+  const { data: order } = await supabase
+    .from("orders")
+    .select("notes")
+    .eq("id", orderId)
+    .single();
+
+  if (order?.notes) {
+    try {
+      const meta = JSON.parse(order.notes);
+      if (meta?.type === "template_purchase") return "paid";
+    } catch { /* not JSON, continue */ }
+  }
+
   const { data: items } = await supabase
     .from("order_items")
     .select("product_id, products(type)")
