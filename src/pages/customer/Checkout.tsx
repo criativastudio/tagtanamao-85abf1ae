@@ -83,7 +83,7 @@ export default function Checkout() {
   const [asaasPaymentData, setAsaasPaymentData] = useState<AsaasPaymentData | null>(null);
   const [asaasBillingType, setAsaasBillingType] = useState<"PIX" | "BOLETO" | "CREDIT_CARD">("PIX");
   const [customerCpfCnpj, setCustomerCpfCnpj] = useState("");
-  const [isCpfValid, setIsCpfValid] = useState(false);
+  const [isCpfValid, setIsCpfValid] = useState(true);
 
   // Credit card data
   const [cardData, setCardData] = useState<CardData | null>(null);
