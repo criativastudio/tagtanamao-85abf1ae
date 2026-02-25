@@ -83,11 +83,11 @@ export default function Checkout() {
   const [asaasPaymentData, setAsaasPaymentData] = useState<AsaasPaymentData | null>(null);
   const [asaasBillingType, setAsaasBillingType] = useState<"PIX" | "BOLETO" | "CREDIT_CARD">("PIX");
   const [customerCpfCnpj, setCustomerCpfCnpj] = useState("");
-  const [isCpfValid, setIsCpfValid] = useState(true);
+  const [isCpfValid, setIsCpfValid] = useState(false);
 
   // Credit card data
   const [cardData, setCardData] = useState<CardData | null>(null);
-  const [isCardValid, setIsCardValid] = useState(true);
+  const [isCardValid, setIsCardValid] = useState(false);
 
   // Payment method
   const [paymentMethod] = useState<"asaas">("asaas");
@@ -411,16 +411,12 @@ export default function Checkout() {
   }, []);
 
   const handleCardValidChange = useCallback((valid: boolean) => {
-  console.log("isCardValid mudou para:", valid);
-  setIsCardValid(valid);
-}, []);
+    setIsCardValid(valid);
+  }, []);
 
   const handleCreateOrder = async () => {
     if (!validateShipping()) return;
-console.log("loading", loading);
-console.log("isCpfValid", isCpfValid);
-console.log("isCardValid", isCardValid);
-console.log("asaasBillingType", asaasBillingType);
+
     setLoading(true);
 
     try {
@@ -1136,11 +1132,16 @@ console.log("asaasBillingType", asaasBillingType);
                   </Card>
                 )}
 
-               <Button
+                <Button
                   className="w-full mt-6"
                   size="lg"
                   onClick={handleCreateOrder}
-                  disabled={false}
+                  disabled={
+                    loading ||
+                    !selectedShipping ||
+                    !isCpfValid ||
+                    (asaasBillingType === "CREDIT_CARD" && !isCardValid)
+                  }
                 >
                   {loading ? (
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
