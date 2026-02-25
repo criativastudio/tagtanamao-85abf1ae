@@ -411,8 +411,9 @@ export default function Checkout() {
   }, []);
 
   const handleCardValidChange = useCallback((valid: boolean) => {
-    setIsCardValid(valid);
-  }, []);
+  console.log("isCardValid mudou para:", valid);
+  setIsCardValid(valid);
+}, []);
 
   const handleCreateOrder = async () => {
     if (!validateShipping()) return;
