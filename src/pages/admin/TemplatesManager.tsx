@@ -21,6 +21,7 @@ import TemplatePositionPreview from "@/components/admin/TemplatePositionPreview"
 
 export default function TemplatesManager() {
   const { profile, loading } = useAuth();
+  console.log("PROFILE NO FRONT:", profile);
   const navigate = useNavigate();
   const { toast } = useToast();
 
