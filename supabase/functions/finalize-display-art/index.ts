@@ -239,7 +239,7 @@ const logoCenterY = logoPos.y + logoPos.height / 2;
 const logoRadius = Math.min(logoPos.width, logoPos.height) / 2;
 
 const clipId = `logo-clip-${activationCode}`;
-
+ 
 svgBody += `
   <defs>
     <clipPath id="${clipId}" clipPathUnits="userSpaceOnUse">
