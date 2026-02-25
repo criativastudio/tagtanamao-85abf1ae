@@ -231,17 +231,33 @@ Deno.serve(async (req) => {
       return `<svg${newAttrs} width="100mm" height="150mm">`;
     });
 
-    // Add logo (circular clip) with embedded base64
-    const logoPos = positions.logo || { x: 50, y: 50, width: 120, height: 120 };
-    const clipId = "logo-clip-final";
-    svgBody += `
-      <defs>
-        <clipPath id="${clipId}">
-          <circle cx="${logoPos.x + logoPos.width / 2}" cy="${logoPos.y + logoPos.height / 2}" r="${Math.min(logoPos.width, logoPos.height) / 2}" />
-        </clipPath>
-      </defs>
-      <image href="${logoDataUri}" xlink:href="${logoDataUri}" x="${logoPos.x}" y="${logoPos.y}" width="${logoPos.width}" height="${logoPos.height}" preserveAspectRatio="xMidYMid meet" clip-path="url(#${clipId})" />
-    `;
+// Add logo (circular clip) with embedded base64
+const logoPos = positions.logo || { x: 50, y: 50, width: 120, height: 120 };
+
+const logoCenterX = logoPos.x + logoPos.width / 2;
+const logoCenterY = logoPos.y + logoPos.height / 2;
+const logoRadius = Math.min(logoPos.width, logoPos.height) / 2;
+
+const clipId = `logo-clip-${activationCode}`;
+
+svgBody += `
+  <defs>
+    <clipPath id="${clipId}" clipPathUnits="userSpaceOnUse">
+      <circle cx="${logoCenterX}" cy="${logoCenterY}" r="${logoRadius}" />
+    </clipPath>
+  </defs>
+
+  <image 
+    href="${logoDataUri}" 
+    xlink:href="${logoDataUri}"
+    x="${logoPos.x}" 
+    y="${logoPos.y}" 
+    width="${logoPos.width}" 
+    height="${logoPos.height}" 
+    preserveAspectRatio="xMidYMid slice"
+    clip-path="url(#${clipId})"
+  />
+`;
 
     // Add company name
     const cnPos = positions.company_name || { x: svgWidth / 2, y: svgHeight - 80, fontSize: 24, textAnchor: "middle" };
