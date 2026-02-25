@@ -46,6 +46,13 @@ export default function CreditCardForm({ onCardDataChange, onValidChange, disabl
 
   const isFormValid = isCardNumberValid && isExpiryValid && isCvvValid && isHolderNameValid;
 
+  console.log({
+  isCardNumberValid,
+  isExpiryValid,
+  isCvvValid,
+  isHolderNameValid,
+});
+
   useEffect(() => {
     onValidChange(isFormValid);
 
@@ -107,7 +114,9 @@ export default function CreditCardForm({ onCardDataChange, onValidChange, disabl
           value={cvv}
           inputMode="numeric"
           autoComplete="cc-csc"
-          onChange={(e) => setCvv(e.target.value.replace(/\D/g, "").slice(0, cvvLength))}
+          onChange={(e) =>
+          setCvv(e.target.value.replace(/\D/g, "").slice(0, cvvLength))
+          }
           disabled={disabled}
         />
       </div>
