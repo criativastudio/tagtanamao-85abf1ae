@@ -1,41 +1,46 @@
 
 
-## Mover Seleção de Templates para Dentro da Página de Edição do Display
+## Simplificar fluxo de pagamento de templates: apenas pending → paid
 
-### Situação Atual
-- A seleção de templates fica em uma página separada (`/dashboard/displays/templates` via `DisplayTemplateManager.tsx`)
-- O usuário precisa navegar para outra tela para gerenciar templates
-- Na tela de edição do display, existe apenas um link "Personalizar (TEMPLATE PADRÃO)" que leva ao editor de bio
+### Problema atual
+Os templates de display compartilham o mesmo fluxo de pedidos dos produtos físicos (displays, pet tags), passando por etapas como `awaiting_customization`, `processing`, `ready_to_ship`, etc. Isso não faz sentido para um produto digital — o template deve ser liberado imediatamente após o pagamento, com apenas 2 status: `pending` e `paid`.
 
-### Plano
+### Mudanças necessárias
 
-#### 1. Criar componente `DisplayTemplateSelector`
-Novo componente reutilizável que encapsula a lógica de browse/ativação de templates, extraída do `DisplayTemplateManager.tsx`:
-- Recebe `displayId` e `userId` como props
-- Busca templates disponíveis (`display_templates`), templates comprados (`user_templates`), e o `active_template_id` do display
-- Mostra grid de templates com cards (preview, preço, badge "Ativo", badge "Premium")
-- Botões: "Adquirir" (grátis), "Comprar" (pago), "Ativar" (já comprado), "Desativar" (ativo)
-- Quando um template é ativado, mostra botão para abrir o editor de conteúdo (navega para `/dashboard/displays/templates?display=ID`) para edição avançada de mídia
+#### 1. Edge Functions — desacoplar templates do fluxo de displays
 
-#### 2. Integrar na página `DisplaysManager.tsx`
-- Adicionar uma nova seção **"Templates Premium"** no painel de edição do display (após a seção de botões/links e antes do link ao bio editor)
-- Renderizar o `DisplayTemplateSelector` quando um display está selecionado
-- Visível tanto em modo de visualização quanto em modo de edição
+**`supabase/functions/asaas-payment/index.ts`** (webhook handler):
+- Na função `getNextStatusAfterPayment`: quando o pedido for `template_purchase` (detectado via `order.notes`), retornar `"paid"` em vez de avançar para `awaiting_customization` ou `processing`
+- Na lógica do webhook, após `fulfillTemplatePurchase`, manter o status como `"paid"` (não avançar mais)
 
-#### 3. Manter a página `DisplayTemplateManager` para edição de conteúdo
-- A página separada continua existindo para o editor de mídia (capas, thumbnails, Reels)
-- O botão "Editar Conteúdo" no novo componente navega para ela
+**`supabase/functions/process-credit-card-payment/index.ts`**:
+- Mesma lógica: detectar `template_purchase` no `notes` do pedido e retornar `"paid"` como status final, sem avançar para `awaiting_customization`
 
-### Arquivos
-- **Criar**: `src/components/display/DisplayTemplateSelector.tsx` — componente com grid de templates, lógica de compra/ativação
-- **Editar**: `src/pages/DisplaysManager.tsx` — importar e renderizar o novo componente dentro do painel de detalhes do display selecionado (linha ~920, após a seção de botões)
+#### 2. Frontend — Checkout (`src/pages/customer/Checkout.tsx`)
 
-### Detalhes Técnicos
-O componente `DisplayTemplateSelector` fará queries independentes:
-```
-display_templates (is_active = true)
-user_templates (user_id = current user)
-business_displays (para ler active_template_id)
-```
-Ao ativar/desativar template, atualiza `business_displays.active_template_id` diretamente. Sem migração de banco necessária.
+- Após pagamento confirmado por cartão de crédito (template), manter o pedido como `"paid"` e redirecionar para o dashboard (não para `/dashboard/displays/templates?display=...`)
+- Remover o vínculo obrigatório com `display_id` no checkout de template — o `display_id` passa a ser opcional (o usuário escolhe onde aplicar depois)
+- Atualizar `isTemplatePurchase` para funcionar sem `display_id` obrigatório: `!!templateId` em vez de `!!templateId && !!templateDisplayId`
+
+#### 3. Frontend — Componentes de template
+
+**`src/components/dashboard/DashboardTemplates.tsx`**:
+- No `handleBuy`, não passar `display_id` como obrigatório; remover `order_bump` param (o desconto continua baseado em `hasDisplay`, mas o fluxo de compra é independente)
+
+**`src/components/display/DisplayTemplateSelector.tsx`**:
+- No `handlePurchase`, navegar para checkout apenas com `template_id` (sem `display_id` obrigatório)
+
+#### 4. Frontend — MyOrders (`src/pages/customer/MyOrders.tsx`)
+- Para pedidos de template (`shipping_method === "digital"`), mostrar apenas os status `pending` e `paid`, sem exibir etapas de produção/envio
+
+### Arquivos modificados
+- `supabase/functions/asaas-payment/index.ts` — detectar template_purchase e manter status "paid"
+- `supabase/functions/process-credit-card-payment/index.ts` — mesma lógica
+- `src/pages/customer/Checkout.tsx` — desacoplar display_id, simplificar redirect
+- `src/components/dashboard/DashboardTemplates.tsx` — remover display_id obrigatório do checkout
+- `src/components/display/DisplayTemplateSelector.tsx` — ajustar navegação de compra
+- `src/pages/customer/MyOrders.tsx` — renderização simplificada para pedidos digitais
+
+### Sem migrações de banco
+Nenhuma alteração de schema necessária. Os status `pending` e `paid` já existem.
 
