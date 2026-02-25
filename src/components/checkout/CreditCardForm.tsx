@@ -34,8 +34,12 @@ export default function CreditCardForm({ onCardDataChange, onValidChange, disabl
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const brand = detectCardBrand(cardNumber);
-  const cvvLength = getCVVLength(brand);
+  const cvvLength = getCVVLength(brand) || 3;
 
+  const cleanExpiry = expiry.replace(/\D/g, "");
+  const expiryMonth = cleanExpiry.slice(0, 2);
+  const expiryYear = cleanExpiry.slice(2, 4);
+  
   const isCardNumberValid = validateCardNumber(cardNumber);
   const expiryParts = expiry.split("/");
   const expiryMonth = expiryParts[0] || "";
