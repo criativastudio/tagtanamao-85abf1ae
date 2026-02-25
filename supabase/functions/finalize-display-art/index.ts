@@ -180,14 +180,6 @@ Deno.serve(async (req) => {
     const finalWidth = 800;
     const finalHeight = 1200;
 
-    // Ensure viewBox matches the 2:3 aspect ratio (100mm x 150mm) for print
-    // If template has a square viewBox, extend height to match target ratio
-    const targetHeight = Math.round(svgWidth * 1.5); // 2:3 ratio
-    if (svgHeight < targetHeight) {
-      svgHeight = targetHeight;
-      baseSvg = baseSvg.replace(/viewBox="[^"]+"/, `viewBox="0 0 ${svgWidth} ${svgHeight}"`);
-    }
-
     // Embed logo as base64 data URI for self-contained SVG
     let logoDataUri = displayArt.logo_url || "";
     if (logoDataUri && logoDataUri.startsWith("http")) {
@@ -208,11 +200,7 @@ Deno.serve(async (req) => {
 
     // Set physical dimensions for print: 100mm × 150mm (10cm × 15cm)
     // At 300 DPI this equals 1181 × 1772 pixels
-    const closingTagIndex = baseSvg.lastIndexOf("</svg>");
-    let svgBody = baseSvg.substring(0, closingTagIndex);
-    
-
-svgBody = svgBody.replace(/<svg([^>]*)>/, (match: string, attrs: string) => {
+    svgBody = svgBody.replace(/<svg([^>]*)>/, (match: string, attrs: string) => {
   let newAttrs = attrs
     .replace(/\s*width="[^"]*"/g, "")
     .replace(/\s*height="[^"]*"/g, "")
