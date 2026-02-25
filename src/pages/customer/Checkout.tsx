@@ -1136,11 +1136,7 @@ export default function Checkout() {
                <Button
                   className="w-full mt-6"
                   size="lg"
-                  onClick={handleCreateOrder}
-                  disabled={
-                  loading ||
-                  !selectedShipping ||
-                  !isCpfValid
+                  disabled={false}
                   }
               >
                   {loading ? (
