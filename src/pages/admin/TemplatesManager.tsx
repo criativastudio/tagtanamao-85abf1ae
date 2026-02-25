@@ -631,12 +631,14 @@ export default function TemplatesManager() {
               <DialogTitle>{previewTemplate?.name}</DialogTitle>
             </DialogHeader>
             {previewTemplate && (
-              <div
-                className="w-full aspect-square flex items-center justify-center bg-muted rounded-lg p-4"
-                dangerouslySetInnerHTML={{
-                  __html: prepareSvgForDisplay(previewTemplate.svg_content),
-                }}
-              />
+              <div className="w-full max-h-[500px] overflow-auto bg-muted rounded-lg p-4">
+  <div
+    className="max-w-full max-h-full"
+    dangerouslySetInnerHTML={{
+      __html: prepareSvgForDisplay(previewTemplate.svg_content, "auto", "100%"),
+    }}
+  />
+</div>
             )}
           </DialogContent>
         </Dialog>
