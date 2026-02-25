@@ -211,25 +211,19 @@ Deno.serve(async (req) => {
     const closingTagIndex = baseSvg.lastIndexOf("</svg>");
     let svgBody = baseSvg.substring(0, closingTagIndex);
     
-    // Definir proporção final 2:3 (800x1200)
-    const svgWidth = 800;
-    const svgHeight = 1200;
 
-    // Ajustar tag <svg> para proporção correta e dimensões físicas
-    svgBody = svgBody.replace(
-      /<svg[^>]*>/,
-      `<svg xmlns="http://www.w3.org/2000/svg"
-     xmlns:xlink="http://www.w3.org/1999/xlink"
-     viewBox="0 0 ${svgWidth} ${svgHeight}"
-     width="100mm"
-     height="150mm">`,
-    );
+svgBody = svgBody.replace(/<svg([^>]*)>/, (match: string, attrs: string) => {
+  let newAttrs = attrs
+    .replace(/\s*width="[^"]*"/g, "")
+    .replace(/\s*height="[^"]*"/g, "")
+    .replace(/\s*viewBox="[^"]*"/g, "");
 
-    // Ajustar background <rect> para ocupar toda área
-    svgBody = svgBody.replace(
-      /<rect([^>]*)width="[^"]*"([^>]*)height="[^"]*"([^>]*)>/,
-      `<rect width="${svgWidth}" height="${svgHeight}" $1 $2 $3>`,
-    );
+  if (!newAttrs.includes("xmlns:xlink")) {
+    newAttrs += ' xmlns:xlink="http://www.w3.org/1999/xlink"';
+  }
+
+  return `<svg${newAttrs} viewBox="0 0 ${svgWidth} ${svgHeight}" width="100mm" height="150mm">`;
+});
 
     // Ajustar imagens de fundo (sem interferir em logo ou QR)
     svgBody = svgBody.replace(/<image([^>]*)width="[^"]*"([^>]*)height="[^"]*"([^>]*)>/g, (match, p1, p2, p3) => {
