@@ -210,6 +210,7 @@ Deno.serve(async (req) => {
     // At 300 DPI this equals 1181 × 1772 pixels
     const closingTagIndex = baseSvg.lastIndexOf("</svg>");
     let svgBody = baseSvg.substring(0, closingTagIndex);
+    
     // Definir proporção final 2:3 (800x1200)
     const svgWidth = 800;
     const svgHeight = 1200;
