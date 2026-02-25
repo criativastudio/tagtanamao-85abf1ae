@@ -82,8 +82,18 @@ export default function TemplatePositionPreview({ svgContent, positions, preview
     body += "</svg>";
 
     // Adjust dimensions for responsive display
-    return body.replace(/width="[^"]*"/, 'width="100%"').replace(/height="[^"]*"/, 'height="100%"');
-  }, [svgContent, positions, logo, qr, cn, on]);
+  // Remove qualquer width/height fixo do SVG original
+let safeSvg = body
+  .replace(/\swidth="[^"]*"/g, "")
+  .replace(/\sheight="[^"]*"/g, "");
+
+// Garante comportamento responsivo seguro
+safeSvg = safeSvg.replace(
+  /<svg([^>]*)>/,
+  `<svg$1 width="100%" height="auto" style="max-height:100%; display:block;">`
+);
+
+return safeSvg;
 
   if (!svgContent) return null;
 
