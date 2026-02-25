@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ElementPositions } from "@/types/ecommerce";
 import { Eye } from "lucide-react";
 import { sanitizeSvg } from "@/lib/sanitize";
-    
+
 interface Props {
   svgContent: string;
   positions: ElementPositions;
@@ -82,18 +82,8 @@ export default function TemplatePositionPreview({ svgContent, positions, preview
     body += "</svg>";
 
     // Adjust dimensions for responsive display
-  // Remove qualquer width/height fixo do SVG original
-let safeSvg = body
-  .replace(/\swidth="[^"]*"/g, "")
-  .replace(/\sheight="[^"]*"/g, "");
-
-// Garante comportamento responsivo seguro
-safeSvg = safeSvg.replace(
-  /<svg([^>]*)>/,
-  `<svg$1 width="100%" height="auto" style="max-height:100%; display:block;">`
-);
-
-return safeSvg;
+    return body.replace(/width="[^"]*"/, 'width="100%"').replace(/height="[^"]*"/, 'height="100%"');
+  }, [svgContent, positions, logo, qr, cn, on]);
 
   if (!svgContent) return null;
 
@@ -108,9 +98,10 @@ return safeSvg;
       <CardContent>
         <div className="bg-muted/50 rounded-lg p-3">
           <div
-  className="w-full h-96 flex items-center justify-center bg-background rounded-lg overflow-hidden"
-  dangerouslySetInnerHTML={{ __html: previewSvg }}
-/>
+            className="w-full h-96 flex items-center justify-center bg-background rounded-lg overflow-hidden"
+            dangerouslySetInnerHTML={{ __html: previewSvg }}
+          />
+        </div>
         <div className="flex flex-wrap gap-3 mt-3 text-xs">
           <span className="flex items-center gap-1">
             <span className="w-3 h-3 rounded-full bg-[#3b82f6] inline-block" /> Logo
