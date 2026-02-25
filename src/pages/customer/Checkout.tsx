@@ -64,7 +64,7 @@ export default function Checkout() {
   const { user, profile } = useAuth();
   const { cart, getCartTotal, clearCart } = useCart();
 
-  const [step, setStep] = useState<"shipping" | "pending" | "awaiting_asaas" | "confirmation">(
+  const [step, setStep] = useState<"shipping" | "processing" | "awaiting_asaas" | "confirmation">(
     "shipping",
   );
   const [loading, setLoading] = useState(false);
