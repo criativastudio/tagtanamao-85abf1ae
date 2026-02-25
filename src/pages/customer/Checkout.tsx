@@ -1133,16 +1133,12 @@ export default function Checkout() {
                   </Card>
                 )}
 
-                <Button
-                  className="w-full mt-6"
-                  size="lg"
-                  onClick={handleCreateOrder}
-                  disabled={
-                  loading ||
-                  !selectedShipping ||
-                  !isCpfValid
-                  }
-                >
+               <Button
+  className="w-full mt-6"
+  size="lg"
+  onClick={handleCreateOrder}
+  disabled={false}
+>
                   {loading ? (
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
                   ) : asaasBillingType === "CREDIT_CARD" ? (
