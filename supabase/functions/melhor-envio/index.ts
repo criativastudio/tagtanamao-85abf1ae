@@ -440,17 +440,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const printResult = await printLabel([shipmentId]);
       const labelUrl = printResult?.url || "";
 
-      // Update order: label generated → auto-advance to ready_to_ship
+      // Update order: label generated → auto-advance to shipped
       await supabase
         .from("orders")
         .update({
           melhor_envio_shipment_id: shipmentId,
           melhor_envio_label_url: labelUrl,
           shipping_status: "label_generated",
-          status: "ready_to_ship",
+          status: "shipped",
         })
         .eq("id", orderId);
-      console.log(`Order ${orderId} auto-advanced to 'ready_to_ship' after label generation`);
+      console.log(`Order ${orderId} auto-advanced to 'shipped' after label generation`);
 
       return new Response(
         JSON.stringify({

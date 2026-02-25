@@ -174,22 +174,6 @@ Deno.serve(async (req) => {
     // Embed all external images (background, etc.) as base64
     baseSvg = await embedExternalImages(baseSvg);
 
-    // Forçar proporção 2:3 definitiva
-    const finalWidth = 1000;
-    const finalHeight = 1500;
-
-    svgBody = svgBody.replace(
-      /<svg[^>]*>/,
-      `<svg xmlns="http://www.w3.org/2000/svg"
-        xmlns:xlink="http://www.w3.org/1999/xlink"
-        viewBox="0 0 ${finalWidth} ${finalHeight}"
-        width="100mm"
-        height="150mm">`,
-    );
-
-    svgWidth = finalWidth;
-    svgHeight = finalHeight;
-
     // Ensure viewBox matches the 2:3 aspect ratio (100mm x 150mm) for print
     // If template has a square viewBox, extend height to match target ratio
     const targetHeight = Math.round(svgWidth * 1.5); // 2:3 ratio
