@@ -89,7 +89,7 @@ export function validateCPFOrCNPJ(value: string): boolean {
  * Luhn algorithm for credit card validation
  */
 export function validateCardNumber(cardNumber: string): boolean {
-  const cleanNumber = cardNumber.replace(/\s/g, '');
+  const cleanNumber = cardNumber.replace(/\D/g, '');
   
   if (!/^\d{13,19}$/.test(cleanNumber)) return false;
   
