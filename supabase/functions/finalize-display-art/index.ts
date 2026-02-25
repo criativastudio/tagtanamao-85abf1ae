@@ -169,16 +169,34 @@ Deno.serve(async (req) => {
     // Build final SVG — print-ready: 10cm (W) × 15cm (H) @ 300 DPI
     const template = displayArt.template;
     const positions = template?.element_positions || {};
-    let baseSvg = template?.svg_content || '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1200"></svg>';
-    let svgWidth = 800;
-    let svgHeight = 1200;
+    let baseSvg = template?.svg_content || '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800"></svg>';
 
     // Embed all external images (background, etc.) as base64
     baseSvg = await embedExternalImages(baseSvg);
 
     // Forçar proporção 2:3 definitiva
-    const finalWidth = 800;
-    const finalHeight = 1200;
+    const finalWidth = 1000;
+    const finalHeight = 1500;
+
+    svgBody = svgBody.replace(
+      /<svg[^>]*>/,
+      `<svg xmlns="http://www.w3.org/2000/svg"
+        xmlns:xlink="http://www.w3.org/1999/xlink"
+        viewBox="0 0 ${finalWidth} ${finalHeight}"
+        width="100mm"
+        height="150mm">`,
+    );
+
+    svgWidth = finalWidth;
+    svgHeight = finalHeight;
+
+    // Ensure viewBox matches the 2:3 aspect ratio (100mm x 150mm) for print
+    // If template has a square viewBox, extend height to match target ratio
+    const targetHeight = Math.round(svgWidth * 1.5); // 2:3 ratio
+    if (svgHeight < targetHeight) {
+      svgHeight = targetHeight;
+      baseSvg = baseSvg.replace(/viewBox="[^"]+"/, `viewBox="0 0 ${svgWidth} ${svgHeight}"`);
+    }
 
     // Embed logo as base64 data URI for self-contained SVG
     let logoDataUri = displayArt.logo_url || "";
@@ -200,26 +218,8 @@ Deno.serve(async (req) => {
 
     // Set physical dimensions for print: 100mm × 150mm (10cm × 15cm)
     // At 300 DPI this equals 1181 × 1772 pixels
-    svgBody = svgBody.replace(/<svg([^>]*)>/, (match: string, attrs: string) => {
-      let newAttrs = attrs
-        .replace(/\s*width="[^"]*"/g, "")
-        .replace(/\s*height="[^"]*"/g, "")
-        .replace(/\s*viewBox="[^"]*"/g, "");
-
-      if (!newAttrs.includes("xmlns:xlink")) {
-        newAttrs += ' xmlns:xlink="http://www.w3.org/1999/xlink"';
-      }
-
-      return `<svg${newAttrs} viewBox="0 0 ${svgWidth} ${svgHeight}" width="100mm" height="150mm">`;
-    });
-
-    // Ajustar imagens de fundo (sem interferir em logo ou QR)
-    svgBody = svgBody.replace(/<image([^>]*)width="[^"]*"([^>]*)height="[^"]*"([^>]*)>/g, (match, p1, p2, p3) => {
-      if (!match.includes("clip-path") && !match.includes("qr") && !match.includes("logo")) {
-        return `<image${p1} width="${svgWidth}" height="${svgHeight}" preserveAspectRatio="none"${p2}${p3}>`;
-      }
-      return match;
-    });
+    const closingTagIndex = baseSvg.lastIndexOf("</svg>");
+    let svgBody = baseSvg.substring(0, closingTagIndex);
 
     // Replace/add width, height attributes for print dimensions + add xlink namespace
     svgBody = svgBody.replace(/<svg([^>]*)>/, (match: string, attrs: string) => {
@@ -231,33 +231,17 @@ Deno.serve(async (req) => {
       return `<svg${newAttrs} width="100mm" height="150mm">`;
     });
 
-// Add logo (circular clip) with embedded base64
-const logoPos = positions.logo || { x: 50, y: 50, width: 120, height: 120 };
-
-const logoCenterX = logoPos.x + logoPos.width / 2;
-const logoCenterY = logoPos.y + logoPos.height / 2;
-const logoRadius = Math.min(logoPos.width, logoPos.height) / 2;
-
-const clipId = `logo-clip-${activationCode}`;
- 
-svgBody += `
-  <defs>
-    <clipPath id="${clipId}" clipPathUnits="userSpaceOnUse">
-      <circle cx="${logoCenterX}" cy="${logoCenterY}" r="${logoRadius}" />
-    </clipPath>
-  </defs>
-
-  <image 
-    href="${logoDataUri}" 
-    xlink:href="${logoDataUri}"
-    x="${logoPos.x}" 
-    y="${logoPos.y}" 
-    width="${logoPos.width}" 
-    height="${logoPos.height}" 
-    preserveAspectRatio="xMidYMid slice"
-    clip-path="url(#${clipId})"
-  />
-`;
+    // Add logo (circular clip) with embedded base64
+    const logoPos = positions.logo || { x: 50, y: 50, width: 120, height: 120 };
+    const clipId = "logo-clip-final";
+    svgBody += `
+      <defs>
+        <clipPath id="${clipId}">
+          <circle cx="${logoPos.x + logoPos.width / 2}" cy="${logoPos.y + logoPos.height / 2}" r="${Math.min(logoPos.width, logoPos.height) / 2}" />
+        </clipPath>
+      </defs>
+      <image href="${logoDataUri}" xlink:href="${logoDataUri}" x="${logoPos.x}" y="${logoPos.y}" width="${logoPos.width}" height="${logoPos.height}" preserveAspectRatio="xMidYMid meet" clip-path="url(#${clipId})" />
+    `;
 
     // Add company name
     const cnPos = positions.company_name || { x: svgWidth / 2, y: svgHeight - 80, fontSize: 24, textAnchor: "middle" };

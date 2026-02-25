@@ -34,35 +34,15 @@ export default function CreditCardForm({ onCardDataChange, onValidChange, disabl
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const brand = detectCardBrand(cardNumber);
-  const cvvLength = getCVVLength(brand) || 3;
+  const cvvLength = getCVVLength(brand);
 
-  const cleanExpiry = expiry.replace(/\D/g, "");
-  const expiryMonth = cleanExpiry.slice(0, 2);
-  const expiryYear = cleanExpiry.slice(2, 4);
-  
   const isCardNumberValid = validateCardNumber(cardNumber);
-  const expiryParts = expiry.split("/");
-  const expiryMonth = expiryParts[0] || "";
-  const expiryYear = expiryParts[1] || "";
+  const [expiryMonth, expiryYear] = expiry.split("/");
   const isExpiryValid = validateExpiry(expiryMonth, expiryYear);
   const isCvvValid = cvv.replace(/\D/g, "").length === cvvLength;
   const isHolderNameValid = holderName.trim().length >= 3;
 
-  const isFormValid = true; = isCardNumberValid && isExpiryValid && isCvvValid && isHolderNameValid;
-
-console.log("VALIDATION STATUS:", {
-  card: isCardNumberValid,
-  expiry: isExpiryValid,
-  cvv: isCvvValid,
-  holder: isHolderNameValid,
-});
-  
-  console.log({
-  isCardNumberValid,
-  isExpiryValid,
-  isCvvValid,
-  isHolderNameValid,
-});
+  const isFormValid = isCardNumberValid && isExpiryValid && isCvvValid && isHolderNameValid;
 
   useEffect(() => {
     onValidChange(isFormValid);
@@ -102,8 +82,6 @@ console.log("VALIDATION STATUS:", {
         <Input
           placeholder="0000 0000 0000 0000"
           value={cardNumber}
-          inputMode="numeric"
-          autoComplete="cc-number"
           onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
           onBlur={() => handleBlur("cardNumber")}
           disabled={disabled}
@@ -115,19 +93,13 @@ console.log("VALIDATION STATUS:", {
         <Input
           placeholder="MM/AA"
           value={expiry}
-          inputMode="numeric"
-          autoComplete="cc-exp"
           onChange={(e) => setExpiry(formatExpiry(e.target.value))}
           disabled={disabled}
         />
         <Input
           placeholder={cvvLength === 4 ? "0000" : "000"}
           value={cvv}
-          inputMode="numeric"
-          autoComplete="cc-csc"
-          onChange={(e) =>
-          setCvv(e.target.value.replace(/\D/g, "").slice(0, cvvLength))
-          }
+          onChange={(e) => setCvv(e.target.value.replace(/\D/g, "").slice(0, cvvLength))}
           disabled={disabled}
         />
       </div>

@@ -479,35 +479,17 @@ export default function TemplatesManager() {
                 <Label>Arquivo SVG</Label>
                 <div className="flex gap-4">
                   <div className="flex-1">
-                    <label
-  htmlFor="upload-art"
-  className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors"
->
+                    <label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors">
                       <Upload className="w-5 h-5" />
                       <span>Upload Arte (SVG, JPG, PNG)</span>
-                      <input
-  id="upload-art"
-  type="file"
-  accept=".svg,.jpg,.jpeg,.png"
-  onChange={handleArtUpload}
-  className="hidden"
-/>
+                      <input type="file" accept=".svg,.jpg,.jpeg,.png" onChange={handleArtUpload} className="hidden" />
                     </label>
                   </div>
                   <div className="flex-1">
-                    <label
-  htmlFor="upload-art"
-  className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors"
->
+                    <label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors">
                       <Image className="w-5 h-5" />
                       <span>Upload Preview</span>
-                      <input
-  id="upload-preview"
-  type="file"
-  accept="image/*"
-  onChange={handlePreviewUpload}
-  className="hidden"
-/>
+                      <input type="file" accept="image/*" onChange={handlePreviewUpload} className="hidden" />
                     </label>
                   </div>
                 </div>
