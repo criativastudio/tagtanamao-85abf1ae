@@ -1,46 +1,41 @@
 
 
-## Simplificar fluxo de pagamento de templates: apenas pending → paid
+## Corrigir transições automáticas de status dos pedidos
 
-### Problema atual
-Os templates de display compartilham o mesmo fluxo de pedidos dos produtos físicos (displays, pet tags), passando por etapas como `awaiting_customization`, `processing`, `ready_to_ship`, etc. Isso não faz sentido para um produto digital — o template deve ser liberado imediatamente após o pagamento, com apenas 2 status: `pending` e `paid`.
+### Problema identificado
 
-### Mudanças necessárias
+1. **Bug crítico em `finalize-display-art`**: Na linha 181, `svgBody` é referenciado **antes** de ser definido (a definição está na linha 222). Isso causa um erro de runtime que impede a função de funcionar — ou seja, a arte nunca é finalizada e o pedido nunca avança para `art_finalized` / `processing`.
 
-#### 1. Edge Functions — desacoplar templates do fluxo de displays
+2. **`melhor-envio` generate-label**: Atualmente define o status como `ready_to_ship`. O usuário quer que, ao anexar no Correios, o status vá direto para `shipped` (Enviado).
 
-**`supabase/functions/asaas-payment/index.ts`** (webhook handler):
-- Na função `getNextStatusAfterPayment`: quando o pedido for `template_purchase` (detectado via `order.notes`), retornar `"paid"` em vez de avançar para `awaiting_customization` ou `processing`
-- Na lógica do webhook, após `fulfillTemplatePurchase`, manter o status como `"paid"` (não avançar mais)
+3. **Tracking/entrega**: Já funciona — o action `tracking` no melhor-envio já atualiza para `delivered` quando o Correios reporta entrega.
 
-**`supabase/functions/process-credit-card-payment/index.ts`**:
-- Mesma lógica: detectar `template_purchase` no `notes` do pedido e retornar `"paid"` como status final, sem avançar para `awaiting_customization`
+### Mudanças
 
-#### 2. Frontend — Checkout (`src/pages/customer/Checkout.tsx`)
+#### 1. `supabase/functions/finalize-display-art/index.ts` — Corrigir bug de svgBody
 
-- Após pagamento confirmado por cartão de crédito (template), manter o pedido como `"paid"` e redirecionar para o dashboard (não para `/dashboard/displays/templates?display=...`)
-- Remover o vínculo obrigatório com `display_id` no checkout de template — o `display_id` passa a ser opcional (o usuário escolhe onde aplicar depois)
-- Atualizar `isTemplatePurchase` para funcionar sem `display_id` obrigatório: `!!templateId` em vez de `!!templateId && !!templateDisplayId`
+- Remover o bloco duplicado das linhas 177-191 que referencia `svgBody` e `svgWidth`/`svgHeight` antes de serem declaradas
+- Manter a lógica correta que já existe nas linhas 193-232 (viewBox adjustment + svgBody definition)
+- O fluxo de status `art_finalized → processing` já está implementado nas linhas 326-332 e funcionará assim que o bug for corrigido
 
-#### 3. Frontend — Componentes de template
+#### 2. `supabase/functions/melhor-envio/index.ts` — generate-label → shipped
 
-**`src/components/dashboard/DashboardTemplates.tsx`**:
-- No `handleBuy`, não passar `display_id` como obrigatório; remover `order_bump` param (o desconto continua baseado em `hasDisplay`, mas o fluxo de compra é independente)
-
-**`src/components/display/DisplayTemplateSelector.tsx`**:
-- No `handlePurchase`, navegar para checkout apenas com `template_id` (sem `display_id` obrigatório)
-
-#### 4. Frontend — MyOrders (`src/pages/customer/MyOrders.tsx`)
-- Para pedidos de template (`shipping_method === "digital"`), mostrar apenas os status `pending` e `paid`, sem exibir etapas de produção/envio
+- Alterar o status de `ready_to_ship` para `shipped` na ação `generate-label` (linha ~290)
+- Isso reflete que, ao gerar a etiqueta e anexar ao Correios, o pedido é considerado "Enviado"
 
 ### Arquivos modificados
-- `supabase/functions/asaas-payment/index.ts` — detectar template_purchase e manter status "paid"
-- `supabase/functions/process-credit-card-payment/index.ts` — mesma lógica
-- `src/pages/customer/Checkout.tsx` — desacoplar display_id, simplificar redirect
-- `src/components/dashboard/DashboardTemplates.tsx` — remover display_id obrigatório do checkout
-- `src/components/display/DisplayTemplateSelector.tsx` — ajustar navegação de compra
-- `src/pages/customer/MyOrders.tsx` — renderização simplificada para pedidos digitais
+- `supabase/functions/finalize-display-art/index.ts` — remover bloco duplicado (linhas 177-191) que causa crash
+- `supabase/functions/melhor-envio/index.ts` — alterar status de `ready_to_ship` para `shipped` no generate-label
 
-### Sem migrações de banco
-Nenhuma alteração de schema necessária. Os status `pending` e `paid` já existem.
+### Detalhes técnicos
+
+O bloco problemático em `finalize-display-art`:
+```text
+Linha 172: let baseSvg = ...       (OK - definido)
+Linha 181: svgBody = svgBody.replace(...)  ← ERRO: svgBody não existe ainda
+Linha 190: svgWidth = finalWidth           ← ERRO: svgWidth não existe ainda
+Linha 222: let svgBody = baseSvg.substring(...)  ← aqui é onde svgBody deveria começar
+```
+
+A correção remove as linhas 177-191 (bloco duplicado/fora de ordem) e integra a lógica de forçar proporção 2:3 no local correto, após `svgBody` ser definido na linha 222.
 
