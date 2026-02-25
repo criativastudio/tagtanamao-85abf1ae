@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ElementPositions } from "@/types/ecommerce";
 import { Eye } from "lucide-react";
 import { sanitizeSvg } from "@/lib/sanitize";
-
+    
 interface Props {
   svgContent: string;
   positions: ElementPositions;
