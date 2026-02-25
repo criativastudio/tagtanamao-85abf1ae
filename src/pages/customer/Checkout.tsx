@@ -417,7 +417,10 @@ export default function Checkout() {
 
   const handleCreateOrder = async () => {
     if (!validateShipping()) return;
-
+console.log("loading", loading);
+console.log("isCpfValid", isCpfValid);
+console.log("isCardValid", isCardValid);
+console.log("asaasBillingType", asaasBillingType);
     setLoading(true);
 
     try {
