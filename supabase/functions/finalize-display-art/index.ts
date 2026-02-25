@@ -201,17 +201,17 @@ Deno.serve(async (req) => {
     // Set physical dimensions for print: 100mm × 150mm (10cm × 15cm)
     // At 300 DPI this equals 1181 × 1772 pixels
     svgBody = svgBody.replace(/<svg([^>]*)>/, (match: string, attrs: string) => {
-  let newAttrs = attrs
-    .replace(/\s*width="[^"]*"/g, "")
-    .replace(/\s*height="[^"]*"/g, "")
-    .replace(/\s*viewBox="[^"]*"/g, "");
+      let newAttrs = attrs
+        .replace(/\s*width="[^"]*"/g, "")
+        .replace(/\s*height="[^"]*"/g, "")
+        .replace(/\s*viewBox="[^"]*"/g, "");
 
-  if (!newAttrs.includes("xmlns:xlink")) {
-    newAttrs += ' xmlns:xlink="http://www.w3.org/1999/xlink"';
-  }
+      if (!newAttrs.includes("xmlns:xlink")) {
+        newAttrs += ' xmlns:xlink="http://www.w3.org/1999/xlink"';
+      }
 
-  return `<svg${newAttrs} viewBox="0 0 ${svgWidth} ${svgHeight}" width="100mm" height="150mm">`;
-});
+      return `<svg${newAttrs} viewBox="0 0 ${svgWidth} ${svgHeight}" width="100mm" height="150mm">`;
+    });
 
     // Ajustar imagens de fundo (sem interferir em logo ou QR)
     svgBody = svgBody.replace(/<image([^>]*)width="[^"]*"([^>]*)height="[^"]*"([^>]*)>/g, (match, p1, p2, p3) => {
