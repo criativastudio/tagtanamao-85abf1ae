@@ -87,7 +87,7 @@ export default function Checkout() {
 
   // Credit card data
   const [cardData, setCardData] = useState<CardData | null>(null);
-  const [isCardValid, setIsCardValid] = useState(false);
+  const [isCardValid, setIsCardValid] = useState(true);
 
   // Payment method
   const [paymentMethod] = useState<"asaas">("asaas");
