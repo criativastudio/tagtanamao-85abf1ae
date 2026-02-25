@@ -1137,10 +1137,9 @@ export default function Checkout() {
                   size="lg"
                   onClick={handleCreateOrder}
                   disabled={
-                    loading ||
-                    !selectedShipping ||
-                    !isCpfValid ||
-                    (asaasBillingType === "CREDIT_CARD" && !isCardValid)
+                  loading ||
+                  !selectedShipping ||
+                  !isCpfValid
                   }
                 >
                   {loading ? (
