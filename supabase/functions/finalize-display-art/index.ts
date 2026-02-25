@@ -189,6 +189,19 @@ Deno.serve(async (req) => {
 
     svgWidth = finalWidth;
     svgHeight = finalHeight;
+    // Corrigir background para ocupar toda área 2:3
+    svgBody = svgBody.replace(
+      /<rect([^>]*)width="[^"]*"([^>]*)height="[^"]*"([^>]*)>/,
+      `<rect width="${svgWidth}" height="${svgHeight}" $1 $2 $3>`,
+    );
+
+    svgBody = svgBody.replace(/<image([^>]*)width="[^"]*"([^>]*)height="[^"]*"([^>]*)>/, (match, p1, p2, p3) => {
+      // Só aplica se for imagem de background (sem x/y específico)
+      if (!match.includes("clip-path") && !match.includes("qr") && !match.includes("logo")) {
+        return `<image${p1} width="${svgWidth}" height="${svgHeight}" preserveAspectRatio="none"${p2}${p3}>`;
+      }
+      return match;
+    });
 
     // Ensure viewBox matches the 2:3 aspect ratio (100mm x 150mm) for print
     // If template has a square viewBox, extend height to match target ratio
@@ -355,5 +368,5 @@ Deno.serve(async (req) => {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } 
+  }
 });
