@@ -28,9 +28,7 @@ async function embedExternalImages(svg: string): Promise<string> {
       if (!resp.ok) continue;
       const buf = await resp.arrayBuffer();
       const contentType = resp.headers.get("content-type") || "image/png";
-      const base64 = btoa(
-        new Uint8Array(buf).reduce((data, byte) => data + String.fromCharCode(byte), "")
-      );
+      const base64 = btoa(new Uint8Array(buf).reduce((data, byte) => data + String.fromCharCode(byte), ""));
       const dataUri = `data:${contentType};base64,${base64}`;
       // Use both href and xlink:href for maximum compatibility with SVG viewers/editors
       result = result.replace(match.full, `${match.prefix}href="${dataUri}" xlink:href="${dataUri}"`);
@@ -176,26 +174,28 @@ Deno.serve(async (req) => {
     // Embed all external images (background, etc.) as base64
     baseSvg = await embedExternalImages(baseSvg);
 
-    const viewBoxMatch = baseSvg.match(/viewBox="([^"]+)"/);
-    let svgWidth = 800,
-      svgHeight = 1200;
-    if (viewBoxMatch) {
-      const parts = viewBoxMatch[1].split(/[\s,]+/).map(Number);
-      if (parts.length >= 4) {
-        svgWidth = parts[2];
-        svgHeight = parts[3];
-      }
-    }
+    // Forçar proporção 2:3 definitiva
+    const finalWidth = 1000;
+    const finalHeight = 1500;
+
+    svgBody = svgBody.replace(
+      /<svg[^>]*>/,
+      `<svg xmlns="http://www.w3.org/2000/svg"
+        xmlns:xlink="http://www.w3.org/1999/xlink"
+        viewBox="0 0 ${finalWidth} ${finalHeight}"
+        width="100mm"
+        height="150mm">`,
+    );
+
+    svgWidth = finalWidth;
+    svgHeight = finalHeight;
 
     // Ensure viewBox matches the 2:3 aspect ratio (100mm x 150mm) for print
     // If template has a square viewBox, extend height to match target ratio
     const targetHeight = Math.round(svgWidth * 1.5); // 2:3 ratio
     if (svgHeight < targetHeight) {
       svgHeight = targetHeight;
-      baseSvg = baseSvg.replace(
-        /viewBox="[^"]+"/,
-        `viewBox="0 0 ${svgWidth} ${svgHeight}"`
-      );
+      baseSvg = baseSvg.replace(/viewBox="[^"]+"/, `viewBox="0 0 ${svgWidth} ${svgHeight}"`);
     }
 
     // Embed logo as base64 data URI for self-contained SVG
@@ -207,7 +207,7 @@ Deno.serve(async (req) => {
           const logoBlob = await logoResp.arrayBuffer();
           const contentType = logoResp.headers.get("content-type") || "image/png";
           const base64Logo = btoa(
-            new Uint8Array(logoBlob).reduce((data, byte) => data + String.fromCharCode(byte), "")
+            new Uint8Array(logoBlob).reduce((data, byte) => data + String.fromCharCode(byte), ""),
           );
           logoDataUri = `data:${contentType};base64,${base64Logo}`;
         }
@@ -222,19 +222,14 @@ Deno.serve(async (req) => {
     let svgBody = baseSvg.substring(0, closingTagIndex);
 
     // Replace/add width, height attributes for print dimensions + add xlink namespace
-    svgBody = svgBody.replace(
-      /<svg([^>]*)>/,
-      (match: string, attrs: string) => {
-        let newAttrs = attrs
-          .replace(/\s*width="[^"]*"/g, "")
-          .replace(/\s*height="[^"]*"/g, "");
-        // Add xlink namespace if not present for compatibility with older SVG viewers
-        if (!newAttrs.includes('xmlns:xlink')) {
-          newAttrs += ' xmlns:xlink="http://www.w3.org/1999/xlink"';
-        }
-        return `<svg${newAttrs} width="100mm" height="150mm">`;
+    svgBody = svgBody.replace(/<svg([^>]*)>/, (match: string, attrs: string) => {
+      let newAttrs = attrs.replace(/\s*width="[^"]*"/g, "").replace(/\s*height="[^"]*"/g, "");
+      // Add xlink namespace if not present for compatibility with older SVG viewers
+      if (!newAttrs.includes("xmlns:xlink")) {
+        newAttrs += ' xmlns:xlink="http://www.w3.org/1999/xlink"';
       }
-    );
+      return `<svg${newAttrs} width="100mm" height="150mm">`;
+    });
 
     // Add logo (circular clip) with embedded base64
     const logoPos = positions.logo || { x: 50, y: 50, width: 120, height: 120 };
