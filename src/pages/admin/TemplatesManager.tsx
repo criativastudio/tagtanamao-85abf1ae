@@ -429,13 +429,16 @@ export default function TemplatesManager() {
         )}
 
         {/* Template Editor Dialog */}
-        <Dialog open={showEditor} onOpenChange={setShowEditor}>
+        <Dialog open={showEditor} onOpenChange={(open) => {
+  console.log("Dialog mudou para:", open);
+  setShowEditor(open);
+}}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingTemplate ? "Editar Template" : "Novo Template"}</DialogTitle>
             </DialogHeader>
 
-            <div className="space-y-6">
+           <div className="space-y-6 relative z-50">
               {/* Basic Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -523,11 +526,11 @@ export default function TemplatesManager() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <TemplatePositionControls positions={elementPositions} onChange={setElementPositions} />
                   {formData.svg_content && (
-                    <TemplatePositionPreview
+                    {/* <TemplatePositionPreview
                       svgContent={formData.svg_content}
                       positions={elementPositions}
                       previewUrl={previewUrl}
-                    />
+                    />*/}
                   )}
                 </div>
               )}
