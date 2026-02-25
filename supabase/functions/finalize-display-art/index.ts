@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
     // Generate QR Code as PNG Data URI
     const qrTargetUrl = `https://tagtanamao.lovable.app/display/${activationCode}`;
     const qrDataUri = await QRCode.toDataURL(qrTargetUrl, {
-      width: 800,
+      width: 1000,
       margin: 1,
       color: { dark: "#000000", light: "#FFFFFF" },
     });
@@ -169,7 +169,7 @@ Deno.serve(async (req) => {
     // Build final SVG — print-ready: 10cm (W) × 15cm (H) @ 300 DPI
     const template = displayArt.template;
     const positions = template?.element_positions || {};
-    let baseSvg = template?.svg_content || '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800"></svg>';
+    let baseSvg = template?.svg_content || '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1500"></svg>';
 
     // Embed all external images (background, etc.) as base64
     baseSvg = await embedExternalImages(baseSvg);
