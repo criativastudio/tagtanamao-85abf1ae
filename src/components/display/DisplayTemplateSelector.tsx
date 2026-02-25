@@ -138,7 +138,7 @@ export default function DisplayTemplateSelector({
       return;
     }
 
-    navigate(`/loja/checkout?template_id=${template.id}&display_id=${displayId}`);
+    navigate(`/loja/checkout?template_id=${template.id}`);
   };
 
   if (loading) {
