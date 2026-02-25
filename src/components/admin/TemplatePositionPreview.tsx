@@ -107,11 +107,12 @@ return safeSvg;
       </CardHeader>
       <CardContent>
         <div className="bg-muted/50 rounded-lg p-3">
-          <div
-            className="w-full h-96 flex items-center justify-center bg-background rounded-lg overflow-hidden"
-            dangerouslySetInnerHTML={{ __html: previewSvg }}
-          />
-        </div>
+          <div className="relative w-full h-96 bg-background rounded-lg overflow-hidden">
+            <div
+            className="w-full h-full flex items-center justify-center"
+              dangerouslySetInnerHTML={{ __html: previewSvg }}
+              />
+          </div>
         <div className="flex flex-wrap gap-3 mt-3 text-xs">
           <span className="flex items-center gap-1">
             <span className="w-3 h-3 rounded-full bg-[#3b82f6] inline-block" /> Logo
