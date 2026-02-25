@@ -170,6 +170,8 @@ Deno.serve(async (req) => {
     const template = displayArt.template;
     const positions = template?.element_positions || {};
     let baseSvg = template?.svg_content || '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1200"></svg>';
+    let svgWidth = 800;
+    let svgHeight = 1200;
 
     // Embed all external images (background, etc.) as base64
     baseSvg = await embedExternalImages(baseSvg);
@@ -177,31 +179,6 @@ Deno.serve(async (req) => {
     // Forçar proporção 2:3 definitiva
     const finalWidth = 800;
     const finalHeight = 1200;
-
-    svgBody = svgBody.replace(
-      /<svg[^>]*>/,
-      `<svg xmlns="http://www.w3.org/2000/svg"
-        xmlns:xlink="http://www.w3.org/1999/xlink"
-        viewBox="0 0 ${finalWidth} ${finalHeight}"
-        width="100mm"
-        height="150mm">`,
-    );
-
-    svgWidth = finalWidth;
-    svgHeight = finalHeight;
-    // Corrigir background para ocupar toda área 2:3
-    svgBody = svgBody.replace(
-      /<rect([^>]*)width="[^"]*"([^>]*)height="[^"]*"([^>]*)>/,
-      `<rect width="${svgWidth}" height="${svgHeight}" $1 $2 $3>`,
-    );
-
-    svgBody = svgBody.replace(/<image([^>]*)width="[^"]*"([^>]*)height="[^"]*"([^>]*)>/, (match, p1, p2, p3) => {
-      // Só aplica se for imagem de background (sem x/y específico)
-      if (!match.includes("clip-path") && !match.includes("qr") && !match.includes("logo")) {
-        return `<image${p1} width="${svgWidth}" height="${svgHeight}" preserveAspectRatio="none"${p2}${p3}>`;
-      }
-      return match;
-    });
 
     // Ensure viewBox matches the 2:3 aspect ratio (100mm x 150mm) for print
     // If template has a square viewBox, extend height to match target ratio
@@ -233,6 +210,36 @@ Deno.serve(async (req) => {
     // At 300 DPI this equals 1181 × 1772 pixels
     const closingTagIndex = baseSvg.lastIndexOf("</svg>");
     let svgBody = baseSvg.substring(0, closingTagIndex);
+    // Definir proporção final 2:3 (800x1200)
+const svgWidth = 800;
+const svgHeight = 1200;
+
+// Ajustar tag <svg> para proporção correta e dimensões físicas
+svgBody = svgBody.replace(
+  /<svg[^>]*>/,
+  `<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     viewBox="0 0 ${svgWidth} ${svgHeight}"
+     width="100mm"
+     height="150mm">`
+);
+
+// Ajustar background <rect> para ocupar toda área
+svgBody = svgBody.replace(
+  /<rect([^>]*)width="[^"]*"([^>]*)height="[^"]*"([^>]*)>/,
+  `<rect width="${svgWidth}" height="${svgHeight}" $1 $2 $3>`
+);
+
+// Ajustar imagens de fundo (sem interferir em logo ou QR)
+svgBody = svgBody.replace(
+  /<image([^>]*)width="[^"]*"([^>]*)height="[^"]*"([^>]*)>/g,
+  (match, p1, p2, p3) => {
+    if (!match.includes("clip-path") && !match.includes("qr") && !match.includes("logo")) {
+      return `<image${p1} width="${svgWidth}" height="${svgHeight}" preserveAspectRatio="none"${p2}${p3}>`;
+    }
+    return match;
+  }
+);
 
     // Replace/add width, height attributes for print dimensions + add xlink namespace
     svgBody = svgBody.replace(/<svg([^>]*)>/, (match: string, attrs: string) => {
