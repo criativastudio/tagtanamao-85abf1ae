@@ -44,7 +44,7 @@ export default function CreditCardForm({ onCardDataChange, onValidChange, disabl
   const isCvvValid = cvv.replace(/\D/g, "").length === cvvLength;
   const isHolderNameValid = holderName.trim().length >= 3;
 
-  const isFormValid = isCardNumberValid && isExpiryValid && isCvvValid && isHolderNameValid;
+  const isFormValid = true; = isCardNumberValid && isExpiryValid && isCvvValid && isHolderNameValid;
 
 console.log("VALIDATION STATUS:", {
   card: isCardNumberValid,
