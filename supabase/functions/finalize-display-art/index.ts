@@ -211,35 +211,32 @@ Deno.serve(async (req) => {
     const closingTagIndex = baseSvg.lastIndexOf("</svg>");
     let svgBody = baseSvg.substring(0, closingTagIndex);
     // Definir proporção final 2:3 (800x1200)
-const svgWidth = 800;
-const svgHeight = 1200;
+    const svgWidth = 800;
+    const svgHeight = 1200;
 
-// Ajustar tag <svg> para proporção correta e dimensões físicas
-svgBody = svgBody.replace(
-  /<svg[^>]*>/,
-  `<svg xmlns="http://www.w3.org/2000/svg"
+    // Ajustar tag <svg> para proporção correta e dimensões físicas
+    svgBody = svgBody.replace(
+      /<svg[^>]*>/,
+      `<svg xmlns="http://www.w3.org/2000/svg"
      xmlns:xlink="http://www.w3.org/1999/xlink"
      viewBox="0 0 ${svgWidth} ${svgHeight}"
      width="100mm"
-     height="150mm">`
-);
+     height="150mm">`,
+    );
 
-// Ajustar background <rect> para ocupar toda área
-svgBody = svgBody.replace(
-  /<rect([^>]*)width="[^"]*"([^>]*)height="[^"]*"([^>]*)>/,
-  `<rect width="${svgWidth}" height="${svgHeight}" $1 $2 $3>`
-);
+    // Ajustar background <rect> para ocupar toda área
+    svgBody = svgBody.replace(
+      /<rect([^>]*)width="[^"]*"([^>]*)height="[^"]*"([^>]*)>/,
+      `<rect width="${svgWidth}" height="${svgHeight}" $1 $2 $3>`,
+    );
 
-// Ajustar imagens de fundo (sem interferir em logo ou QR)
-svgBody = svgBody.replace(
-  /<image([^>]*)width="[^"]*"([^>]*)height="[^"]*"([^>]*)>/g,
-  (match, p1, p2, p3) => {
-    if (!match.includes("clip-path") && !match.includes("qr") && !match.includes("logo")) {
-      return `<image${p1} width="${svgWidth}" height="${svgHeight}" preserveAspectRatio="none"${p2}${p3}>`;
-    }
-    return match;
-  }
-);
+    // Ajustar imagens de fundo (sem interferir em logo ou QR)
+    svgBody = svgBody.replace(/<image([^>]*)width="[^"]*"([^>]*)height="[^"]*"([^>]*)>/g, (match, p1, p2, p3) => {
+      if (!match.includes("clip-path") && !match.includes("qr") && !match.includes("logo")) {
+        return `<image${p1} width="${svgWidth}" height="${svgHeight}" preserveAspectRatio="none"${p2}${p3}>`;
+      }
+      return match;
+    });
 
     // Replace/add width, height attributes for print dimensions + add xlink namespace
     svgBody = svgBody.replace(/<svg([^>]*)>/, (match: string, attrs: string) => {
