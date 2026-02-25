@@ -46,6 +46,13 @@ export default function CreditCardForm({ onCardDataChange, onValidChange, disabl
 
   const isFormValid = isCardNumberValid && isExpiryValid && isCvvValid && isHolderNameValid;
 
+console.log("VALIDATION STATUS:", {
+  card: isCardNumberValid,
+  expiry: isExpiryValid,
+  cvv: isCvvValid,
+  holder: isHolderNameValid,
+});
+  
   console.log({
   isCardNumberValid,
   isExpiryValid,
