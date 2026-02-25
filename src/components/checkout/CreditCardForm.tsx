@@ -37,7 +37,9 @@ export default function CreditCardForm({ onCardDataChange, onValidChange, disabl
   const cvvLength = getCVVLength(brand);
 
   const isCardNumberValid = validateCardNumber(cardNumber);
-  const [expiryMonth, expiryYear] = expiry.split("/");
+  const expiryParts = expiry.split("/");
+  const expiryMonth = expiryParts[0] || "";
+  const expiryYear = expiryParts[1] || "";
   const isExpiryValid = validateExpiry(expiryMonth, expiryYear);
   const isCvvValid = cvv.replace(/\D/g, "").length === cvvLength;
   const isHolderNameValid = holderName.trim().length >= 3;
@@ -82,6 +84,8 @@ export default function CreditCardForm({ onCardDataChange, onValidChange, disabl
         <Input
           placeholder="0000 0000 0000 0000"
           value={cardNumber}
+          inputMode="numeric"
+          autoComplete="cc-number"
           onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
           onBlur={() => handleBlur("cardNumber")}
           disabled={disabled}
@@ -93,12 +97,16 @@ export default function CreditCardForm({ onCardDataChange, onValidChange, disabl
         <Input
           placeholder="MM/AA"
           value={expiry}
+          inputMode="numeric"
+          autoComplete="cc-exp"
           onChange={(e) => setExpiry(formatExpiry(e.target.value))}
           disabled={disabled}
         />
         <Input
           placeholder={cvvLength === 4 ? "0000" : "000"}
           value={cvv}
+          inputMode="numeric"
+          autoComplete="cc-csc"
           onChange={(e) => setCvv(e.target.value.replace(/\D/g, "").slice(0, cvvLength))}
           disabled={disabled}
         />
