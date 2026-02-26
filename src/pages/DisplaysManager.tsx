@@ -101,6 +101,11 @@ export default function DisplaysManager() {
   const [passwordInput, setPasswordInput] = useState("");
   const [deletingBulk, setDeletingBulk] = useState(false);
 
+  // Slug state
+  const [slugInput, setSlugInput] = useState("");
+  const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
+  const [checkingSlug, setCheckingSlug] = useState(false);
+
   // Form state
   const [formData, setFormData] = useState({
     business_name: "",
@@ -215,6 +220,8 @@ export default function DisplaysManager() {
 
   const handleSelectDisplay = (display: BusinessDisplay) => {
     setSelectedDisplay(display);
+    setSlugInput(display.slug || "");
+    setSlugAvailable(null);
     setFormData({
       business_name: display.business_name || "",
       logo_url: display.logo_url || "",
@@ -223,6 +230,28 @@ export default function DisplaysManager() {
       buttons: display.buttons || [],
     });
     setEditMode(false);
+  };
+
+  // Slug validation and availability check
+  const slugPattern = /^[a-zA-Z0-9._-]+$/;
+  const handleSlugChange = async (value: string) => {
+    const lower = value.toLowerCase();
+    setSlugInput(lower);
+    setSlugAvailable(null);
+
+    if (!lower || lower.length < 3) return;
+    if (!slugPattern.test(lower)) return;
+
+    setCheckingSlug(true);
+    const { data } = await supabase
+      .from("business_displays")
+      .select("id")
+      .eq("slug", lower)
+      .neq("id", selectedDisplay?.id || "")
+      .maybeSingle();
+
+    setSlugAvailable(!data);
+    setCheckingSlug(false);
   };
 
   const handleSave = async () => {
@@ -247,12 +276,15 @@ export default function DisplaysManager() {
       icon: btn.icon,
     }));
 
+    const trimmedSlug = slugInput.trim().toLowerCase() || null;
+
     const updateData = {
       business_name: formData.business_name?.trim() || null,
       logo_url: formData.logo_url?.trim() || null,
       description: formData.description?.trim() || null,
       theme_color: formData.theme_color || "#10b981",
       buttons: buttonsToSave,
+      slug: trimmedSlug,
       updated_at: new Date().toISOString(),
     };
 
@@ -795,6 +827,54 @@ export default function DisplaysManager() {
                         <p className="text-xs text-muted-foreground">Código do Produto</p>
                         <p className="font-mono text-sm text-foreground">{selectedDisplay.qr_code}</p>
                       </div>
+                    </div>
+
+                    {/* Slug / Link Personalizado */}
+                    <div className="p-3 rounded-lg bg-muted/30 mb-6 space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Link2 className="w-4 h-4" />
+                        Link Personalizado (slug)
+                      </Label>
+                      {editMode ? (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">/d/</span>
+                            <Input
+                              value={slugInput}
+                              onChange={(e) => handleSlugChange(e.target.value)}
+                              placeholder="minha-empresa"
+                              className="font-mono text-sm"
+                              maxLength={30}
+                            />
+                          </div>
+                          {slugInput.length > 0 && slugInput.length < 3 && (
+                            <p className="text-xs text-yellow-500">Mínimo 3 caracteres</p>
+                          )}
+                          {slugInput && !slugPattern.test(slugInput) && (
+                            <p className="text-xs text-destructive">Apenas letras, números, pontos, hífens e underscores</p>
+                          )}
+                          {checkingSlug && <p className="text-xs text-muted-foreground">Verificando...</p>}
+                          {slugAvailable === true && <p className="text-xs text-green-500">✓ Disponível</p>}
+                          {slugAvailable === false && <p className="text-xs text-destructive">✗ Já está em uso</p>}
+                        </div>
+                      ) : slugInput ? (
+                        <div className="flex items-center gap-2">
+                          <p className="font-mono text-sm text-foreground">/d/{slugInput}</p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2"
+                            onClick={() => {
+                              navigator.clipboard.writeText(`${window.location.origin}/d/${slugInput}`);
+                              toast({ title: "Link copiado!" });
+                            }}
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Nenhum slug definido</p>
+                      )}
                     </div>
 
                     {/* Form */}
