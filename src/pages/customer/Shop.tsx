@@ -89,6 +89,20 @@ export default function Shop() {
   };
 
   const addToCart = (product: Product) => {
+    // Templates go to dedicated checkout flow
+    if (product.type === "template") {
+      if (!user) {
+        toast({
+          title: "Faça login para continuar",
+          description: "Você precisa estar logado para comprar o template.",
+        });
+        navigate(`/auth?redirect=${encodeURIComponent(`/loja/checkout?template_id=${product.id}`)}`);
+        return;
+      }
+      navigate(`/loja/checkout?template_id=${product.id}`);
+      return;
+    }
+
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
       let newCart;
@@ -281,7 +295,7 @@ export default function Shop() {
                         <span className="text-2xl font-bold text-primary">{formatCurrency(product.price)}</span>
                         <Button onClick={() => addToCart(product)}>
                           <Plus className="w-4 h-4 mr-1" />
-                          Adicionar
+                          {product.type === "template" ? "Comprar" : "Adicionar"}
                         </Button>
                       </CardFooter>
                     </Card>

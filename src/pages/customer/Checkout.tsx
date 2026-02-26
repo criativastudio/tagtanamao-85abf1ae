@@ -710,7 +710,7 @@ export default function Checkout() {
         template_id: templatePurchase.id,
         order_id: currentOrderId,
       });
-      navigate(`/dashboard/displays/templates?display=${templatePurchase.displayId}`);
+      navigate(templatePurchase.displayId ? `/dashboard/displays/templates?display=${templatePurchase.displayId}` : '/dashboard');
     } else {
       navigate('/meus-pedidos');
     }
