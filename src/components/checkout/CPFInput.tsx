@@ -29,7 +29,7 @@ export default function CPFInput({
   useEffect(() => {
     const clean = value.replace(/\D/g, '');
     if (clean.length === 11 || clean.length === 14) {
-      const valid = validateCPFOrCNPJ(value);
+      const valid = validateCPFOrCNPJ(clean);
       setIsValid(valid);
       onValidChange?.(valid);
     } else {
