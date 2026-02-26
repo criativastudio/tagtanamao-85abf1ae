@@ -28,7 +28,8 @@ import {
   Printer,
   Trash2,
   DollarSign,
-  Users
+  Users,
+  Monitor
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -190,6 +191,14 @@ const adminSettingsItems: AdminMenuItem[] = [
     icon: Layout,
     path: '/admin/secoes',
     color: 'text-pink-400'
+  },
+  {
+    id: 'display-templates',
+    title: 'Templates de Display',
+    description: 'Gerencie templates (Netflix, etc).',
+    icon: Monitor,
+    path: '/admin/display-templates',
+    color: 'text-red-400'
   },
 ];
 
