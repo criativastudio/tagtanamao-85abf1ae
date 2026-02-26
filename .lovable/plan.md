@@ -1,25 +1,27 @@
 
 
-## Plan: Add Custom Slug for Business Displays
+## Plan: Add Netflix "Ta-Dum" Sound on Template Load
 
-The `business_displays` table already has a `slug` column. The plan is to:
+### Approach
+Use a free Netflix-style sound effect hosted in the `public/` folder, played automatically when the `NetflixTemplate` component mounts on the public page. Due to browser autoplay policies, we'll play the sound on the first user interaction (click/touch/scroll) as a fallback if autoplay is blocked.
 
-1. **Add a new route** `/d/:slug` in `App.tsx` that resolves a display by its slug (acting as a friendly alias over the existing `/display/:qrCode` URL)
+### Steps
 
-2. **Update `PublicDisplayPage.tsx`** to also try matching by `slug` when the `qr_code` lookup fails, so both `/display/:qrCode` and `/d/:slug` work
+1. **Add sound file** — Place a Netflix "ta-dum" `.mp3` file in `public/sounds/netflix-tadum.mp3` (short ~3s clip)
 
-3. **Add slug editor field in `DisplaysManager.tsx`** (the business display editor) — an input field with validation (alphanumeric, dots, hyphens, underscores), real-time availability check, and save alongside other display data
+2. **Update `NetflixTemplate.tsx`**:
+   - Add a `useEffect` that creates an `Audio` object and attempts to play it on mount
+   - If autoplay is blocked (browsers often block it), register a one-time event listener on `click`/`touchstart` to play the sound on first interaction
+   - Only play when `isPublic` prop is true (to avoid playing in editor previews)
 
-4. **Add slug editor field in `DisplayTemplateManager.tsx`** (the template manager page) — similar slug input with the shareable link displayed
+3. **Add `isPublic` prop** to `NetflixTemplateProps` (default `false`) to distinguish public page vs editor preview
 
-5. **Show the friendly URL** (`/d/slug`) next to the QR code info so users can copy/share it
+4. **Update `PublicDisplayPage.tsx`** — Pass `isPublic={true}` to `NetflixTemplate`
 
-### Technical Details
+5. **Keep editor previews silent** — `DisplayTemplateManager.tsx` won't pass `isPublic`, so sound won't play during editing
 
-- **Route**: New route `<Route path="/d/:slug" element={<PublicDisplayPage />} />` using the same component
-- **Resolution logic**: In `PublicDisplayPage`, detect if param could be a slug (non-UUID format) and query by `slug` column; if UUID-like, query by `qr_code` as before
-- **Slug validation**: Same pattern as bio pages — `/^[a-zA-Z0-9._-]+$/`, min 3 chars, max 30 chars
-- **Availability check**: Query `business_displays` where `slug = input` and `id != current display id`
-- **Save**: Include `slug` in the existing `handleSave` update payload in `DisplaysManager.tsx`
-- **Files modified**: `src/App.tsx`, `src/pages/PublicDisplayPage.tsx`, `src/pages/DisplaysManager.tsx`, `src/pages/customer/DisplayTemplateManager.tsx`
+### Files
+- `public/sounds/netflix-tadum.mp3` (new — generated/sourced audio file)
+- `src/components/display/NetflixTemplate.tsx` (add sound logic + `isPublic` prop)
+- `src/pages/PublicDisplayPage.tsx` (pass `isPublic={true}`)
 
