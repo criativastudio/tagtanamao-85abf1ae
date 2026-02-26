@@ -11,7 +11,9 @@ import {
   Clock,
   ExternalLink,
   Edit,
-  Search
+  Search,
+  Globe,
+  Link
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,11 +44,21 @@ interface BusinessDisplay {
   created_at: string | null;
 }
 
+interface BioPageItem {
+  id: string;
+  title: string;
+  slug: string;
+  is_active: boolean | null;
+  profile_photo_url: string | null;
+  created_at: string;
+}
+
 export default function MyProducts() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [petTags, setPetTags] = useState<PetTag[]>([]);
   const [displays, setDisplays] = useState<BusinessDisplay[]>([]);
+  const [bioPages, setBioPages] = useState<BioPageItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -59,32 +71,34 @@ export default function MyProducts() {
   const fetchProducts = async () => {
     setLoading(true);
     
-    // Fetch pet tags belonging to this user
-    const { data: tagsData, error: tagsError } = await supabase
-      .from('pet_tags')
-      .select('*')
-      .eq('user_id', user?.id)
-      .order('created_at', { ascending: false });
-    
-    if (tagsError) {
-      toast.error('Erro ao carregar tags pet');
-    } else {
-      setPetTags(tagsData || []);
-    }
-    
-    // Fetch business displays belonging to this user
-    const { data: displaysData, error: displaysError } = await supabase
-      .from('business_displays')
-      .select('*')
-      .eq('user_id', user?.id)
-      .order('created_at', { ascending: false });
-    
-    if (displaysError) {
-      toast.error('Erro ao carregar displays');
-    } else {
-      setDisplays(displaysData || []);
-    }
-    
+    const [tagsRes, displaysRes, bioRes] = await Promise.all([
+      supabase
+        .from('pet_tags')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('business_displays')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('bio_pages')
+        .select('id, title, slug, is_active, profile_photo_url, created_at')
+        .eq('user_id', user?.id as string)
+        .is('display_id', null)
+        .order('created_at', { ascending: false }),
+    ]);
+
+    if (tagsRes.error) toast.error('Erro ao carregar tags pet');
+    else setPetTags(tagsRes.data || []);
+
+    if (displaysRes.error) toast.error('Erro ao carregar displays');
+    else setDisplays(displaysRes.data || []);
+
+    if (bioRes.error) toast.error('Erro ao carregar links bio');
+    else setBioPages(bioRes.data || []);
+
     setLoading(false);
   };
 
@@ -101,7 +115,12 @@ export default function MyProducts() {
     display.business_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const totalProducts = petTags.length + displays.length;
+  const filteredBioPages = bioPages.filter(bio =>
+    bio.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    bio.slug?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const totalProducts = petTags.length + displays.length + bioPages.length;
   const activatedProducts = petTags.filter(t => t.is_activated).length + displays.filter(d => d.is_activated).length;
 
   if (loading) {
@@ -148,7 +167,7 @@ export default function MyProducts() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -188,14 +207,25 @@ export default function MyProducts() {
             <div className="text-2xl font-bold text-foreground">{displays.length}</div>
             <div className="text-sm text-muted-foreground">Displays</div>
           </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="glass-card p-4 rounded-xl text-center"
+          >
+            <Globe className="w-8 h-8 mx-auto mb-2 text-purple-400" />
+            <div className="text-2xl font-bold text-foreground">{bioPages.length}</div>
+            <div className="text-sm text-muted-foreground">Links Bio</div>
+          </motion.div>
         </div>
 
         {/* Products Tabs */}
         <Tabs defaultValue="all" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger value="all">Todos ({totalProducts})</TabsTrigger>
             <TabsTrigger value="tags">Tags Pet ({petTags.length})</TabsTrigger>
             <TabsTrigger value="displays">Displays ({displays.length})</TabsTrigger>
+            <TabsTrigger value="bio">Links Bio ({bioPages.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="all">
@@ -223,6 +253,12 @@ export default function MyProducts() {
                     isActivated={display.is_activated || false}
                     slug={display.slug}
                     onEdit={() => navigate('/dashboard/displays')}
+                  />
+                ))}
+                {filteredBioPages.map((bio) => (
+                  <BioPageCard
+                    key={bio.id}
+                    bio={bio}
                   />
                 ))}
               </div>
@@ -263,6 +299,21 @@ export default function MyProducts() {
                     isActivated={display.is_activated || false}
                     slug={display.slug}
                     onEdit={() => navigate('/dashboard/displays')}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="bio">
+            {bioPages.length === 0 ? (
+              <EmptyState type="bio" onActivate={() => navigate('/dashboard/activate')} />
+            ) : (
+              <div className="space-y-4">
+                {filteredBioPages.map((bio) => (
+                  <BioPageCard
+                    key={bio.id}
+                    bio={bio}
                   />
                 ))}
               </div>
@@ -350,28 +401,85 @@ function ProductCard({ type, name, code, isActivated, slug, onEdit }: ProductCar
   );
 }
 
+function BioPageCard({ bio }: { bio: BioPageItem }) {
+  const navigate = useNavigate();
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="glass-card p-4 rounded-xl flex items-center justify-between"
+    >
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 rounded-full flex items-center justify-center text-purple-400 bg-purple-500/20">
+          <Globe className="w-6 h-6" />
+        </div>
+        <div>
+          <div className="font-medium text-foreground">{bio.title}</div>
+          <div className="text-sm text-muted-foreground font-mono">/{bio.slug}</div>
+          <div className="flex items-center gap-2 mt-1">
+            {bio.is_active ? (
+              <span className="flex items-center gap-1 text-xs text-green-500">
+                <CheckCircle2 className="w-3 h-3" />
+                Ativo
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-xs text-yellow-500">
+                <Clock className="w-3 h-3" />
+                Inativo
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => window.open(`/bio/${bio.slug}`, '_blank')}
+        >
+          <ExternalLink className="w-4 h-4 mr-1" />
+          Ver página
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate(`/dashboard/bio/${bio.id}`)}
+        >
+          <Edit className="w-4 h-4 mr-1" />
+          Editar
+        </Button>
+      </div>
+    </motion.div>
+  );
+}
+
 interface EmptyStateProps {
-  type?: 'tags' | 'displays';
+  type?: 'tags' | 'displays' | 'bio';
   onActivate: () => void;
 }
 
 function EmptyState({ type, onActivate }: EmptyStateProps) {
-  const Icon = type === 'tags' ? Dog : type === 'displays' ? Building2 : Package;
+  const Icon = type === 'tags' ? Dog : type === 'displays' ? Building2 : type === 'bio' ? Globe : Package;
   const message = type === 'tags' 
     ? 'Nenhuma tag pet encontrada' 
     : type === 'displays' 
       ? 'Nenhum display encontrado'
-      : 'Nenhum produto encontrado';
+      : type === 'bio'
+        ? 'Nenhum link bio encontrado'
+        : 'Nenhum produto encontrado';
 
   return (
     <div className="text-center py-12">
       <Icon className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
       <h3 className="text-lg font-medium text-foreground mb-2">{message}</h3>
       <p className="text-muted-foreground mb-6">
-        Compre um produto e ative-o usando o código único do manual.
+        {type === 'bio' 
+          ? 'Compre um template para ter sua página bio personalizada.'
+          : 'Compre um produto e ative-o usando o código único do manual.'}
       </p>
       <Button variant="hero" onClick={onActivate}>
-        Ativar Produto
+        {type === 'bio' ? 'Ver Templates' : 'Ativar Produto'}
       </Button>
     </div>
   );
