@@ -1,50 +1,47 @@
 
 
-## Reestruturação da página de Produtos Admin com seções por tipo
+## Adicionar seção "Links Bio" na página Meus Produtos
 
-### Contexto atual
+### Problema
 
-- **ProductsManager** (`/admin/produtos`): CRUD genérico de produtos da tabela `products`, sem separação por tipo
-- **DisplayTemplatesManager** (`/admin/display-templates`): página separada com CRUD de templates + ativação em displays
-- O menu admin em `UserSettings.tsx` lista ambos como itens separados
+Atualmente, a página "Meus Produtos" lista apenas **Tags Pet** e **Displays**. Quando um usuário compra apenas o template Netflix (sem produto físico), ele recebe uma `bio_page` com `display_id = null`. Essa bio page fica "perdida" — não aparece em lugar nenhum no dashboard de produtos.
 
-### O que será feito
+### Solução
 
-Reescrever `ProductsManager.tsx` para consolidar tudo em uma única página com **Tabs** organizadas por tipo de produto:
+Adicionar uma nova aba **"Links Bio"** na página `MyProducts.tsx` que lista todas as `bio_pages` do usuário que **não estão vinculadas a um display** (`display_id IS NULL`).
 
-**Abas:**
-1. **Tag Pet** — lista/CRUD de produtos com `type = 'pet_tag'`
-2. **Display Empresarial** — lista/CRUD de produtos com `type = 'business_display'`
-3. **Templates** — CRUD completo da tabela `display_templates` + ativação/desativação em displays (toda a lógica que hoje está em `DisplayTemplatesManager`)
-4. **Tag Celular** — lista/CRUD de produtos com `type = 'nfc_tag'`
-5. **Card NFC** — lista/CRUD de produtos com `type = 'nfc_card'`
+### Mudanças no arquivo `src/pages/customer/MyProducts.tsx`
 
-### Estrutura técnica
+1. **Novo estado e interface** para bio pages independentes:
+   - Interface `BioPageItem` com campos `id`, `title`, `slug`, `is_active`, `profile_photo_url`, `created_at`
+   - Estado `bioPages` no componente principal
 
-- Cada aba de produto físico (Pet, Display, Tag Celular, Card NFC) filtra `products` por `type` e usa o mesmo dialog de criação/edição que já existe, pré-selecionando o tipo
-- A aba **Templates** incorpora toda a lógica atual do `DisplayTemplatesManager` (CRUD `display_templates` + ativar/desativar `active_template_id` em `business_displays` sem exigir compra)
-- O botão "Novo Produto" será contextual: na aba de templates cria um template, nas outras cria um produto com o tipo correto
+2. **Fetch de bio pages** no `fetchProducts`:
+   - Query: `bio_pages` WHERE `user_id = user.id` AND `display_id IS NULL`
+   - Ordenado por `created_at desc`
 
-### Arquivos
+3. **Nova aba "Links Bio"** nas Tabs (de 3 para 4 colunas):
+   - `Todos` | `Tags Pet` | `Displays` | `Links Bio`
 
-| Arquivo | Ação |
-|---|---|
-| `src/pages/admin/ProductsManager.tsx` | Reescrever com Tabs por tipo + seção Templates integrada |
-| `src/pages/customer/UserSettings.tsx` | Remover item "Templates de Display" do menu admin (já está dentro de Produtos) |
-| `src/App.tsx` | Remover rota `/admin/display-templates` e import do `DisplayTemplatesManager` |
-| `src/pages/admin/DisplayTemplatesManager.tsx` | Pode ser mantido como arquivo (não quebra nada) ou removido — a funcionalidade migra para ProductsManager |
+4. **Stats cards** atualizados:
+   - Grid de 5 cards (ou manter 4 e substituir "Total" por "Links Bio")
+   - Novo card com icone `Link` e contagem de bio pages
 
-### Detalhes de implementação
+5. **Card de bio page** com:
+   - Icone diferenciado (Link ou Globe) em cor roxa
+   - Título da bio page
+   - Slug como subtítulo
+   - Status ativo/inativo (em vez de "ativado/aguardando")
+   - Botão "Ver página" abrindo `/bio/{slug}`
+   - Botão "Editar" navegando para `/dashboard/bio/{id}`
 
-A página usará `Tabs` do Radix com 5 abas. As 4 abas de produtos físicos compartilham:
-- Grid de cards com imagem, nome, preço, switch ativo/inativo, editar, excluir
-- Dialog de criação/edição com campos: nome, descrição, preço, imagem, galeria, ativo — com `type` pré-definido pela aba
+6. **Busca** inclui bio pages no filtro por título ou slug
 
-A aba Templates terá:
-- Grid de cards de templates (nome, key, preço, features, switch ativo)
-- Seção "Ativar template em display" com selects de display + template + botão Ativar
-- Lista de displays com template ativo + botão Desativar
-- Dialog de criação/edição de template (nome, key, descrição, preço, preview_url, features, ativo)
+7. **Aba "Todos"** inclui bio pages junto com tags e displays
 
-Nenhuma alteração de banco de dados é necessária.
+### Detalhes técnicos
+
+- A tabela `bio_pages` já tem RLS que permite `SELECT` para o dono (`auth.uid() = user_id`)
+- Nenhuma alteração de banco de dados necessária
+- O filtro `display_id IS NULL` garante que bio pages vinculadas a displays não apareçam duplicadas (elas já aparecem indiretamente via o display)
 
