@@ -1,68 +1,63 @@
-## Criar página de gerenciamento para Links Bio com seletor de templates
 
-### Contexto
 
-Atualmente, ao clicar "Editar" em um link bio na aba "Links Bio" de Meus Produtos, o usuário é redirecionado para `/dashboard/bio/{id}` (o editor de bio padrão). O usuário quer que essa tela seja à mesma do DisplaysManager, com seção de templates premium (comprar, ativar, desativar, voltar ao padrão), conforme o print anexado.
+## Bloquear templates para usuários não pagos e permitir liberação manual pelo admin
 
-### Problema
+### Problema atual
 
-O `DisplayTemplateSelector` atual depende de um `displayId` para funcionar — ele ativa templates na tabela `business_displays.active_template_id`. Bio pages standalone (sem display vinculado) não têm esse vínculo, então o seletor de templates não funciona para elas.
+Existem **3 pontos** no código onde um usuário pode adquirir templates gratuitos (preço = 0) sem pagar, inserindo diretamente na tabela `user_templates`:
+
+1. `src/components/display/DisplayTemplateSelector.tsx` — linha 129-133: se `template.price === 0`, insere em `user_templates` instantaneamente
+2. `src/pages/customer/DisplayTemplateManager.tsx` — linha 144-153: mesma lógica para templates gratuitos
+3. Qualquer template com `price = 0` pode ser auto-adquirido sem validação
+
+Além disso, **não existe interface admin** para liberar manualmente um template a um usuário específico.
 
 ### Solução
 
-Criar uma nova página `BioLinkManager` que replica a experiência do `DisplaysManager` para bio pages standalone, incluindo:
+#### 1. Bloquear auto-aquisição de templates gratuitos pelo usuário
 
-#### 1. Nova página: `src/pages/customer/BioLinkManager.tsx`
+Remover a lógica de "adquirir grátis" em todos os componentes do lado do cliente. Templates só podem ser desbloqueados por:
+- **Compra** (fluxo de checkout existente → insere em `user_templates`)
+- **Admin** (liberação manual via painel)
 
-Uma página dedicada acessada via `/dashboard/bio-link/{id}` que exibe:
+| Arquivo | Mudança |
+|---|---|
+| `src/components/display/DisplayTemplateSelector.tsx` | Remover bloco `if (template.price === 0)` no `handlePurchase`. Todos os templates não-owned redirecionam para checkout (`/loja/checkout?template_id=...`), independente do preço |
+| `src/pages/customer/DisplayTemplateManager.tsx` | Mesma remoção no `handlePurchaseTemplate` — remover auto-aquisição de templates gratuitos |
 
-- **Header** com botão voltar, título "Gerenciar Link Bio" e botões "Ver Página" / "Editar" / "Salvar"
-- **Stats**: visualizações (da tabela `bio_page_analytics`), última visualização, quantidade de botões
-- **Informações básicas**: título, subtítulo/descrição, slug (URL), status ativo/inativo
-- **Cor do tema**: baseado no `theme.primaryColor` da bio page
-- **Botões/Links**: lista dos botões configurados na bio page
-- **Templates Premium**: componente `DisplayTemplateSelector` adaptado (ou um novo `BioTemplateSelector`) que permite comprar/ativar/desativar templates para a bio page
-- **Link "Personalizar (TEMPLATE PADRÃO)"**: redireciona para `/dashboard/bio/{id}` (o editor completo de bio)
+#### 2. Admin: interface para liberar templates manualmente a usuários
 
-#### 2. Adaptação do seletor de templates para bio pages
+Adicionar uma nova seção no `TemplatesTabContent.tsx` (aba Templates do admin de produtos) que permite:
+- Selecionar um usuário (busca por email na tabela `profiles`)
+- Selecionar um template
+- Clicar "Liberar" → insere em `user_templates`
+- Listar templates já liberados com opção de revogar (deletar de `user_templates`)
 
-Duas opções:
+| Arquivo | Mudança |
+|---|---|
+| `src/components/admin/TemplatesTabContent.tsx` | Adicionar seção "Liberar Template para Usuário" com select de usuário (busca por email), select de template, botão liberar, e lista de liberações existentes com botão revogar |
 
-**Opção A — Criar display virtual**: Quando o usuário ativa um template em uma bio page standalone, criar automaticamente um `business_display` virtual (sem código QR físico) e vincular a bio page a ele via `display_id`. Isso permite reutilizar o `DisplayTemplateSelector` sem alteração.
+#### 3. Fluxo de compra (já funciona)
 
-**Opção B (recomendada) — Novo componente `BioTemplateSelector**`: Um componente similar ao `DisplayTemplateSelector` mas que opera na `bio_page` diretamente. Em vez de setar `active_template_id` no `business_displays`, ele armazena a referência do template ativo na própria bio page (via um campo `active_template_id` na tabela `bio_pages`, ou via a config do tema).
+O desbloqueio automático pós-compra **já está implementado** em 3 pontos e não precisa de alteração:
+- `Checkout.tsx` linha 577: insere em `user_templates` após cartão aprovado
+- `Checkout.tsx` linha 708: insere em `user_templates` após PIX confirmado
+- `asaas-payment/index.ts` linha 220: insere em `user_templates` via webhook
 
-Recomendo a **Opção A** por ser mais simples e reutilizar toda a infra existente de templates. Quando o usuário ativa um template premium:
+#### 4. Nenhuma alteração de banco necessária
 
-1. Cria-se um `business_display` sem `qr_code` físico (ou com um código gerado internamente)
-2. Vincula a bio_page a esse display via `display_id`
-3. O `DisplayTemplateSelector` funciona normalmente
+A tabela `user_templates` já existe com as colunas necessárias (`user_id`, `template_id`, `order_id`). As políticas RLS já permitem:
+- Admin: ALL (gerenciar)
+- System: INSERT (backend)
+- Users: SELECT own
 
-#### 3. Atualizar rota em `App.tsx`
+O admin já pode inserir e deletar via RLS policy "Admins can manage user templates".
 
-Adicionar rota `/dashboard/bio-link/:id` apontando para `BioLinkManager`.
+### Resumo das mudanças
 
-#### 4. Atualizar MyProducts.tsx
+| Arquivo | Ação |
+|---|---|
+| `src/components/display/DisplayTemplateSelector.tsx` | Remover auto-aquisição gratuita — sempre redirecionar para checkout |
+| `src/pages/customer/DisplayTemplateManager.tsx` | Remover auto-aquisição gratuita — sempre redirecionar para checkout |
+| `src/components/admin/TemplatesTabContent.tsx` | Adicionar seção de liberação manual de templates para usuários (busca por email, liberar, revogar) |
 
-Mudar o botão "Editar" dos bio links para navegar para `/dashboard/bio-link/{id}` em vez de `/dashboard/bio/{id}`.
-
-### Arquivos a criar/editar
-
-
-| Arquivo                                 | Ação                                                       |
-| --------------------------------------- | ---------------------------------------------------------- |
-| `src/pages/customer/BioLinkManager.tsx` | **Criar** — página de gerenciamento estilo DisplaysManager |
-| `src/App.tsx`                           | **Editar** — adicionar rota `/dashboard/bio-link/:id`      |
-| `src/pages/customer/MyProducts.tsx`     | **Editar** — mudar navegação do botão "Editar"             |
-
-
-### Alteração de banco de dados
-
-Nenhuma alteração necessária se usarmos a Opção A (criar display virtual ao ativar template). O `DisplayTemplateSelector` e toda a infra de templates continuam funcionando como estão.
-
-### Detalhes técnicos
-
-- A página `BioLinkManager` busca a bio page por ID, exibe seus dados no formato visual do DisplaysManager
-- O `DisplayTemplateSelector` é incluído condicionalmente: se a bio page já tem um `display_id`, usa-o; se não, o seletor cria um display virtual ao ativar o primeiro template
-- O link "Personalizar (TEMPLATE PADRÃO)" continua levando ao BioEditor existente (`/dashboard/bio/{id}`)
-- Analytics são buscados da tabela `bio_page_analytics` filtrando por `bio_page_id`
