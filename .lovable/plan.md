@@ -1,54 +1,68 @@
+## Criar página de gerenciamento para Links Bio com seletor de templates
 
+### Contexto
 
-## Desacoplar o fluxo de compra de templates do fluxo de produtos físicos
+Atualmente, ao clicar "Editar" em um link bio na aba "Links Bio" de Meus Produtos, o usuário é redirecionado para `/dashboard/bio/{id}` (o editor de bio padrão). O usuário quer que essa tela seja à mesma do DisplaysManager, com seção de templates premium (comprar, ativar, desativar, voltar ao padrão), conforme o print anexado.
 
-### Problema identificado
+### Problema
 
-Existem **dois caminhos** para comprar um template, e apenas um funciona corretamente:
-
-1. **Via URL param** (`/loja/checkout?template_id=X`) — funciona: pula endereço, seta `shipping_method: "digital"`, marca `notes` com `type: "template_purchase"`, e o webhook sabe que deve manter status em `"paid"` sem avançar para `awaiting_customization`.
-
-2. **Via carrinho da loja** (Shop.tsx) — **quebrado**: o template é adicionado ao carrinho como produto comum (`type: "template"`), e o checkout exige endereço, frete, e não marca o pedido como digital. Após pagamento, o webhook chama `getNextStatusAfterPayment` que não encontra `template_purchase` no `notes` e avança o status para `processing` (ou `awaiting_customization` se tiver display no carrinho junto).
+O `DisplayTemplateSelector` atual depende de um `displayId` para funcionar — ele ativa templates na tabela `business_displays.active_template_id`. Bio pages standalone (sem display vinculado) não têm esse vínculo, então o seletor de templates não funciona para elas.
 
 ### Solução
 
-#### 1. Shop.tsx — Redirecionar template direto para checkout dedicado
+Criar uma nova página `BioLinkManager` que replica a experiência do `DisplaysManager` para bio pages standalone, incluindo:
 
-Quando o usuário clica "Adicionar" em um produto do tipo `template`, em vez de adicionar ao carrinho, redirecionar diretamente para `/loja/checkout?template_id={id}` (o fluxo dedicado que já existe e funciona).
+#### 1. Nova página: `src/pages/customer/BioLinkManager.tsx`
 
-| Arquivo | Mudança |
-|---|---|
-| `src/pages/customer/Shop.tsx` | No `addToCart`, se `product.type === "template"`, redirecionar para `/loja/checkout?template_id=${product.id}` em vez de adicionar ao carrinho. Mudar o label do botão para "Comprar" em vez de "Adicionar" para templates. |
+Uma página dedicada acessada via `/dashboard/bio-link/{id}` que exibe:
 
-#### 2. Products.tsx (Landing Page) — Mesma lógica
+- **Header** com botão voltar, título "Gerenciar Link Bio" e botões "Ver Página" / "Editar" / "Salvar"
+- **Stats**: visualizações (da tabela `bio_page_analytics`), última visualização, quantidade de botões
+- **Informações básicas**: título, subtítulo/descrição, slug (URL), status ativo/inativo
+- **Cor do tema**: baseado no `theme.primaryColor` da bio page
+- **Botões/Links**: lista dos botões configurados na bio page
+- **Templates Premium**: componente `DisplayTemplateSelector` adaptado (ou um novo `BioTemplateSelector`) que permite comprar/ativar/desativar templates para a bio page
+- **Link "Personalizar (TEMPLATE PADRÃO)"**: redireciona para `/dashboard/bio/{id}` (o editor completo de bio)
 
-| Arquivo | Mudança |
-|---|---|
-| `src/components/Products.tsx` | No botão de ação de templates, redirecionar para `/loja/checkout?template_id=${product.id}` em vez de adicionar ao carrinho. |
+#### 2. Adaptação do seletor de templates para bio pages
 
-#### 3. Checkout.tsx — Garantir fulfillment após PIX/Boleto
+Duas opções:
 
-O `handlePaymentConfirmed` (chamado quando PIX é confirmado) já faz o fulfill. Porém, o redirect vai para `/dashboard/displays/templates?display=${templatePurchase.displayId}` — que depende do display. Corrigir para redirecionar para `/dashboard` quando não há `displayId`.
+**Opção A — Criar display virtual**: Quando o usuário ativa um template em uma bio page standalone, criar automaticamente um `business_display` virtual (sem código QR físico) e vincular a bio page a ele via `display_id`. Isso permite reutilizar o `DisplayTemplateSelector` sem alteração.
 
-| Arquivo | Mudança |
-|---|---|
-| `src/pages/customer/Checkout.tsx` | Na função `handlePaymentConfirmed`, se `templatePurchase.displayId` estiver vazio, redirecionar para `/dashboard` em vez de `/dashboard/displays/templates`. Também na aprovação por cartão (linha 582), mesma correção. |
+**Opção B (recomendada) — Novo componente `BioTemplateSelector**`: Um componente similar ao `DisplayTemplateSelector` mas que opera na `bio_page` diretamente. Em vez de setar `active_template_id` no `business_displays`, ele armazena a referência do template ativo na própria bio page (via um campo `active_template_id` na tabela `bio_pages`, ou via a config do tema).
 
-#### 4. Checkout.tsx — Detectar templates no carrinho misto (segurança)
+Recomendo a **Opção A** por ser mais simples e reutilizar toda a infra existente de templates. Quando o usuário ativa um template premium:
 
-Como proteção adicional, no `handleCreateOrder`, quando o carrinho contém itens com `type === "template"`, marcar o pedido com `notes` contendo `template_purchase` e `shipping_method: "digital"` — para que o webhook os reconheça.
+1. Cria-se um `business_display` sem `qr_code` físico (ou com um código gerado internamente)
+2. Vincula a bio_page a esse display via `display_id`
+3. O `DisplayTemplateSelector` funciona normalmente
 
-Porém, isso conflita com pedidos mistos (template + produto físico). A solução mais limpa é **impedir que templates entrem no carrinho** (item 1), eliminando esse cenário.
+#### 3. Atualizar rota em `App.tsx`
 
-### Resumo das mudanças
+Adicionar rota `/dashboard/bio-link/:id` apontando para `BioLinkManager`.
 
-| Arquivo | Ação |
-|---|---|
-| `src/pages/customer/Shop.tsx` | Templates: botão "Comprar" redireciona para checkout dedicado em vez de adicionar ao carrinho |
-| `src/components/Products.tsx` | Templates: botão redireciona para checkout dedicado |
-| `src/pages/customer/Checkout.tsx` | Corrigir redirect pós-pagamento para templates sem `displayId` (ir para `/dashboard` ou `/dashboard/produtos`) |
+#### 4. Atualizar MyProducts.tsx
 
-### Nenhuma alteração de banco necessária
+Mudar o botão "Editar" dos bio links para navegar para `/dashboard/bio-link/{id}` em vez de `/dashboard/bio/{id}`.
 
-O fluxo backend (edge function `asaas-payment`) já trata corretamente templates quando o pedido tem `notes.type === "template_purchase"` e `shipping_method === "digital"`. A correção é garantir que o frontend sempre use esse caminho.
+### Arquivos a criar/editar
 
+
+| Arquivo                                 | Ação                                                       |
+| --------------------------------------- | ---------------------------------------------------------- |
+| `src/pages/customer/BioLinkManager.tsx` | **Criar** — página de gerenciamento estilo DisplaysManager |
+| `src/App.tsx`                           | **Editar** — adicionar rota `/dashboard/bio-link/:id`      |
+| `src/pages/customer/MyProducts.tsx`     | **Editar** — mudar navegação do botão "Editar"             |
+
+
+### Alteração de banco de dados
+
+Nenhuma alteração necessária se usarmos a Opção A (criar display virtual ao ativar template). O `DisplayTemplateSelector` e toda a infra de templates continuam funcionando como estão.
+
+### Detalhes técnicos
+
+- A página `BioLinkManager` busca a bio page por ID, exibe seus dados no formato visual do DisplaysManager
+- O `DisplayTemplateSelector` é incluído condicionalmente: se a bio page já tem um `display_id`, usa-o; se não, o seletor cria um display virtual ao ativar o primeiro template
+- O link "Personalizar (TEMPLATE PADRÃO)" continua levando ao BioEditor existente (`/dashboard/bio/{id}`)
+- Analytics são buscados da tabela `bio_page_analytics` filtrando por `bio_page_id`
