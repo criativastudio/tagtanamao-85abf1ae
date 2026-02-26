@@ -174,6 +174,17 @@ Deno.serve(async (req) => {
     // Embed all external images (background, etc.) as base64
     baseSvg = await embedExternalImages(baseSvg);
 
+    // Parse SVG viewBox to get dimensions
+    let svgWidth = 800, svgHeight = 800;
+    const viewBoxMatch = baseSvg.match(/viewBox="([^"]+)"/);
+    if (viewBoxMatch) {
+      const parts = viewBoxMatch[1].split(/[\s,]+/).map(Number);
+      if (parts.length >= 4) {
+        svgWidth = parts[2];
+        svgHeight = parts[3];
+      }
+    }
+
     // Ensure viewBox matches the 2:3 aspect ratio (100mm x 150mm) for print
     // If template has a square viewBox, extend height to match target ratio
     const targetHeight = Math.round(svgWidth * 1.5); // 2:3 ratio
