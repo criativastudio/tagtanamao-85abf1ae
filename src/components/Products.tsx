@@ -54,6 +54,20 @@ const Products = () => {
   });
 
   const handleAddToCart = (product: Product) => {
+    // Templates go to dedicated checkout flow
+    if (product.type === "template") {
+      if (!user) {
+        toast({
+          title: "Faça login para continuar",
+          description: "Você precisa estar logado para comprar o template.",
+        });
+        navigate(`/auth?redirect=${encodeURIComponent(`/loja/checkout?template_id=${product.id}`)}`);
+        return;
+      }
+      navigate(`/loja/checkout?template_id=${product.id}`);
+      return;
+    }
+
     if (!user) {
       toast({
         title: "Faça login para continuar",
@@ -75,8 +89,21 @@ const Products = () => {
   };
 
   const handleBuyNow = (product: Product) => {
+    // Templates go to dedicated checkout flow
+    if (product.type === "template") {
+      if (!user) {
+        toast({
+          title: "Faça login para continuar",
+          description: "Você precisa estar logado para comprar o template.",
+        });
+        navigate(`/auth?redirect=${encodeURIComponent(`/loja/checkout?template_id=${product.id}`)}`);
+        return;
+      }
+      navigate(`/loja/checkout?template_id=${product.id}`);
+      return;
+    }
+
     if (!user) {
-      // Save product to cart for after login
       addToCart(product);
       toast({
         title: "Faça login para continuar",
