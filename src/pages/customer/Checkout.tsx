@@ -538,7 +538,7 @@ export default function Checkout() {
             customerName: isTemplatePurchase ? (profile?.full_name || "Cliente") : shippingData.name,
             customerEmail: profile?.email || user?.email,
             customerPhone: isTemplatePurchase ? (profile?.phone || "00000000000") : shippingData.phone,
-            customerCpfCnpj: customerCpfCnpj,
+            customerCpfCnpj: customerCpfCnpj.replace(/\D/g, ""),
             postalCode: isTemplatePurchase ? ((profile as any)?.cep || "00000000") : shippingData.zip,
             address: isTemplatePurchase ? ((profile as any)?.endereco || "Digital") : shippingData.address,
             addressNumber: isTemplatePurchase ? ((profile as any)?.numero || "0") : shippingData.number,
