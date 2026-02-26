@@ -724,16 +724,23 @@ export default function OrdersManager() {
                 {/* Status Actions */}
                 <div className="flex flex-wrap gap-2">
                   <span className="text-sm text-muted-foreground mr-2">Alterar status:</span>
-                  {Object.entries(statusLabels).map(([key, label]) => (
-                    <Button
-                      key={key}
-                      size="sm"
-                      variant={selectedOrder.status === key ? "default" : "outline"}
-                      onClick={() => handleUpdateStatus(selectedOrder.id, key)}
-                    >
-                      {label}
-                    </Button>
-                  ))}
+                  {(() => {
+                    const isDigital = selectedOrder.shipping_method === "digital";
+                    const digitalStatuses = ["pending", "paid"];
+                    const entries = isDigital
+                      ? Object.entries(statusLabels).filter(([key]) => digitalStatuses.includes(key))
+                      : Object.entries(statusLabels);
+                    return entries.map(([key, label]) => (
+                      <Button
+                        key={key}
+                        size="sm"
+                        variant={selectedOrder.status === key ? "default" : "outline"}
+                        onClick={() => handleUpdateStatus(selectedOrder.id, key)}
+                      >
+                        {label}
+                      </Button>
+                    ));
+                  })()}
                 </div>
 
                 {/* Customer Info */}
