@@ -39,7 +39,7 @@ interface OrderItemSummary {
   unit_price: number;
   product?: { name: string; type: string } | null;
 }
-
+ 
 interface OrderWithItems extends Order {
   items?: (OrderItem | OrderItemSummary)[];
   melhor_envio_shipment_id?: string | null;
