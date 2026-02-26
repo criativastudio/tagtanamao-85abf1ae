@@ -125,19 +125,7 @@ export default function DisplayTemplateSelector({
     setActivating(null);
   };
 
-  const handlePurchase = async (template: DisplayTemplate) => {
-    if (template.price === 0) {
-      const { error } = await supabase
-        .from("user_templates")
-        .insert({ user_id: userId, template_id: template.id });
-
-      if (!error) {
-        setOwnedTemplateIds((prev) => new Set([...prev, template.id]));
-        toast({ title: "Template adquirido!", description: "Agora você pode ativá-lo." });
-      }
-      return;
-    }
-
+  const handlePurchase = (template: DisplayTemplate) => {
     navigate(`/loja/checkout?template_id=${template.id}`);
   };
 

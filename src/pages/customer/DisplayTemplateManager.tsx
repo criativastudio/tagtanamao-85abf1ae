@@ -137,23 +137,8 @@ export default function DisplayTemplateManager() {
     }
   };
 
-  const handlePurchaseTemplate = async (template: DisplayTemplate) => {
-    if (!user || !displayId) return;
-
-    // For free templates, just add to owned
-    if (template.price === 0) {
-      const { error } = await supabase
-        .from("user_templates")
-        .insert({ user_id: user.id, template_id: template.id });
-
-      if (!error) {
-        setOwnedTemplateIds(prev => new Set([...prev, template.id]));
-        toast({ title: "Template adquirido!", description: "Agora você pode ativá-lo." });
-      }
-      return;
-    }
-
-    // For paid templates, redirect to checkout with template as product
+  const handlePurchaseTemplate = (template: DisplayTemplate) => {
+    if (!displayId) return;
     navigate(`/loja/checkout?template_id=${template.id}&display_id=${displayId}`);
   };
 

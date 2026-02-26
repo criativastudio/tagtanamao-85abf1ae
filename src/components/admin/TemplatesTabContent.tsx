@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Pencil, Power, PowerOff, Monitor } from 'lucide-react';
+import { Plus, Trash2, Pencil, Power, PowerOff, Monitor, UserPlus, X, Search, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -29,6 +30,16 @@ interface BusinessDisplay {
   active_template_id: string | null;
 }
 
+interface UserTemplate {
+  id: string;
+  user_id: string;
+  template_id: string;
+  order_id: string | null;
+  purchased_at: string;
+  user_email?: string;
+  template_name?: string;
+}
+
 const emptyForm = {
   name: '', description: '', template_key: '', price: 0, preview_url: '', is_active: true, features: [] as string[],
 };
@@ -47,7 +58,16 @@ export default function TemplatesTabContent() {
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [activating, setActivating] = useState(false);
 
-  useEffect(() => { fetchData(); }, []);
+  // User template release state
+  const [emailSearch, setEmailSearch] = useState('');
+  const [searchingUser, setSearchingUser] = useState(false);
+  const [foundUser, setFoundUser] = useState<{ id: string; email: string; full_name: string | null } | null>(null);
+  const [releaseTemplateId, setReleaseTemplateId] = useState('');
+  const [releasing, setReleasing] = useState(false);
+  const [userTemplates, setUserTemplates] = useState<UserTemplate[]>([]);
+  const [loadingUserTemplates, setLoadingUserTemplates] = useState(false);
+
+  useEffect(() => { fetchData(); fetchUserTemplates(); }, []);
 
   const fetchData = async () => {
     setLoading(true);
@@ -58,6 +78,100 @@ export default function TemplatesTabContent() {
     if (tRes.data) setTemplates(tRes.data.map(t => ({ ...t, features: Array.isArray(t.features) ? t.features as string[] : [] })));
     if (dRes.data) setDisplays(dRes.data);
     setLoading(false);
+  };
+
+  const fetchUserTemplates = async () => {
+    setLoadingUserTemplates(true);
+    const { data } = await supabase
+      .from('user_templates')
+      .select('*')
+      .order('purchased_at', { ascending: false })
+      .limit(50);
+
+    if (data && data.length > 0) {
+      // Fetch user emails and template names
+      const userIds = [...new Set(data.map(ut => ut.user_id))];
+      const templateIds = [...new Set(data.map(ut => ut.template_id))];
+
+      const [profilesRes, templatesRes] = await Promise.all([
+        supabase.from('profiles').select('id, email').in('id', userIds),
+        supabase.from('display_templates').select('id, name').in('id', templateIds),
+      ]);
+
+      const emailMap = new Map(profilesRes.data?.map(p => [p.id, p.email]) || []);
+      const nameMap = new Map(templatesRes.data?.map(t => [t.id, t.name]) || []);
+
+      setUserTemplates(data.map(ut => ({
+        ...ut,
+        user_email: emailMap.get(ut.user_id) || 'Desconhecido',
+        template_name: nameMap.get(ut.template_id) || 'Desconhecido',
+      })));
+    } else {
+      setUserTemplates([]);
+    }
+    setLoadingUserTemplates(false);
+  };
+
+  const searchUser = async () => {
+    if (!emailSearch.trim()) return;
+    setSearchingUser(true);
+    setFoundUser(null);
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, email, full_name')
+      .ilike('email', `%${emailSearch.trim()}%`)
+      .limit(1)
+      .single();
+
+    if (error || !data) {
+      toast({ title: 'Usuário não encontrado', description: 'Verifique o email digitado.', variant: 'destructive' });
+    } else {
+      setFoundUser(data);
+    }
+    setSearchingUser(false);
+  };
+
+  const releaseTemplate = async () => {
+    if (!foundUser || !releaseTemplateId) return;
+    setReleasing(true);
+
+    // Check if already exists
+    const { data: existing } = await supabase
+      .from('user_templates')
+      .select('id')
+      .eq('user_id', foundUser.id)
+      .eq('template_id', releaseTemplateId)
+      .maybeSingle();
+
+    if (existing) {
+      toast({ title: 'Template já liberado', description: 'Este usuário já possui este template.', variant: 'destructive' });
+      setReleasing(false);
+      return;
+    }
+
+    const { error } = await supabase
+      .from('user_templates')
+      .insert({ user_id: foundUser.id, template_id: releaseTemplateId });
+
+    if (error) {
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Template liberado!', description: `Template liberado para ${foundUser.email}` });
+      setReleaseTemplateId('');
+      fetchUserTemplates();
+    }
+    setReleasing(false);
+  };
+
+  const revokeTemplate = async (utId: string) => {
+    const { error } = await supabase.from('user_templates').delete().eq('id', utId);
+    if (error) {
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Template revogado' });
+      fetchUserTemplates();
+    }
   };
 
   const openCreate = () => { setEditingId(null); setForm(emptyForm); setFeatureInput(''); setDialogOpen(true); };
@@ -164,6 +278,107 @@ export default function TemplatesTabContent() {
         ))}
         {templates.length === 0 && <p className="text-muted-foreground col-span-full text-center py-8">Nenhum template cadastrado.</p>}
       </div>
+
+      {/* Release Template to User */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2"><UserPlus className="w-5 h-5 text-primary" /> Liberar Template para Usuário</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Search user by email */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div className="md:col-span-2">
+              <Label>Buscar usuário por email</Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  value={emailSearch}
+                  onChange={e => setEmailSearch(e.target.value)}
+                  placeholder="email@exemplo.com"
+                  onKeyDown={e => e.key === 'Enter' && searchUser()}
+                />
+                <Button onClick={searchUser} disabled={searchingUser || !emailSearch.trim()} size="sm">
+                  {searchingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {foundUser && (
+            <div className="p-3 bg-muted/50 rounded-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-foreground">{foundUser.full_name || 'Sem nome'}</p>
+                  <p className="text-xs text-muted-foreground">{foundUser.email}</p>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => { setFoundUser(null); setEmailSearch(''); }}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+                <div>
+                  <Label>Template</Label>
+                  <Select value={releaseTemplateId} onValueChange={setReleaseTemplateId}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione um template" /></SelectTrigger>
+                    <SelectContent>
+                      {templates.filter(t => t.is_active).map(t => (
+                        <SelectItem key={t.id} value={t.id}>{t.name} (R$ {t.price.toFixed(2)})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={releaseTemplate} disabled={releasing || !releaseTemplateId}>
+                  {releasing ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <UserPlus className="w-4 h-4 mr-1" />}
+                  Liberar
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* List of released templates */}
+          {loadingUserTemplates ? (
+            <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+          ) : userTemplates.length > 0 ? (
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium text-muted-foreground">Templates liberados ({userTemplates.length})</h4>
+              {userTemplates.map(ut => (
+                <div key={ut.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{ut.user_email}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {ut.template_name}
+                        {ut.order_id && <Badge variant="outline" className="ml-2 text-[10px]">Via compra</Badge>}
+                        {!ut.order_id && <Badge variant="secondary" className="ml-2 text-[10px]">Manual</Badge>}
+                      </p>
+                    </div>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive">
+                        <Trash2 className="w-3 h-3 mr-1" /> Revogar
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Revogar template?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Remover o template "{ut.template_name}" do usuário {ut.user_email}?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => revokeTemplate(ut.id)}>Revogar</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-2">Nenhum template liberado ainda.</p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Activate on Display */}
       <Card>
