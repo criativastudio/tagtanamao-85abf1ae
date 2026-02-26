@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { formatCPFOrCNPJ, validateCPFOrCNPJ } from '@/lib/validators';
-import { Check, X } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { formatCPFOrCNPJ, validateCPFOrCNPJ } from "@/lib/validators";
+import { Check, X } from "lucide-react";
 
 interface CPFInputProps {
   value: string;
@@ -18,8 +18,8 @@ export default function CPFInput({
   value,
   onChange,
   onValidChange,
-  label = 'CPF/CNPJ',
-  placeholder = '000.000.000-00',
+  label = "CPF/CNPJ",
+  placeholder = "000.000.000-00",
   required = false,
   disabled = false,
 }: CPFInputProps) {
@@ -27,7 +27,7 @@ export default function CPFInput({
   const [touched, setTouched] = useState(false);
 
   useEffect(() => {
-    const clean = value.replace(/\D/g, '');
+    const clean = value.replace(/\D/g, "");
     if (clean.length === 11 || clean.length === 14) {
       const valid = validateCPFOrCNPJ(clean);
       setIsValid(valid);
@@ -47,7 +47,7 @@ export default function CPFInput({
     setTouched(true);
   };
 
-  const showValidation = touched && value.replace(/\D/g, '').length >= 11;
+  const showValidation = touched && value.replace(/\D/g, "").length >= 11;
 
   return (
     <div className="space-y-2">
@@ -67,26 +67,22 @@ export default function CPFInput({
           className={`pr-10 ${
             showValidation
               ? isValid
-                ? 'border-green-500 focus:border-green-500'
-                : 'border-destructive focus:border-destructive'
-              : ''
+                ? "border-green-500 focus:border-green-500"
+                : "border-destructive focus:border-destructive"
+              : ""
           }`}
         />
         {showValidation && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            {isValid ? (
-              <Check className="h-4 w-4 text-green-500" />
-            ) : (
-              <X className="h-4 w-4 text-destructive" />
-            )}
+            {isValid ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-destructive" />}
           </div>
         )}
       </div>
       {showValidation && !isValid && (
         <p className="text-sm text-destructive">
-          {value.replace(/\D/g, '').length === 11
-            ? 'CPF inválido. Verifique os dígitos.'
-            : 'CNPJ inválido. Verifique os dígitos.'}
+          {value.replace(/\D/g, "").length === 11
+            ? "CPF inválido. Verifique os dígitos."
+            : "CNPJ inválido. Verifique os dígitos."}
         </p>
       )}
     </div>
