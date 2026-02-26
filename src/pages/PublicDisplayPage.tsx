@@ -56,7 +56,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 };
 
 const PublicDisplayPage = () => {
-  const { qrCode } = useParams<{ qrCode: string }>();
+  const { qrCode, slug } = useParams<{ qrCode?: string; slug?: string }>();
   const [display, setDisplay] = useState<BusinessDisplay | null>(null);
   const [bioPage, setBioPage] = useState<BioPage | null>(null);
   const [loading, setLoading] = useState(true);
@@ -64,18 +64,35 @@ const PublicDisplayPage = () => {
 
   useEffect(() => {
     const fetchDisplayAndLogScan = async () => {
-      if (!qrCode) {
+      const identifier = qrCode || slug;
+      if (!identifier) {
         setNotFound(true);
         setLoading(false);
         return;
       }
 
       try {
-        const { data, error } = await supabase
-          .from("business_displays")
-          .select("*")
-          .eq("qr_code", qrCode)
-          .single();
+        // If accessed via /d/:slug, query by slug; otherwise by qr_code
+        let data: any = null;
+        let error: any = null;
+
+        if (slug) {
+          const result = await supabase
+            .from("business_displays")
+            .select("*")
+            .eq("slug", identifier)
+            .single();
+          data = result.data;
+          error = result.error;
+        } else {
+          const result = await supabase
+            .from("business_displays")
+            .select("*")
+            .eq("qr_code", identifier)
+            .single();
+          data = result.data;
+          error = result.error;
+        }
 
         if (error || !data) {
           setNotFound(true);
@@ -154,7 +171,7 @@ const PublicDisplayPage = () => {
     };
 
     fetchDisplayAndLogScan();
-  }, [qrCode]);
+  }, [qrCode, slug]);
 
   const handleButtonClick = (button: DisplayButton) => {
     const url = button.url;

@@ -127,6 +127,7 @@ const App = () => (
               />
               <Route path="/pet/:qrCode" element={<PublicPetPage />} />
               <Route path="/display/:qrCode" element={<PublicDisplayPage />} />
+              <Route path="/d/:slug" element={<PublicDisplayPage />} />
               <Route path="/bio/:slug" element={<PublicBioPage />} />
               {/* E-commerce routes */}
               <Route path="/loja" element={<Shop />} />

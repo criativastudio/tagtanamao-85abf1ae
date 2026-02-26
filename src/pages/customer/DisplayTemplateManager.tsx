@@ -8,11 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import NetflixTemplate from "@/components/display/NetflixTemplate";
 import TemplateMediaEditor from "@/components/display/TemplateMediaEditor";
 import {
   ArrowLeft, Check, Crown, Eye, Palette, Save, ShoppingCart,
-  Sparkles, Loader2, Lock
+  Sparkles, Loader2, Lock, Link2, ExternalLink
 } from "lucide-react";
 
 interface DisplayTemplate {
@@ -52,6 +54,9 @@ export default function DisplayTemplateManager() {
   const [displayData, setDisplayData] = useState<any>(null);
   const [previewMode, setPreviewMode] = useState(false);
   const [tab, setTab] = useState<"browse" | "edit">("browse");
+  const [slugInput, setSlugInput] = useState("");
+  const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
+  const [checkingSlug, setCheckingSlug] = useState(false);
 
   useEffect(() => {
     if (user && displayId) fetchAll();
@@ -71,6 +76,7 @@ export default function DisplayTemplateManager() {
       setDisplayData(display);
       setActiveTemplateId(display.active_template_id || null);
       setTemplateConfig((display.template_config as unknown as TemplateConfig) || {});
+      setSlugInput(display.slug || "");
     }
 
     // Fetch available templates
@@ -142,13 +148,33 @@ export default function DisplayTemplateManager() {
     navigate(`/loja/checkout?template_id=${template.id}&display_id=${displayId}`);
   };
 
+  const slugPattern = /^[a-zA-Z0-9._-]+$/;
+  const handleSlugChange = async (value: string) => {
+    const lower = value.toLowerCase();
+    setSlugInput(lower);
+    setSlugAvailable(null);
+    if (!lower || lower.length < 3) return;
+    if (!slugPattern.test(lower)) return;
+    setCheckingSlug(true);
+    const { data } = await supabase
+      .from("business_displays")
+      .select("id")
+      .eq("slug", lower)
+      .neq("id", displayId || "")
+      .maybeSingle();
+    setSlugAvailable(!data);
+    setCheckingSlug(false);
+  };
+
   const handleSaveConfig = async () => {
     if (!displayId) return;
     setSaving(true);
 
+    const trimmedSlug = slugInput.trim().toLowerCase() || null;
+
     const { error } = await supabase
       .from("business_displays")
-      .update({ template_config: templateConfig as any })
+      .update({ template_config: templateConfig as any, slug: trimmedSlug })
       .eq("id", displayId);
 
     if (error) {
@@ -357,7 +383,50 @@ export default function DisplayTemplateManager() {
         ) : (
           /* Edit Tab - Media Editor */
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div>
+            <div className="space-y-6">
+              {/* Slug Editor */}
+              <div className="p-4 rounded-xl border border-border bg-muted/20 space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Link2 className="w-4 h-4" />
+                  Link Personalizado (slug)
+                </Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">/d/</span>
+                  <Input
+                    value={slugInput}
+                    onChange={(e) => handleSlugChange(e.target.value)}
+                    placeholder="minha-empresa"
+                    className="font-mono text-sm"
+                    maxLength={30}
+                  />
+                </div>
+                {slugInput.length > 0 && slugInput.length < 3 && (
+                  <p className="text-xs text-yellow-500">Mínimo 3 caracteres</p>
+                )}
+                {slugInput && !slugPattern.test(slugInput) && (
+                  <p className="text-xs text-destructive">Apenas letras, números, pontos, hífens e underscores</p>
+                )}
+                {checkingSlug && <p className="text-xs text-muted-foreground">Verificando...</p>}
+                {slugAvailable === true && <p className="text-xs text-green-500">✓ Disponível</p>}
+                {slugAvailable === false && <p className="text-xs text-destructive">✗ Já está em uso</p>}
+                {slugInput && slugInput.length >= 3 && slugPattern.test(slugInput) && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <p className="text-xs text-muted-foreground font-mono">{window.location.origin}/d/{slugInput}</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/d/${slugInput}`);
+                        toast({ title: "Link copiado!" });
+                      }}
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+
               <TemplateMediaEditor
                 displayId={displayId!}
                 userId={user!.id}
