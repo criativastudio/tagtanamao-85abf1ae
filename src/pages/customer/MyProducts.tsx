@@ -444,7 +444,7 @@ function BioPageCard({ bio }: { bio: BioPageItem }) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => navigate(`/dashboard/bio/${bio.id}`)}
+          onClick={() => navigate(`/dashboard/bio-link/${bio.id}`)}
         >
           <Edit className="w-4 h-4 mr-1" />
           Editar
