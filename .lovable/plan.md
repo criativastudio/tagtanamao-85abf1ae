@@ -1,63 +1,36 @@
 
 
-## Bloquear templates para usuários não pagos e permitir liberação manual pelo admin
+## Templates: fluxo independente com apenas pending/paid
 
-### Problema atual
+### Situação atual
 
-Existem **3 pontos** no código onde um usuário pode adquirir templates gratuitos (preço = 0) sem pagar, inserindo diretamente na tabela `user_templates`:
+O sistema **já trata templates como digitais** em vários pontos:
+- `Checkout.tsx` marca `shipping_method = "digital"` e `notes = { type: "template_purchase" }`
+- `asaas-payment/index.ts` webhook já detecta `template_purchase` e retorna status `"paid"` (não avança para `awaiting_customization`)
+- `MyOrders.tsx` já exibe card simplificado (Crown icon) para pedidos digitais, sem stepper de produção
+- `Checkout.tsx` já insere em `user_templates` após pagamento aprovado (cartão e PIX)
 
-1. `src/components/display/DisplayTemplateSelector.tsx` — linha 129-133: se `template.price === 0`, insere em `user_templates` instantaneamente
-2. `src/pages/customer/DisplayTemplateManager.tsx` — linha 144-153: mesma lógica para templates gratuitos
-3. Qualquer template com `price = 0` pode ser auto-adquirido sem validação
+### Problema identificado
 
-Além disso, **não existe interface admin** para liberar manualmente um template a um usuário específico.
+No `Checkout.tsx` (linhas 508-525), após criar os order items do carrinho, o código verifica se há `business_display` e cria `display_arts` + muda status para `awaiting_customization`. Esse bloco **não se aplica a templates** porque templates usam o fluxo `isTemplatePurchase` que pula o carrinho. Portanto, **não há bug ativo** nesse trecho.
 
-### Solução
+### O que realmente precisa ser reforçado
 
-#### 1. Bloquear auto-aquisição de templates gratuitos pelo usuário
+1. **Admin OrdersManager** — o select de status permite mudar pedidos digitais para statuses físicos (shipped, processing, etc). Precisa restringir para pedidos digitais.
 
-Remover a lógica de "adquirir grátis" em todos os componentes do lado do cliente. Templates só podem ser desbloqueados por:
-- **Compra** (fluxo de checkout existente → insere em `user_templates`)
-- **Admin** (liberação manual via painel)
+2. **OrderProductionStepper** — se por alguma razão um pedido digital cair no stepper, deve mostrar apenas pending/paid.
 
-| Arquivo | Mudança |
-|---|---|
-| `src/components/display/DisplayTemplateSelector.tsx` | Remover bloco `if (template.price === 0)` no `handlePurchase`. Todos os templates não-owned redirecionam para checkout (`/loja/checkout?template_id=...`), independente do preço |
-| `src/pages/customer/DisplayTemplateManager.tsx` | Mesma remoção no `handlePurchaseTemplate` — remover auto-aquisição de templates gratuitos |
+3. **DisplaysOrderManager / Personalizar Arte** — garantir que pedidos de template não mostrem botão de personalização.
 
-#### 2. Admin: interface para liberar templates manualmente a usuários
-
-Adicionar uma nova seção no `TemplatesTabContent.tsx` (aba Templates do admin de produtos) que permite:
-- Selecionar um usuário (busca por email na tabela `profiles`)
-- Selecionar um template
-- Clicar "Liberar" → insere em `user_templates`
-- Listar templates já liberados com opção de revogar (deletar de `user_templates`)
+### Mudanças planejadas
 
 | Arquivo | Mudança |
 |---|---|
-| `src/components/admin/TemplatesTabContent.tsx` | Adicionar seção "Liberar Template para Usuário" com select de usuário (busca por email), select de template, botão liberar, e lista de liberações existentes com botão revogar |
+| `src/pages/customer/MyOrders.tsx` | Garantir que pedidos digitais nunca mostrem botão "Personalizar Arte do Display" e ocultar seção de shipping |
+| `src/pages/customer/OrdersManager.tsx` | No admin, restringir opções de status para pedidos digitais (apenas pending/paid/cancelled) |
+| `src/components/order/OrderProductionStepper.tsx` | Adicionar suporte a `isDigital` que mostra apenas 2 etapas: Aguardando Pagamento e Liberado |
 
-#### 3. Fluxo de compra (já funciona)
+### Sem alterações de banco necessárias
 
-O desbloqueio automático pós-compra **já está implementado** em 3 pontos e não precisa de alteração:
-- `Checkout.tsx` linha 577: insere em `user_templates` após cartão aprovado
-- `Checkout.tsx` linha 708: insere em `user_templates` após PIX confirmado
-- `asaas-payment/index.ts` linha 220: insere em `user_templates` via webhook
-
-#### 4. Nenhuma alteração de banco necessária
-
-A tabela `user_templates` já existe com as colunas necessárias (`user_id`, `template_id`, `order_id`). As políticas RLS já permitem:
-- Admin: ALL (gerenciar)
-- System: INSERT (backend)
-- Users: SELECT own
-
-O admin já pode inserir e deletar via RLS policy "Admins can manage user templates".
-
-### Resumo das mudanças
-
-| Arquivo | Ação |
-|---|---|
-| `src/components/display/DisplayTemplateSelector.tsx` | Remover auto-aquisição gratuita — sempre redirecionar para checkout |
-| `src/pages/customer/DisplayTemplateManager.tsx` | Remover auto-aquisição gratuita — sempre redirecionar para checkout |
-| `src/components/admin/TemplatesTabContent.tsx` | Adicionar seção de liberação manual de templates para usuários (busca por email, liberar, revogar) |
+O fluxo já funciona corretamente no banco e nos webhooks. As mudanças são apenas de UI para reforçar a separação visual.
 
