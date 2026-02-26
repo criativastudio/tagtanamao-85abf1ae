@@ -53,6 +53,7 @@ interface NetflixTemplateProps {
   logoUrl?: string | null;
   themeColor?: string;
   config: TemplateConfig;
+  isPublic?: boolean;
 }
 
 // Dynamic Lucide icon renderer
@@ -71,6 +72,7 @@ export default function NetflixTemplate({
   logoUrl,
   themeColor = "#e50914",
   config,
+  isPublic = false,
 }: NetflixTemplateProps) {
   const [heroIndex, setHeroIndex] = useState(0);
   const [muted, setMuted] = useState(true);
@@ -86,6 +88,36 @@ export default function NetflixTemplate({
   const tags = config.tags || [];
   const heroButtons = config.heroButtons || [];
   const bottomNav = config.bottomNav || [];
+
+  // Play Netflix "ta-dum" sound on public page
+  useEffect(() => {
+    if (!isPublic) return;
+    const audio = new Audio("/sounds/netflix-tadum.mp3");
+    audio.volume = 0.7;
+
+    const tryPlay = () => {
+      audio.play().catch(() => {});
+    };
+
+    // Attempt autoplay
+    audio.play().catch(() => {
+      // Autoplay blocked — play on first user interaction
+      const events = ["click", "touchstart", "scroll"];
+      const handler = () => {
+        tryPlay();
+        events.forEach((e) => document.removeEventListener(e, handler));
+      };
+      events.forEach((e) => document.addEventListener(e, handler, { once: false }));
+      return () => {
+        events.forEach((e) => document.removeEventListener(e, handler));
+      };
+    });
+
+    return () => {
+      audio.pause();
+      audio.currentTime = 0;
+    };
+  }, [isPublic]);
 
   // Inject Bebas Neue font
   useEffect(() => {

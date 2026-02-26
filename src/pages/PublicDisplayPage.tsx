@@ -341,6 +341,7 @@ const PublicDisplayPage = () => {
         logoUrl={display.logo_url}
         themeColor={display.theme_color || "#e50914"}
         config={tplConfig}
+        isPublic={true}
       />
     );
   }
