@@ -1,41 +1,38 @@
 
 
-## Corrigir transições automáticas de status dos pedidos
+## Por que o template Netflix não aparece no site publicado + correção do erro de build
 
-### Problema identificado
+### Diagnóstico
 
-1. **Bug crítico em `finalize-display-art`**: Na linha 181, `svgBody` é referenciado **antes** de ser definido (a definição está na linha 222). Isso causa um erro de runtime que impede a função de funcionar — ou seja, a arte nunca é finalizada e o pedido nunca avança para `art_finalized` / `processing`.
+Existem **dois problemas** acontecendo:
 
-2. **`melhor-envio` generate-label**: Atualmente define o status como `ready_to_ship`. O usuário quer que, ao anexar no Correios, o status vá direto para `shipped` (Enviado).
+#### 1. Erro de build bloqueando o deploy
+O erro atual `ERR_TYPES_NOT_FOUND` na função `finalize-display-art/index.ts` está impedindo o build. O import `import QRCode from "npm:qrcode@1.5.4"` usa um pacote npm sem tipos TypeScript disponíveis no Deno, e o comentário `// @ts-ignore` não é suficiente para o type-checker do Deno.
 
-3. **Tracking/entrega**: Já funciona — o action `tracking` no melhor-envio já atualiza para `delivered` quando o Correios reporta entrega.
-
-### Mudanças
-
-#### 1. `supabase/functions/finalize-display-art/index.ts` — Corrigir bug de svgBody
-
-- Remover o bloco duplicado das linhas 177-191 que referencia `svgBody` e `svgWidth`/`svgHeight` antes de serem declaradas
-- Manter a lógica correta que já existe nas linhas 193-232 (viewBox adjustment + svgBody definition)
-- O fluxo de status `art_finalized → processing` já está implementado nas linhas 326-332 e funcionará assim que o bug for corrigido
-
-#### 2. `supabase/functions/melhor-envio/index.ts` — generate-label → shipped
-
-- Alterar o status de `ready_to_ship` para `shipped` na ação `generate-label` (linha ~290)
-- Isso reflete que, ao gerar a etiqueta e anexar ao Correios, o pedido é considerado "Enviado"
-
-### Arquivos modificados
-- `supabase/functions/finalize-display-art/index.ts` — remover bloco duplicado (linhas 177-191) que causa crash
-- `supabase/functions/melhor-envio/index.ts` — alterar status de `ready_to_ship` para `shipped` no generate-label
-
-### Detalhes técnicos
-
-O bloco problemático em `finalize-display-art`:
-```text
-Linha 172: let baseSvg = ...       (OK - definido)
-Linha 181: svgBody = svgBody.replace(...)  ← ERRO: svgBody não existe ainda
-Linha 190: svgWidth = finalWidth           ← ERRO: svgWidth não existe ainda
-Linha 222: let svgBody = baseSvg.substring(...)  ← aqui é onde svgBody deveria começar
+**Correção**: Usar `// @deno-types` ou uma declaração inline para suprimir o erro, ou simplesmente usar um cast com tipo `any`:
+```typescript
+// @ts-ignore
+import QRCode from "npm:qrcode@1.5.4";
 ```
+Trocar para:
+```typescript
+import QRCode from "npm:qrcode@1.5.4";
+const _QRCode = QRCode as any;
+```
+Ou adicionar um `/// <reference types="..." />` adequado — a forma mais simples é usar a diretiva Deno `// @ts-nocheck` no topo do arquivo, já que é uma edge function sem benefício real do type-checking estrito.
 
-A correção remove as linhas 177-191 (bloco duplicado/fora de ordem) e integra a lógica de forçar proporção 2:3 no local correto, após `svgBody` ser definido na linha 222.
+#### 2. Lógica de renderização do template (funciona corretamente)
+O código em `PublicDisplayPage.tsx` (linha 318) já verifica `display.active_template_id && display.template_config` e renderiza o `NetflixTemplate`. A lógica está correta e os dados no banco confirmam que existem displays com template ativo (ex: `DSP-B844AB53`, `512659`).
+
+O template **não aparece no site publicado** porque o **erro de build impede a publicação de novas versões**. Assim que o erro for corrigido e o build passar, o template aparecerá normalmente.
+
+### Mudança necessária
+
+**Arquivo**: `supabase/functions/finalize-display-art/index.ts`
+- Linha 2-3: Substituir o import problemático por uma abordagem que o Deno aceite sem erro de tipos. A solução mais robusta é adicionar `// @ts-nocheck` na primeira linha ou usar a sintaxe `// deno-lint-ignore` com importação dinâmica.
+
+### Resumo
+- O template Netflix já está configurado corretamente no código e no banco de dados
+- O único bloqueio é o erro de tipo do `qrcode` que impede o build/deploy
+- Corrigindo esse import, o build passa e o site publicado mostrará o template
 
