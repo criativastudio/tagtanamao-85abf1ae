@@ -46,7 +46,9 @@ export default function CreditCardForm({ onCardDataChange, onValidChange, disabl
 
   useEffect(() => {
     onValidChange(isFormValid);
+  }, [isFormValid, onValidChange]);
 
+  useEffect(() => {
     onCardDataChange({
       holderName: holderName.trim(),
       number: cardNumber.replace(/\s/g, ""),
@@ -55,7 +57,7 @@ export default function CreditCardForm({ onCardDataChange, onValidChange, disabl
       cvv: cvv.replace(/\D/g, ""),
       brand,
     });
-  }, [holderName, cardNumber, expiry, cvv, brand, isFormValid]);
+  }, [holderName, cardNumber, expiry, cvv, brand, onCardDataChange]);
 
   const handleBlur = (field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
