@@ -1,38 +1,46 @@
 
 
-## Por que o template Netflix não aparece no site publicado + correção do erro de build
+## Gerenciador de Templates de Display no Admin
 
-### Diagnóstico
+### Contexto
 
-Existem **dois problemas** acontecendo:
+Atualmente o admin tem o `TemplatesManager` em `/admin/templates`, mas ele gerencia **art_templates** (modelos de arte SVG para produção). Os templates de display (Netflix e futuros) ficam na tabela `display_templates` e **não têm interface administrativa** — o único registro existente foi inserido via SQL.
 
-#### 1. Erro de build bloqueando o deploy
-O erro atual `ERR_TYPES_NOT_FOUND` na função `finalize-display-art/index.ts` está impedindo o build. O import `import QRCode from "npm:qrcode@1.5.4"` usa um pacote npm sem tipos TypeScript disponíveis no Deno, e o comentário `// @ts-ignore` não é suficiente para o type-checker do Deno.
+O `DisplayTemplateSelector` (usado pelo usuário final) exige que o usuário **compre** o template antes de ativá-lo (tabela `user_templates`). O admin precisa poder ativar templates em qualquer display sem essa restrição.
 
-**Correção**: Usar `// @deno-types` ou uma declaração inline para suprimir o erro, ou simplesmente usar um cast com tipo `any`:
-```typescript
-// @ts-ignore
-import QRCode from "npm:qrcode@1.5.4";
-```
-Trocar para:
-```typescript
-import QRCode from "npm:qrcode@1.5.4";
-const _QRCode = QRCode as any;
-```
-Ou adicionar um `/// <reference types="..." />` adequado — a forma mais simples é usar a diretiva Deno `// @ts-nocheck` no topo do arquivo, já que é uma edge function sem benefício real do type-checking estrito.
+### Mudanças
 
-#### 2. Lógica de renderização do template (funciona corretamente)
-O código em `PublicDisplayPage.tsx` (linha 318) já verifica `display.active_template_id && display.template_config` e renderiza o `NetflixTemplate`. A lógica está correta e os dados no banco confirmam que existem displays com template ativo (ex: `DSP-B844AB53`, `512659`).
+#### 1. Nova página: `src/pages/admin/DisplayTemplatesManager.tsx`
 
-O template **não aparece no site publicado** porque o **erro de build impede a publicação de novas versões**. Assim que o erro for corrigido e o build passar, o template aparecerá normalmente.
+Página administrativa para gerenciar a tabela `display_templates` com:
 
-### Mudança necessária
+- **Listagem** em grid de cards com preview, nome, preço, template_key, status (ativo/inativo)
+- **Switch ativo/inativo** em cada card (toggle `is_active`)
+- **Criar/Editar** template via dialog: nome, descrição, template_key, preço, preview_url (upload), features (lista editável), is_active
+- **Excluir** template com confirmação
+- **Ativar template em um display específico**: seção com select de displays (busca por nome/código) + botão "Ativar" que faz update direto no `business_displays.active_template_id` sem exigir compra/user_templates
+- **Desativar template de um display**: botão para limpar `active_template_id` e `template_config`
 
-**Arquivo**: `supabase/functions/finalize-display-art/index.ts`
-- Linha 2-3: Substituir o import problemático por uma abordagem que o Deno aceite sem erro de tipos. A solução mais robusta é adicionar `// @ts-nocheck` na primeira linha ou usar a sintaxe `// deno-lint-ignore` com importação dinâmica.
+#### 2. Rota e navegação
 
-### Resumo
-- O template Netflix já está configurado corretamente no código e no banco de dados
-- O único bloqueio é o erro de tipo do `qrcode` que impede o build/deploy
-- Corrigindo esse import, o build passa e o site publicado mostrará o template
+- Adicionar rota `/admin/display-templates` no `App.tsx`
+- Adicionar link no `AdminDashboard` ou menu admin existente para acessar a nova página
+
+#### 3. Lógica de ativação admin (sem compra)
+
+O admin poderá:
+1. Selecionar um display (por nome ou código QR)
+2. Escolher um template da lista
+3. Clicar "Ativar" → faz `UPDATE business_displays SET active_template_id = template.id WHERE id = display.id`
+
+Isso bypassa completamente a tabela `user_templates`, que é o fluxo de compra do usuário final.
+
+### Arquivos
+
+- **Criar**: `src/pages/admin/DisplayTemplatesManager.tsx` — nova página completa
+- **Editar**: `src/App.tsx` — adicionar import e rota `/admin/display-templates`
+
+### Detalhes técnicos
+
+A tabela `display_templates` já tem RLS configurado: admins podem fazer ALL, qualquer um pode SELECT templates ativos. O admin já tem permissão de UPDATE em `business_displays` via `is_admin()`. Nenhuma migration é necessária.
 
