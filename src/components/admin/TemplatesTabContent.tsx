@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, Trash2, Pencil, Power, PowerOff, Monitor, UserPlus, X, Search, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, Trash2, Pencil, Power, PowerOff, Monitor, UserPlus, X, Search, Loader2, Upload, Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +21,7 @@ interface DisplayTemplate {
   preview_url: string | null;
   is_active: boolean | null;
   features: string[] | null;
+  gallery_images: string[] | null;
 }
 
 interface BusinessDisplay {
@@ -41,7 +42,7 @@ interface UserTemplate {
 }
 
 const emptyForm = {
-  name: '', description: '', template_key: '', price: 0, preview_url: '', is_active: true, features: [] as string[],
+  name: '', description: '', template_key: '', price: 0, preview_url: '', is_active: true, features: [] as string[], gallery_images: [] as string[],
 };
 
 export default function TemplatesTabContent() {
@@ -177,7 +178,7 @@ export default function TemplatesTabContent() {
   const openCreate = () => { setEditingId(null); setForm(emptyForm); setFeatureInput(''); setDialogOpen(true); };
   const openEdit = (t: DisplayTemplate) => {
     setEditingId(t.id);
-    setForm({ name: t.name, description: t.description || '', template_key: t.template_key, price: t.price, preview_url: t.preview_url || '', is_active: t.is_active ?? true, features: t.features || [] });
+    setForm({ name: t.name, description: t.description || '', template_key: t.template_key, price: t.price, preview_url: t.preview_url || '', is_active: t.is_active ?? true, features: t.features || [], gallery_images: t.gallery_images || [] });
     setFeatureInput(''); setDialogOpen(true);
   };
 
@@ -187,7 +188,7 @@ export default function TemplatesTabContent() {
   const saveTemplate = async () => {
     if (!form.name || !form.template_key) { toast({ title: 'Preencha nome e template_key', variant: 'destructive' }); return; }
     setSaving(true);
-    const payload = { name: form.name, description: form.description || null, template_key: form.template_key, price: form.price, preview_url: form.preview_url || null, is_active: form.is_active, features: form.features };
+    const payload = { name: form.name, description: form.description || null, template_key: form.template_key, price: form.price, preview_url: form.preview_url || null, is_active: form.is_active, features: form.features, gallery_images: form.gallery_images };
     const { error } = editingId
       ? await supabase.from('display_templates').update(payload).eq('id', editingId)
       : await supabase.from('display_templates').insert(payload);
@@ -442,7 +443,7 @@ export default function TemplatesTabContent() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? 'Editar Template' : 'Novo Template'}</DialogTitle>
             <DialogDescription>{editingId ? 'Atualize os dados do template.' : 'Preencha os dados para criar um novo template.'}</DialogDescription>
@@ -452,7 +453,55 @@ export default function TemplatesTabContent() {
             <div><Label>Template Key *</Label><Input value={form.template_key} onChange={e => setForm(f => ({ ...f, template_key: e.target.value }))} className="mt-1" placeholder="ex: netflix" /></div>
             <div><Label>Descrição</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1" /></div>
             <div><Label>Preço (R$)</Label><Input type="number" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: parseFloat(e.target.value) || 0 }))} className="mt-1" /></div>
-            <div><Label>Preview URL</Label><Input value={form.preview_url} onChange={e => setForm(f => ({ ...f, preview_url: e.target.value }))} className="mt-1" /></div>
+
+            {/* Cover Image Upload */}
+            <div>
+              <Label>Foto de Capa</Label>
+              <div className="mt-1 space-y-2">
+                {form.preview_url && (
+                  <div className="relative w-full h-32 rounded-lg overflow-hidden border border-border">
+                    <img src={form.preview_url} alt="Capa" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, preview_url: '' }))}
+                      className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                    >✕</button>
+                  </div>
+                )}
+                <TemplateImageUploader
+                  onUploaded={(url) => setForm(f => ({ ...f, preview_url: url }))}
+                  label="Enviar capa"
+                />
+              </div>
+            </div>
+
+            {/* Gallery Images Upload */}
+            <div>
+              <Label>Galeria de Fotos ({form.gallery_images.length}/5)</Label>
+              <div className="mt-1 space-y-2">
+                {form.gallery_images.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {form.gallery_images.map((url, idx) => (
+                      <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-border">
+                        <img src={url} alt={`Galeria ${idx + 1}`} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setForm(f => ({ ...f, gallery_images: f.gallery_images.filter((_, i) => i !== idx) }))}
+                          className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                        >✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {form.gallery_images.length < 5 && (
+                  <TemplateImageUploader
+                    onUploaded={(url) => setForm(f => ({ ...f, gallery_images: [...f.gallery_images, url] }))}
+                    label="Adicionar foto"
+                  />
+                )}
+              </div>
+            </div>
+
             <div className="flex items-center gap-2"><Switch checked={form.is_active} onCheckedChange={v => setForm(f => ({ ...f, is_active: v }))} /><Label>Ativo</Label></div>
             <div>
               <Label>Features</Label>
@@ -476,6 +525,56 @@ export default function TemplatesTabContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+/* ---------- Image Uploader Sub-component ---------- */
+function TemplateImageUploader({ onUploaded, label }: { onUploaded: (url: string) => void; label: string }) {
+  const { toast } = useToast();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Selecione uma imagem', variant: 'destructive' });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'Imagem muito grande (máx 5MB)', variant: 'destructive' });
+      return;
+    }
+
+    setUploading(true);
+    const ext = file.name.split('.').pop() || 'jpg';
+    const path = `templates/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+    const { error } = await supabase.storage
+      .from('display-media')
+      .upload(path, file, { cacheControl: '3600', upsert: false });
+
+    if (error) {
+      toast({ title: 'Erro no upload', description: error.message, variant: 'destructive' });
+    } else {
+      const { data: urlData } = supabase.storage.from('display-media').getPublicUrl(path);
+      onUploaded(urlData.publicUrl);
+    }
+
+    setUploading(false);
+    if (inputRef.current) inputRef.current.value = '';
+  };
+
+  return (
+    <div>
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+      <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()} disabled={uploading}>
+        {uploading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Upload className="w-4 h-4 mr-1" />}
+        {label}
+      </Button>
     </div>
   );
 }
