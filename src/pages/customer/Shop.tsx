@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Product } from "@/types/ecommerce";
+import { getProductTypeBadge } from "@/lib/productTypeMap";
 
 interface CartItem {
   product: Product;
@@ -34,20 +35,39 @@ export default function Shop() {
   const fetchProducts = async () => {
     setLoadingProducts(true);
 
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false });
+    const [productsRes, templatesRes] = await Promise.all([
+      supabase
+        .from("products")
+        .select("*")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("display_templates")
+        .select("*")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false }),
+    ]);
 
-    if (error) {
+    if (productsRes.error) {
       toast({
         title: "Erro ao carregar produtos",
-        description: error.message,
+        description: productsRes.error.message,
         variant: "destructive",
       });
     } else {
-      setProducts(data || []);
+      const regularProducts = (productsRes.data || []) as Product[];
+      const templateProducts: Product[] = (templatesRes.data || []).map((t) => ({
+        id: t.id,
+        name: t.name,
+        description: t.description,
+        price: t.price,
+        type: "template",
+        image_url: t.preview_url,
+        is_active: t.is_active,
+        gallery_images: null,
+        created_at: t.created_at,
+      }));
+      setProducts([...regularProducts, ...templateProducts]);
     }
 
     setLoadingProducts(false);
@@ -247,9 +267,14 @@ export default function Shop() {
                           </div>
                         )}
                         <div className="mt-4">
-                          <span className="text-xs bg-muted px-2 py-1 rounded">
-                            {product.type === "pet_tag" ? "Tag Pet" : "Display"}
-                          </span>
+                          {(() => {
+                            const badge = getProductTypeBadge(product.type);
+                            return (
+                              <span className={`text-xs px-2 py-1 rounded ${badge.colorClass}`}>
+                                {badge.label}
+                              </span>
+                            );
+                          })()}
                         </div>
                       </CardContent>
                       <CardFooter className="flex items-center justify-between">

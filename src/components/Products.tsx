@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Product } from "@/types/ecommerce";
+import { getProductTypeBadge } from "@/lib/productTypeMap";
 
 const Products = () => {
   const navigate = useNavigate();
@@ -20,14 +21,35 @@ const Products = () => {
   const { data: products, isLoading } = useQuery({
     queryKey: ["landing-products"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq("is_active", true)
-        .order("created_at", { ascending: false });
+      const [productsRes, templatesRes] = await Promise.all([
+        supabase
+          .from("products")
+          .select("*")
+          .eq("is_active", true)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("display_templates")
+          .select("*")
+          .eq("is_active", true)
+          .order("created_at", { ascending: false }),
+      ]);
 
-      if (error) throw error;
-      return data as Product[];
+      if (productsRes.error) throw productsRes.error;
+
+      const regularProducts = (productsRes.data || []) as Product[];
+      const templateProducts: Product[] = (templatesRes.data || []).map((t) => ({
+        id: t.id,
+        name: t.name,
+        description: t.description,
+        price: t.price,
+        type: "template",
+        image_url: t.preview_url,
+        is_active: t.is_active,
+        gallery_images: null,
+        created_at: t.created_at,
+      }));
+
+      return [...regularProducts, ...templateProducts];
     },
   });
 
@@ -141,15 +163,16 @@ const Products = () => {
                     )}
 
                     {/* Badge based on type */}
-                    <div
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium mb-4 w-fit ${
-                        product.type === "pet_tag"
-                          ? "bg-primary/10 text-primary"
-                          : "bg-glow-secondary/10 text-glow-secondary"
-                      }`}
-                    >
-                      {product.type === "pet_tag" ? "Para Pets" : "Para Empresas"}
-                    </div>
+                    {(() => {
+                      const badge = getProductTypeBadge(product.type);
+                      return (
+                        <div
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium mb-4 w-fit ${badge.colorClass}`}
+                        >
+                          {badge.label}
+                        </div>
+                      );
+                    })()}
 
                     <h3 className="text-xl font-display font-bold mb-2">{product.name}</h3>
                     <p className="text-muted-foreground text-sm mb-6 flex-grow">{product.description}</p>
