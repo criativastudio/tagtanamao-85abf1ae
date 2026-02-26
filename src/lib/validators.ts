@@ -79,7 +79,7 @@ export function validateCNPJ(cnpj: string): boolean {
  * Validates CPF or CNPJ
  */
 export function validateCPFOrCNPJ(value: string): boolean {
-  const clean = value.replace(/\D/g, "");
+  const clean = value.replace(/\D/g, '');
   if (clean.length === 11) return validateCPF(clean);
   if (clean.length === 14) return validateCNPJ(clean);
   return false;
