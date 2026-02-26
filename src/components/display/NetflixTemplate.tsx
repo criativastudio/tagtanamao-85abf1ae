@@ -89,28 +89,30 @@ export default function NetflixTemplate({
   const heroButtons = config.heroButtons || [];
   const bottomNav = config.bottomNav || [];
 
-  // Play Netflix "ta-dum" sound on public page
+  // Play Netflix "ta-dum" sound once on public page load
   useEffect(() => {
     if (!isPublic) return;
     const audio = new Audio("/sounds/netflix-tadum.mp3");
     audio.volume = 0.7;
+    let played = false;
 
-    const tryPlay = () => {
+    const playOnce = () => {
+      if (played) return;
+      played = true;
       audio.play().catch(() => {});
     };
 
     // Attempt autoplay
-    audio.play().catch(() => {
+    audio.play().then(() => {
+      played = true;
+    }).catch(() => {
       // Autoplay blocked — play on first user interaction
       const events = ["click", "touchstart", "scroll"];
       const handler = () => {
-        tryPlay();
+        playOnce();
         events.forEach((e) => document.removeEventListener(e, handler));
       };
       events.forEach((e) => document.addEventListener(e, handler, { once: false }));
-      return () => {
-        events.forEach((e) => document.removeEventListener(e, handler));
-      };
     });
 
     return () => {
