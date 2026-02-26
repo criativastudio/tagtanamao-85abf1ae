@@ -1,46 +1,50 @@
 
 
-## Gerenciador de Templates de Display no Admin
+## Reestruturação da página de Produtos Admin com seções por tipo
 
-### Contexto
+### Contexto atual
 
-Atualmente o admin tem o `TemplatesManager` em `/admin/templates`, mas ele gerencia **art_templates** (modelos de arte SVG para produção). Os templates de display (Netflix e futuros) ficam na tabela `display_templates` e **não têm interface administrativa** — o único registro existente foi inserido via SQL.
+- **ProductsManager** (`/admin/produtos`): CRUD genérico de produtos da tabela `products`, sem separação por tipo
+- **DisplayTemplatesManager** (`/admin/display-templates`): página separada com CRUD de templates + ativação em displays
+- O menu admin em `UserSettings.tsx` lista ambos como itens separados
 
-O `DisplayTemplateSelector` (usado pelo usuário final) exige que o usuário **compre** o template antes de ativá-lo (tabela `user_templates`). O admin precisa poder ativar templates em qualquer display sem essa restrição.
+### O que será feito
 
-### Mudanças
+Reescrever `ProductsManager.tsx` para consolidar tudo em uma única página com **Tabs** organizadas por tipo de produto:
 
-#### 1. Nova página: `src/pages/admin/DisplayTemplatesManager.tsx`
+**Abas:**
+1. **Tag Pet** — lista/CRUD de produtos com `type = 'pet_tag'`
+2. **Display Empresarial** — lista/CRUD de produtos com `type = 'business_display'`
+3. **Templates** — CRUD completo da tabela `display_templates` + ativação/desativação em displays (toda a lógica que hoje está em `DisplayTemplatesManager`)
+4. **Tag Celular** — lista/CRUD de produtos com `type = 'nfc_tag'`
+5. **Card NFC** — lista/CRUD de produtos com `type = 'nfc_card'`
 
-Página administrativa para gerenciar a tabela `display_templates` com:
+### Estrutura técnica
 
-- **Listagem** em grid de cards com preview, nome, preço, template_key, status (ativo/inativo)
-- **Switch ativo/inativo** em cada card (toggle `is_active`)
-- **Criar/Editar** template via dialog: nome, descrição, template_key, preço, preview_url (upload), features (lista editável), is_active
-- **Excluir** template com confirmação
-- **Ativar template em um display específico**: seção com select de displays (busca por nome/código) + botão "Ativar" que faz update direto no `business_displays.active_template_id` sem exigir compra/user_templates
-- **Desativar template de um display**: botão para limpar `active_template_id` e `template_config`
-
-#### 2. Rota e navegação
-
-- Adicionar rota `/admin/display-templates` no `App.tsx`
-- Adicionar link no `AdminDashboard` ou menu admin existente para acessar a nova página
-
-#### 3. Lógica de ativação admin (sem compra)
-
-O admin poderá:
-1. Selecionar um display (por nome ou código QR)
-2. Escolher um template da lista
-3. Clicar "Ativar" → faz `UPDATE business_displays SET active_template_id = template.id WHERE id = display.id`
-
-Isso bypassa completamente a tabela `user_templates`, que é o fluxo de compra do usuário final.
+- Cada aba de produto físico (Pet, Display, Tag Celular, Card NFC) filtra `products` por `type` e usa o mesmo dialog de criação/edição que já existe, pré-selecionando o tipo
+- A aba **Templates** incorpora toda a lógica atual do `DisplayTemplatesManager` (CRUD `display_templates` + ativar/desativar `active_template_id` em `business_displays` sem exigir compra)
+- O botão "Novo Produto" será contextual: na aba de templates cria um template, nas outras cria um produto com o tipo correto
 
 ### Arquivos
 
-- **Criar**: `src/pages/admin/DisplayTemplatesManager.tsx` — nova página completa
-- **Editar**: `src/App.tsx` — adicionar import e rota `/admin/display-templates`
+| Arquivo | Ação |
+|---|---|
+| `src/pages/admin/ProductsManager.tsx` | Reescrever com Tabs por tipo + seção Templates integrada |
+| `src/pages/customer/UserSettings.tsx` | Remover item "Templates de Display" do menu admin (já está dentro de Produtos) |
+| `src/App.tsx` | Remover rota `/admin/display-templates` e import do `DisplayTemplatesManager` |
+| `src/pages/admin/DisplayTemplatesManager.tsx` | Pode ser mantido como arquivo (não quebra nada) ou removido — a funcionalidade migra para ProductsManager |
 
-### Detalhes técnicos
+### Detalhes de implementação
 
-A tabela `display_templates` já tem RLS configurado: admins podem fazer ALL, qualquer um pode SELECT templates ativos. O admin já tem permissão de UPDATE em `business_displays` via `is_admin()`. Nenhuma migration é necessária.
+A página usará `Tabs` do Radix com 5 abas. As 4 abas de produtos físicos compartilham:
+- Grid de cards com imagem, nome, preço, switch ativo/inativo, editar, excluir
+- Dialog de criação/edição com campos: nome, descrição, preço, imagem, galeria, ativo — com `type` pré-definido pela aba
+
+A aba Templates terá:
+- Grid de cards de templates (nome, key, preço, features, switch ativo)
+- Seção "Ativar template em display" com selects de display + template + botão Ativar
+- Lista de displays com template ativo + botão Desativar
+- Dialog de criação/edição de template (nome, key, descrição, preço, preview_url, features, ativo)
+
+Nenhuma alteração de banco de dados é necessária.
 
