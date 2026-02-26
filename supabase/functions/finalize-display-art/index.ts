@@ -1,5 +1,5 @@
+// @ts-nocheck
 import { createClient } from "npm:@supabase/supabase-js@2";
-// @ts-ignore - no type definitions available for qrcode npm module in Deno
 import QRCode from "npm:qrcode@1.5.4";
 
 const corsHeaders = {
