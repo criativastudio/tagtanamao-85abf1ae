@@ -204,24 +204,9 @@ export default function MyOrders() {
                           </AccordionTrigger>
                           <AccordionContent>
                             <div className="space-y-4 pt-2">
-                            {/* Production stepper — skip for digital orders */}
-                              {normalizedStatus !== "cancelled" && !isDigitalOrder && (
-                                <OrderProductionStepper status={normalizedStatus} hasDisplay={hasDisplay} />
-                              )}
-                              {normalizedStatus !== "cancelled" && isDigitalOrder && (
-                                <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
-                                  <Crown className="w-5 h-5 text-primary shrink-0" />
-                                  <div>
-                                    <p className="font-semibold text-sm text-foreground">
-                                      {normalizedStatus === "paid" ? "Template Liberado" : "Aguardando Pagamento"}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {normalizedStatus === "paid"
-                                        ? "Seu template premium já está disponível no dashboard."
-                                        : "O template será liberado assim que o pagamento for confirmado."}
-                                    </p>
-                                  </div>
-                                </div>
+                            {/* Production stepper */}
+                              {normalizedStatus !== "cancelled" && (
+                                <OrderProductionStepper status={normalizedStatus} hasDisplay={hasDisplay} isDigital={isDigitalOrder} />
                               )}
                               {normalizedStatus === "cancelled" && (
                                 <div className="flex items-center gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400">
@@ -254,7 +239,8 @@ export default function MyOrders() {
                                 ))}
                               </div>
 
-                              {/* Shipping */}
+                              {/* Shipping — hide for digital orders */}
+                              {!isDigitalOrder && (
                               <div className="p-3 bg-muted/30 rounded-lg space-y-1">
                                 <p className="text-sm font-medium">Entrega</p>
                                 <p className="text-xs text-muted-foreground">{order.shipping_address}</p>
@@ -277,6 +263,7 @@ export default function MyOrders() {
                                   </div>
                                 )}
                               </div>
+                              )}
 
                               {/* Actions */}
                               <div className="flex flex-wrap gap-2">
@@ -301,8 +288,8 @@ export default function MyOrders() {
                                     Rastrear
                                   </Button>
                                 )}
-                                {/* Personalizar Arte do Display — botão único por pedido */}
-                                {hasDisplay && ["awaiting_customization", "paid"].includes(normalizedStatus) && (
+                                {/* Personalizar Arte do Display — only for physical display orders */}
+                                {hasDisplay && !isDigitalOrder && ["awaiting_customization", "paid"].includes(normalizedStatus) && (
                                   <Button
                                     size="sm"
                                     variant="outline"

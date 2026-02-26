@@ -81,13 +81,30 @@ export function getProductionFlow(hasDisplay: boolean): { flow: string[]; steps:
   };
 }
 
+const DIGITAL_STEPS: StepDef[] = [
+  {
+    status: "pending",
+    label: "Aguardando Pagamento",
+    description: "Pedido criado, aguardando confirmação de pagamento.",
+    icon: Clock,
+  },
+  {
+    status: "paid",
+    label: "Liberado",
+    description: "Pagamento confirmado. Template disponível no dashboard.",
+    icon: CheckCircle,
+  },
+];
+
 interface OrderProductionStepperProps {
   status: string;
   hasDisplay: boolean;
+  isDigital?: boolean;
 }
 
-export default function OrderProductionStepper({ status, hasDisplay }: OrderProductionStepperProps) {
-  const { flow, steps } = getProductionFlow(hasDisplay);
+export default function OrderProductionStepper({ status, hasDisplay, isDigital }: OrderProductionStepperProps) {
+  const digitalFlow = { flow: DIGITAL_STEPS.map((s) => s.status), steps: DIGITAL_STEPS };
+  const { flow, steps } = isDigital ? digitalFlow : getProductionFlow(hasDisplay);
   const currentIndex = flow.indexOf(status.toLowerCase());
 
   return (
