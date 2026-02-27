@@ -138,7 +138,8 @@ export default function TemplateMediaEditor({ displayId, userId, config, onChang
 
     if (!isVideo) {
       try {
-        uploadBlob = await compressImage(file, "gallery");
+        // Use profile preset (400x400) for smaller/optimized thumbnails
+        uploadBlob = await compressImage(file, "profile");
         ext = "webp";
       } catch {
         uploadBlob = file;

@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Volume2, VolumeX, icons } from "lucide-react";
+import { ChevronLeft, ChevronRight, Volume2, VolumeX, X, icons } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface MediaItem {
@@ -66,6 +66,50 @@ function LucideIcon({ name, className, size = 20 }: { name: string; className?: 
   return <IconComponent className={className} size={size} />;
 }
 
+// Fullscreen media lightbox
+function MediaLightbox({ item, onClose }: { item: MediaItem | null; onClose: () => void }) {
+  if (!item) return null;
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-10 bg-white/10 hover:bg-white/20 rounded-full p-2 transition"
+        >
+          <X className="w-6 h-6 text-white" />
+        </button>
+        <div className="max-w-4xl max-h-[90vh] w-full" onClick={(e) => e.stopPropagation()}>
+          {item.type === "video" ? (
+            <video
+              src={item.url}
+              className="w-full max-h-[85vh] object-contain rounded-lg"
+              controls
+              autoPlay
+              playsInline
+              preload="auto"
+            />
+          ) : (
+            <img
+              src={item.url}
+              alt={item.title || ""}
+              className="w-full max-h-[85vh] object-contain rounded-lg"
+            />
+          )}
+          {item.title && (
+            <p className="text-white text-center mt-3 text-sm font-medium">{item.title}</p>
+          )}
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 export default function NetflixTemplate({
   businessName,
   description,
@@ -76,7 +120,12 @@ export default function NetflixTemplate({
 }: NetflixTemplateProps) {
   const [heroIndex, setHeroIndex] = useState(0);
   const [muted, setMuted] = useState(true);
+  const [lightboxItem, setLightboxItem] = useState<MediaItem | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Hero swipe state
+  const heroTouchStartX = useRef(0);
+  const heroTouchEndX = useRef(0);
 
   const heroItems = config.hero?.items || [];
   const covers = config.covers || [];
@@ -102,11 +151,9 @@ export default function NetflixTemplate({
       audio.play().catch(() => {});
     };
 
-    // Attempt autoplay
     audio.play().then(() => {
       played = true;
     }).catch(() => {
-      // Autoplay blocked — play on first user interaction
       const events = ["click", "touchstart", "scroll"];
       const handler = () => {
         playOnce();
@@ -140,9 +187,30 @@ export default function NetflixTemplate({
     return () => clearInterval(interval);
   }, [heroItems.length, config.hero?.type]);
 
-  const heroNext = () => setHeroIndex((prev) => (prev + 1) % heroItems.length);
-  const heroPrev = () => setHeroIndex((prev) => (prev - 1 + heroItems.length) % heroItems.length);
+  const heroNext = useCallback(() => setHeroIndex((prev) => (prev + 1) % heroItems.length), [heroItems.length]);
+  const heroPrev = useCallback(() => setHeroIndex((prev) => (prev - 1 + heroItems.length) % heroItems.length), [heroItems.length]);
   const currentHero = heroItems[heroIndex];
+
+  // Hero swipe handlers
+  const onHeroTouchStart = (e: React.TouchEvent) => {
+    heroTouchStartX.current = e.touches[0].clientX;
+  };
+  const onHeroTouchEnd = () => {
+    const diff = heroTouchStartX.current - heroTouchEndX.current;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) heroNext();
+      else heroPrev();
+    }
+  };
+  const onHeroTouchMove = (e: React.TouchEvent) => {
+    heroTouchEndX.current = e.touches[0].clientX;
+  };
+
+  // Open media in lightbox
+  const openMedia = (item: MediaItem) => {
+    if (item.type === "instagram") return; // Can't lightbox iframes
+    setLightboxItem(item);
+  };
 
   const displaySections =
     sections.length > 0
@@ -158,7 +226,7 @@ export default function NetflixTemplate({
       className="min-h-screen bg-[#0a0a0a] text-white font-sans"
       style={{ paddingBottom: hasBottomNav ? "72px" : 0 }}
     >
-      {/* Inject carousel keyframes */}
+      {/* Inject styles */}
       <style>{`
         @keyframes netflix-scroll {
           0% { transform: translateX(0); }
@@ -174,15 +242,31 @@ export default function NetflixTemplate({
           font-family: 'Bebas Neue', sans-serif;
           text-shadow: 0 4px 30px rgba(0,0,0,0.9), 0 2px 10px rgba(0,0,0,0.8), 0 0 60px rgba(0,0,0,0.5);
         }
-        .netflix-thumb-overlay {
-          transform: translateY(100%);
-          transition: transform 0.35s cubic-bezier(0.4,0,0.2,1), box-shadow 0.35s ease;
+        /* Card hover: scale + shadow on the card itself */
+        .netflix-card {
+          transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), box-shadow 0.3s ease;
         }
-        .netflix-thumb:hover .netflix-thumb-overlay {
+        .netflix-card:hover, .netflix-card:active {
+          transform: scale(1.06);
+          box-shadow: 0 8px 32px rgba(0,0,0,0.7), 0 0 16px rgba(229,9,20,0.25);
+        }
+        .netflix-card:active {
+          transform: scale(1.03);
+        }
+        .netflix-card .netflix-card-title {
+          opacity: 0;
+          transform: translateY(8px);
+          transition: opacity 0.3s, transform 0.3s;
+        }
+        .netflix-card:hover .netflix-card-title {
+          opacity: 1;
           transform: translateY(0);
-          box-shadow: 0 -8px 24px rgba(0,0,0,0.5);
         }
+        .slider-hide-scrollbar::-webkit-scrollbar { display: none; }
       `}</style>
+
+      {/* Lightbox */}
+      <MediaLightbox item={lightboxItem} onClose={() => setLightboxItem(null)} />
 
       {/* Top Nav */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/80 to-transparent px-4 py-3">
@@ -197,8 +281,13 @@ export default function NetflixTemplate({
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative w-full aspect-[9/16] max-h-[85vh] overflow-hidden">
+      {/* Hero Section - Swipeable */}
+      <section
+        className="relative w-full aspect-[9/16] max-h-[85vh] overflow-hidden"
+        onTouchStart={heroItems.length > 1 ? onHeroTouchStart : undefined}
+        onTouchMove={heroItems.length > 1 ? onHeroTouchMove : undefined}
+        onTouchEnd={heroItems.length > 1 ? onHeroTouchEnd : undefined}
+      >
         <AnimatePresence mode="wait">
           {currentHero && (
             <motion.div
@@ -207,7 +296,8 @@ export default function NetflixTemplate({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.8 }}
-              className="absolute inset-0"
+              className="absolute inset-0 cursor-pointer"
+              onClick={() => currentHero && openMedia(currentHero)}
             >
               {currentHero.type === "video" || config.hero?.type === "video" ? (
                 <video
@@ -218,6 +308,13 @@ export default function NetflixTemplate({
                   loop
                   muted={muted}
                   playsInline
+                  preload="metadata"
+                  poster=""
+                  onLoadedData={(e) => {
+                    const el = e.currentTarget;
+                    el.style.opacity = "1";
+                  }}
+                  style={{ opacity: 1, transition: "opacity 0.3s" }}
                 />
               ) : config.hero?.type === "youtube" && config.hero.youtubeId ? (
                 <iframe
@@ -238,11 +335,11 @@ export default function NetflixTemplate({
         </AnimatePresence>
 
         {/* Gradient overlays */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/20 to-black/30" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/60 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/20 to-black/30 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/60 via-transparent to-transparent pointer-events-none" />
 
         {/* Hero Content */}
-        <div className="absolute bottom-[4%] left-0 right-0 px-6 z-10 text-center">
+        <div className="absolute bottom-[4%] left-0 right-0 px-6 z-10 text-center pointer-events-none">
           {subheadline && (
             <p className="text-xs md:text-sm uppercase tracking-[0.3em] text-white/80 mb-2 font-medium">
               {subheadline}
@@ -269,7 +366,7 @@ export default function NetflixTemplate({
 
           {/* Hero Buttons */}
           {heroButtons.length > 0 && (
-            <div className="flex items-center justify-center gap-3 flex-wrap">
+            <div className="flex items-center justify-center gap-3 flex-wrap pointer-events-auto">
               {heroButtons.map((btn, i) => (
                 <a
                   key={i}
@@ -295,7 +392,7 @@ export default function NetflixTemplate({
 
           {/* Mute toggle for video/youtube */}
           {(config.hero?.type === "video" || config.hero?.type === "youtube") && (
-            <div className="mt-4">
+            <div className="mt-4 pointer-events-auto">
               <Button onClick={() => setMuted(!muted)} className="rounded-full" size="icon" variant="ghost">
                 {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
               </Button>
@@ -304,7 +401,7 @@ export default function NetflixTemplate({
         </div>
 
         {/* Carousel Controls */}
-        {config.hero?.type === "carousel" && heroItems.length > 1 && (
+        {(config.hero?.type === "carousel" || heroItems.length > 1) && heroItems.length > 1 && (
           <>
             <button
               onClick={heroPrev}
@@ -340,12 +437,12 @@ export default function NetflixTemplate({
               className="netflix-carousel flex gap-3"
               style={{ width: covers.length > 2 ? "max-content" : undefined }}
             >
-              {/* Duplicate items for seamless loop */}
               {[...covers, ...(covers.length > 2 ? covers : [])].map((cover, i) => (
                 <div
                   key={i}
-                  className="flex-none w-[150px] md:w-[180px] rounded-lg overflow-hidden relative group cursor-pointer netflix-thumb"
+                  className="flex-none w-[150px] md:w-[180px] rounded-lg overflow-hidden relative cursor-pointer netflix-card"
                   style={{ backgroundColor: cover.bgColor || "#1a1a2e" }}
+                  onClick={() => openMedia(cover)}
                 >
                   {/* Netflix N badge */}
                   <div className="absolute top-1.5 left-1.5 z-10 w-6 h-8 flex items-center justify-center">
@@ -384,6 +481,9 @@ export default function NetflixTemplate({
                       loop
                       muted
                       playsInline
+                      preload="metadata"
+                      onLoadedData={(e) => { e.currentTarget.style.opacity = "1"; }}
+                      style={{ opacity: 0, transition: "opacity 0.3s" }}
                     />
                   ) : (
                     <img
@@ -395,18 +495,18 @@ export default function NetflixTemplate({
                   )}
 
                   {/* Static gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
 
-                  {/* Hover overlay - slides up */}
-                  <div className="netflix-thumb-overlay absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/90 to-transparent p-3 pt-8">
-                    {cover.title && (
-                      <span className="text-xs font-bold uppercase tracking-wide text-white">{cover.title}</span>
-                    )}
-                  </div>
+                  {/* Title on hover */}
+                  {cover.title && (
+                    <div className="netflix-card-title absolute bottom-8 left-0 right-0 px-3 z-10">
+                      <span className="text-xs font-bold uppercase tracking-wide text-white drop-shadow-lg">{cover.title}</span>
+                    </div>
+                  )}
 
-                  {/* Badge (e.g., "NOVOS EPISÓDIOS") */}
+                  {/* Badge — rounded top, taller, with margins */}
                   {cover.badge && (
-                    <div className="absolute bottom-0 left-0 right-0 z-10 bg-[#e50914] text-white text-[9px] font-bold text-center py-0.5 tracking-wider uppercase">
+                    <div className="absolute bottom-1 left-1 right-1 z-10 bg-[#e50914] text-white text-[9px] font-bold text-center py-1 tracking-wider uppercase rounded-t-md rounded-b-sm">
                       {cover.badge}
                     </div>
                   )}
@@ -446,7 +546,7 @@ export default function NetflixTemplate({
             </button>
             <div
               ref={scrollRef}
-              className="flex gap-2 overflow-x-auto px-4"
+              className="flex gap-2 overflow-x-auto px-4 slider-hide-scrollbar"
               style={{
                 scrollSnapType: "x mandatory",
                 scrollbarWidth: "none",
@@ -454,16 +554,15 @@ export default function NetflixTemplate({
                 WebkitOverflowScrolling: "touch",
               }}
             >
-              <style>{`.slider-hide-scrollbar::-webkit-scrollbar { display: none; }`}</style>
               {section.itemIndexes.map((idx) => {
                 const thumb = thumbnails[idx];
                 if (!thumb) return null;
                 return (
-                  <motion.div
+                  <div
                     key={idx}
-                    whileHover={{ scale: 1.05 }}
-                    className="flex-none w-[31%] md:w-[180px] rounded-lg overflow-hidden cursor-pointer relative netflix-thumb"
+                    className="flex-none w-[31%] md:w-[180px] rounded-lg overflow-hidden cursor-pointer relative netflix-card"
                     style={{ backgroundColor: thumb.bgColor || "#1a1a2e", scrollSnapAlign: "start" }}
+                    onClick={() => openMedia(thumb)}
                   >
                     {/* N badge */}
                     <div className="absolute top-1.5 left-1.5 z-10">
@@ -502,6 +601,9 @@ export default function NetflixTemplate({
                         loop
                         muted
                         playsInline
+                        preload="metadata"
+                        onLoadedData={(e) => { e.currentTarget.style.opacity = "1"; }}
+                        style={{ opacity: 0, transition: "opacity 0.3s" }}
                       />
                     ) : (
                       <img
@@ -513,21 +615,22 @@ export default function NetflixTemplate({
                     )}
 
                     {/* Static gradient */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
 
-                    {/* Hover overlay - slides up */}
-                    <div className="netflix-thumb-overlay absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/90 to-transparent p-2 pt-6">
-                      {thumb.title && (
-                        <span className="text-[10px] md:text-xs font-bold uppercase text-white">{thumb.title}</span>
-                      )}
-                    </div>
+                    {/* Title on hover */}
+                    {thumb.title && (
+                      <div className="netflix-card-title absolute bottom-8 left-0 right-0 px-2 z-10">
+                        <span className="text-[10px] md:text-xs font-bold uppercase text-white drop-shadow-lg">{thumb.title}</span>
+                      </div>
+                    )}
 
+                    {/* Badge — rounded top, taller, margins */}
                     {thumb.badge && (
-                      <div className="absolute bottom-0 left-0 right-0 z-10 bg-[#e50914] text-white text-[8px] font-bold text-center py-0.5 tracking-wider uppercase">
+                      <div className="absolute bottom-1 left-1 right-1 z-10 bg-[#e50914] text-white text-[8px] font-bold text-center py-1 tracking-wider uppercase rounded-t-md rounded-b-sm">
                         {thumb.badge}
                       </div>
                     )}
-                  </motion.div>
+                  </div>
                 );
               })}
             </div>
