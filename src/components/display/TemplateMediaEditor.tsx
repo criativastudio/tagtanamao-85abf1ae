@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { compressImage } from "@/lib/imageCompression";
 import {
   Upload, X, Plus, Image, Film, Type,
-  Loader2, Play, Youtube, MousePointer, Navigation, GripVertical
+  Loader2, Play, Youtube, MousePointer, Navigation
 } from "lucide-react";
 import TemplateTextEditor from "./TemplateTextEditor";
 import TemplateHeroButtonsEditor from "./TemplateHeroButtonsEditor";
@@ -71,40 +71,6 @@ export default function TemplateMediaEditor({ displayId, userId, config, onChang
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadTarget, setUploadTarget] = useState<"hero" | "covers" | "thumbnails">("hero");
   const [reelUrl, setReelUrl] = useState("");
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-
-  const handleDragStart = (index: number) => {
-    setDragIndex(index);
-  };
-
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    setDragOverIndex(index);
-  };
-
-  const handleDrop = (section: "hero" | "covers" | "thumbnails", index: number) => {
-    if (dragIndex === null || dragIndex === index) {
-      setDragIndex(null);
-      setDragOverIndex(null);
-      return;
-    }
-    const updated = { ...config };
-    if (section === "hero" && updated.hero) {
-      const items = [...updated.hero.items];
-      const [moved] = items.splice(dragIndex, 1);
-      items.splice(index, 0, moved);
-      updated.hero = { ...updated.hero, items };
-    } else if (section === "covers" || section === "thumbnails") {
-      const items = [...(updated[section] || [])];
-      const [moved] = items.splice(dragIndex, 1);
-      items.splice(index, 0, moved);
-      updated[section] = items;
-    }
-    onChange(updated);
-    setDragIndex(null);
-    setDragOverIndex(null);
-  };
 
   const addInstagramReel = (section: "covers" | "thumbnails") => {
     const match = reelUrl.match(/(?:instagram\.com\/(?:reel|reels|p)\/|instagr\.am\/)([a-zA-Z0-9_-]+)/);
@@ -262,21 +228,7 @@ export default function TemplateMediaEditor({ displayId, userId, config, onChang
   const renderMediaGrid = (items: MediaItem[], section: "hero" | "covers" | "thumbnails") => (
     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
       {items.map((item, i) => (
-        <div
-          key={i}
-          draggable
-          onDragStart={() => handleDragStart(i)}
-          onDragOver={(e) => handleDragOver(e, i)}
-          onDrop={() => handleDrop(section, i)}
-          onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
-          className={`relative group rounded-lg overflow-hidden border bg-muted/30 cursor-grab active:cursor-grabbing transition-all ${
-            dragOverIndex === i ? "border-primary ring-2 ring-primary/30" : "border-border"
-          } ${dragIndex === i ? "opacity-40" : "opacity-100"}`}
-        >
-          {/* Drag handle */}
-          <div className="absolute top-1 left-1 z-10 bg-black/60 rounded p-0.5 opacity-0 group-hover:opacity-100 transition">
-            <GripVertical className="w-3.5 h-3.5 text-white" />
-          </div>
+        <div key={i} className="relative group rounded-lg overflow-hidden border border-border bg-muted/30">
           {item.type === "instagram" ? (
             <div className="aspect-video bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 flex items-center justify-center">
               <div className="text-center text-white">
