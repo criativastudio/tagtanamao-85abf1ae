@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Volume2, VolumeX, icons } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -417,89 +417,123 @@ export default function NetflixTemplate({
         </section>
       )}
 
-      {/* Thumbnail Sections */}
-      {displaySections.map((section, si) => (
-        <section key={si} className="px-4 py-4">
-          <h2 className="text-base md:text-lg font-semibold mb-3 text-white/90">{section.title}</h2>
-          <div className="grid grid-cols-3 gap-2">
-            {section.itemIndexes.map((idx) => {
-              const thumb = thumbnails[idx];
-              if (!thumb) return null;
-              return (
-                <motion.div
-                  key={idx}
-                  whileHover={{ scale: 1.05 }}
-                  className="rounded-lg overflow-hidden cursor-pointer relative netflix-thumb"
-                  style={{ backgroundColor: thumb.bgColor || "#1a1a2e" }}
-                >
-                  {/* N badge */}
-                  <div className="absolute top-1.5 left-1.5 z-10">
-                    <span
-                      className="text-[#e50914] font-black text-lg"
-                      style={{ fontFamily: "'Bebas Neue', sans-serif" }}
-                    >
-                      N
-                    </span>
-                  </div>
+      {/* Thumbnail Sections - Swipeable Slider */}
+      {displaySections.map((section, si) => {
+        const scrollRef = React.createRef<HTMLDivElement>();
+        const scrollBy = (dir: number) => {
+          if (scrollRef.current) {
+            scrollRef.current.scrollBy({ left: dir * 300, behavior: "smooth" });
+          }
+        };
+        return (
+          <section key={si} className="py-4 relative group/slider">
+            <h2 className="text-base md:text-lg font-semibold mb-3 text-white/90 px-4">{section.title}</h2>
+            {/* Left Arrow */}
+            <button
+              onClick={() => scrollBy(-1)}
+              className="absolute left-0 top-1/2 translate-y-1 z-20 bg-black/70 hover:bg-black/90 rounded-r-md p-1.5 opacity-0 group-hover/slider:opacity-100 transition-opacity"
+              aria-label="Anterior"
+            >
+              <ChevronLeft className="w-5 h-5 text-white" />
+            </button>
+            {/* Right Arrow */}
+            <button
+              onClick={() => scrollBy(1)}
+              className="absolute right-0 top-1/2 translate-y-1 z-20 bg-black/70 hover:bg-black/90 rounded-l-md p-1.5 opacity-0 group-hover/slider:opacity-100 transition-opacity"
+              aria-label="Próximo"
+            >
+              <ChevronRight className="w-5 h-5 text-white" />
+            </button>
+            <div
+              ref={scrollRef}
+              className="flex gap-2 overflow-x-auto px-4"
+              style={{
+                scrollSnapType: "x mandatory",
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
+                WebkitOverflowScrolling: "touch",
+              }}
+            >
+              <style>{`.slider-hide-scrollbar::-webkit-scrollbar { display: none; }`}</style>
+              {section.itemIndexes.map((idx) => {
+                const thumb = thumbnails[idx];
+                if (!thumb) return null;
+                return (
+                  <motion.div
+                    key={idx}
+                    whileHover={{ scale: 1.05 }}
+                    className="flex-none w-[31%] md:w-[180px] rounded-lg overflow-hidden cursor-pointer relative netflix-thumb"
+                    style={{ backgroundColor: thumb.bgColor || "#1a1a2e", scrollSnapAlign: "start" }}
+                  >
+                    {/* N badge */}
+                    <div className="absolute top-1.5 left-1.5 z-10">
+                      <span
+                        className="text-[#e50914] font-black text-lg"
+                        style={{ fontFamily: "'Bebas Neue', sans-serif" }}
+                      >
+                        N
+                      </span>
+                    </div>
 
-                  {thumb.type === "instagram" && extractReelId(thumb.url) ? (
-                    <div className="w-full aspect-[2/3] overflow-hidden relative">
-                      <iframe
-                        src={`https://www.instagram.com/reel/${extractReelId(thumb.url)}/embed/?autoplay=1&mute=1`}
-                        className="absolute border-0"
-                        style={{
-                          width: "300%",
-                          height: "300%",
-                          top: "-100%",
-                          left: "-100%",
-                          transform: "scale(0.5)",
-                          transformOrigin: "center center",
-                          pointerEvents: "none",
-                        }}
-                        allow="autoplay; encrypted-media"
-                        allowFullScreen
-                        scrolling="no"
+                    {thumb.type === "instagram" && extractReelId(thumb.url) ? (
+                      <div className="w-full aspect-[2/3] overflow-hidden relative">
+                        <iframe
+                          src={`https://www.instagram.com/reel/${extractReelId(thumb.url)}/embed/?autoplay=1&mute=1`}
+                          className="absolute border-0"
+                          style={{
+                            width: "300%",
+                            height: "300%",
+                            top: "-100%",
+                            left: "-100%",
+                            transform: "scale(0.5)",
+                            transformOrigin: "center center",
+                            pointerEvents: "none",
+                          }}
+                          allow="autoplay; encrypted-media"
+                          allowFullScreen
+                          scrolling="no"
+                        />
+                      </div>
+                    ) : thumb.type === "video" ? (
+                      <video
+                        src={thumb.url}
+                        className="w-full aspect-[2/3] object-cover"
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
                       />
-                    </div>
-                  ) : thumb.type === "video" ? (
-                    <video
-                      src={thumb.url}
-                      className="w-full aspect-[2/3] object-cover"
-                      autoPlay
-                      loop
-                      muted
-                      playsInline
-                    />
-                  ) : (
-                    <img
-                      src={thumb.url}
-                      alt={thumb.title || ""}
-                      className="w-full aspect-[2/3] object-cover"
-                      loading="lazy"
-                    />
-                  )}
-
-                  {/* Static gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-
-                  {/* Hover overlay - slides up */}
-                  <div className="netflix-thumb-overlay absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/90 to-transparent p-2 pt-6">
-                    {thumb.title && (
-                      <span className="text-[10px] md:text-xs font-bold uppercase text-white">{thumb.title}</span>
+                    ) : (
+                      <img
+                        src={thumb.url}
+                        alt={thumb.title || ""}
+                        className="w-full aspect-[2/3] object-cover"
+                        loading="lazy"
+                      />
                     )}
-                  </div>
 
-                  {thumb.badge && (
-                    <div className="absolute bottom-0 left-0 right-0 z-10 bg-[#e50914] text-white text-[8px] font-bold text-center py-0.5 tracking-wider uppercase">
-                      {thumb.badge}
+                    {/* Static gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+
+                    {/* Hover overlay - slides up */}
+                    <div className="netflix-thumb-overlay absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/90 to-transparent p-2 pt-6">
+                      {thumb.title && (
+                        <span className="text-[10px] md:text-xs font-bold uppercase text-white">{thumb.title}</span>
+                      )}
                     </div>
-                  )}
-                </motion.div>
-              );
-            })}
-          </div>
-        </section>
-      ))}
+
+                    {thumb.badge && (
+                      <div className="absolute bottom-0 left-0 right-0 z-10 bg-[#e50914] text-white text-[8px] font-bold text-center py-0.5 tracking-wider uppercase">
+                        {thumb.badge}
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })}
 
       {/* Spacer if no content */}
       {covers.length === 0 && thumbnails.length === 0 && (
