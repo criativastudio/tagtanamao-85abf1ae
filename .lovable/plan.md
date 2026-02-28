@@ -1,28 +1,28 @@
 
 
-## Plan: Netflix Template Image Slider + Drag-to-Reorder Thumbnails
+## Plan: Separate Landing Page Visibility for Templates
 
-### Current State
-- Thumbnails render as a static 3-column grid in `NetflixTemplate.tsx` (line 424)
-- Covers use a CSS auto-scroll carousel
-- No drag-and-drop reordering exists in the editor
+### Problem
+Currently, `is_active` controls both landing page and internal visibility. The user wants to hide templates from the landing page without affecting the internal shop or public user pages.
 
 ### Changes
 
-#### 1. Convert Thumbnail Sections to Swipeable Slider (`NetflixTemplate.tsx`)
-- Replace the `grid grid-cols-3` layout with a horizontally scrollable container using touch events + CSS `overflow-x: scroll` with snap points
-- Add left/right arrow buttons (chevrons) for click navigation
-- Support swipe/drag on mobile via native scroll behavior with `scroll-snap-type: x mandatory`
-- Each thumbnail becomes a `scroll-snap-align: start` item
-- Hide scrollbar with CSS (`scrollbar-width: none`, `-webkit-scrollbar`)
+#### 1. Database Migration
+- Add `show_on_landing` boolean column to `display_templates` table, default `true`
 
-#### 2. Add Drag-to-Reorder in Editor (`TemplateMediaEditor.tsx`)
-- Add drag-and-drop reordering to the `renderMediaGrid` function for covers and thumbnails
-- Use HTML5 native drag events (`onDragStart`, `onDragOver`, `onDrop`) — no external library needed
-- Show a visual drag handle icon on each media item
-- When items are dropped, update the array order in config and call `onChange`
+#### 2. Filter Landing Page Query (`src/components/Products.tsx`)
+- Add `.eq("show_on_landing", true)` to the `display_templates` query (line 33) so templates with `show_on_landing = false` are hidden from the landing page only
 
-#### 3. Files Modified
-- `src/components/display/NetflixTemplate.tsx` — swipeable slider with arrows for thumbnail sections
-- `src/components/display/TemplateMediaEditor.tsx` — drag-to-reorder media items
+#### 3. Internal Shop Unchanged (`src/pages/customer/Shop.tsx`)
+- No changes needed — it only filters by `is_active`, so templates remain visible internally regardless of `show_on_landing`
+
+#### 4. Admin Toggle (`src/pages/admin/DisplayTemplatesManager.tsx`)
+- Add a `show_on_landing` toggle (Switch) on each template card, next to the existing `is_active` switch
+- Label it "Landing Page" for quick identification
+- One-click toggle that updates the `show_on_landing` column directly
+
+### Files Modified
+- `display_templates` table (migration)
+- `src/components/Products.tsx` — filter by `show_on_landing`
+- `src/pages/admin/DisplayTemplatesManager.tsx` — add toggle switch
 
