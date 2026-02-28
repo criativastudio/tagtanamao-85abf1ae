@@ -21,6 +21,7 @@ interface DisplayTemplate {
   price: number;
   preview_url: string | null;
   is_active: boolean | null;
+  show_on_landing: boolean;
   features: string[] | null;
   created_at: string;
 }
@@ -164,6 +165,11 @@ export default function DisplayTemplatesManager() {
     fetchData();
   };
 
+  const toggleShowOnLanding = async (id: string, current: boolean) => {
+    await supabase.from("display_templates").update({ show_on_landing: !current } as any).eq("id", id);
+    fetchData();
+  };
+
   const deleteTemplate = async (id: string) => {
     const { error } = await supabase.from("display_templates").delete().eq("id", id);
     if (error) {
@@ -252,10 +258,19 @@ export default function DisplayTemplatesManager() {
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">{t.name}</CardTitle>
-                <Switch
-                  checked={t.is_active ?? true}
-                  onCheckedChange={() => toggleActive(t.id, t.is_active)}
-                />
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <Switch
+                      checked={t.show_on_landing}
+                      onCheckedChange={() => toggleShowOnLanding(t.id, t.show_on_landing)}
+                    />
+                    <span className="text-xs text-muted-foreground">Landing</span>
+                  </div>
+                  <Switch
+                    checked={t.is_active ?? true}
+                    onCheckedChange={() => toggleActive(t.id, t.is_active)}
+                  />
+                </div>
               </div>
               <p className="text-xs text-muted-foreground">Key: {t.template_key} · R$ {t.price.toFixed(2)}</p>
             </CardHeader>
