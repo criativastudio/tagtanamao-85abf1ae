@@ -31,6 +31,7 @@ const Products = () => {
           .from("display_templates")
           .select("*")
           .eq("is_active", true)
+          .eq("show_on_landing", true)
           .order("created_at", { ascending: false }),
       ]);
 

@@ -1,0 +1,1 @@
+ALTER TABLE public.display_templates ADD COLUMN show_on_landing boolean NOT NULL DEFAULT true;

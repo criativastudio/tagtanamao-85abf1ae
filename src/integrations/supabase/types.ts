@@ -479,6 +479,7 @@ export type Database = {
           name: string
           preview_url: string | null
           price: number
+          show_on_landing: boolean
           template_key: string
           updated_at: string
         }
@@ -492,6 +493,7 @@ export type Database = {
           name: string
           preview_url?: string | null
           price?: number
+          show_on_landing?: boolean
           template_key: string
           updated_at?: string
         }
@@ -505,6 +507,7 @@ export type Database = {
           name?: string
           preview_url?: string | null
           price?: number
+          show_on_landing?: boolean
           template_key?: string
           updated_at?: string
         }
