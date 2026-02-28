@@ -1,28 +1,41 @@
 
 
-## Plan: Separate Landing Page Visibility for Templates
+## Plan: Separate Landing Visibility from Template Activation
 
-### Problem
-Currently, `is_active` controls both landing page and internal visibility. The user wants to hide templates from the landing page without affecting the internal shop or public user pages.
+### Root Cause
+The RLS policy `Anyone can view active templates` uses `is_active = true`. When a template is deactivated (`is_active = false`), non-admin users can't see it **anywhere** — not just the landing page. The `show_on_landing` column already exists but the `is_active` toggle still controls global visibility via RLS.
 
 ### Changes
 
-#### 1. Database Migration
-- Add `show_on_landing` boolean column to `display_templates` table, default `true`
+#### 1. Update RLS Policy (migration)
+Change the SELECT policy on `display_templates` to allow all authenticated users to see all templates, while keeping the `is_active` filter only for anonymous/public access:
 
-#### 2. Filter Landing Page Query (`src/components/Products.tsx`)
-- Add `.eq("show_on_landing", true)` to the `display_templates` query (line 33) so templates with `show_on_landing = false` are hidden from the landing page only
+```sql
+DROP POLICY "Anyone can view active templates" ON display_templates;
+CREATE POLICY "Anyone can view active templates" ON display_templates
+  FOR SELECT USING (true);
+```
 
-#### 3. Internal Shop Unchanged (`src/pages/customer/Shop.tsx`)
-- No changes needed — it only filters by `is_active`, so templates remain visible internally regardless of `show_on_landing`
+This makes all templates visible to everyone at the database level. Filtering for landing/shop is handled in application code.
 
-#### 4. Admin Toggle (`src/pages/admin/DisplayTemplatesManager.tsx`)
-- Add a `show_on_landing` toggle (Switch) on each template card, next to the existing `is_active` switch
-- Label it "Landing Page" for quick identification
-- One-click toggle that updates the `show_on_landing` column directly
+#### 2. Landing Page (`src/components/Products.tsx`)
+Already filters by `.eq("show_on_landing", true)` — no change needed.
+
+#### 3. Internal Shop (`src/pages/customer/Shop.tsx`)
+Already filters by `.eq("is_active", true)` — keeps working as intended. Templates hidden from landing but with `is_active = true` remain visible here.
+
+#### 4. Other internal pages
+- `DisplayTemplateSelector.tsx`, `DisplayTemplateManager.tsx`, `DashboardTemplates.tsx` — all filter by `.eq("is_active", true)` in code, no changes needed.
+
+#### 5. Admin UI — Replace `is_active` toggle label
+In both `DisplayTemplatesManager.tsx` and `TemplatesTabContent.tsx`:
+- Rename the `is_active` toggle label to "Ativo" for clarity
+- The `show_on_landing` toggle (already labeled "Landing") controls landing visibility independently
+- No functional code change needed — the toggles already work correctly
+
+### Summary
+The only real fix is the RLS policy. Currently it blocks non-admin users from seeing `is_active = false` templates. By opening SELECT to all rows, the app-level filters (`is_active` for shop, `show_on_landing` for landing) handle visibility correctly.
 
 ### Files Modified
-- `display_templates` table (migration)
-- `src/components/Products.tsx` — filter by `show_on_landing`
-- `src/pages/admin/DisplayTemplatesManager.tsx` — add toggle switch
+- `display_templates` RLS policy (migration)
 
