@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
@@ -14,12 +14,14 @@ import {
   Loader2,
   Check,
   X,
+  Package,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Card,
   CardContent,
@@ -67,7 +69,15 @@ interface Coupon {
   valid_from: string | null;
   valid_until: string | null;
   is_active: boolean;
+  exclude_combos: boolean;
   created_at: string;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  type: string;
+  is_active: boolean;
 }
 
 const initialFormState = {
@@ -81,6 +91,7 @@ const initialFormState = {
   valid_from: '',
   valid_until: '',
   is_active: true,
+  exclude_combos: true,
 };
 
 export default function CouponsManager() {
@@ -90,6 +101,21 @@ export default function CouponsManager() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
   const [form, setForm] = useState(initialFormState);
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+
+  // Fetch all active products for the product selection
+  const { data: products } = useQuery({
+    queryKey: ['admin-products-for-coupons'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, type, is_active')
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data as Product[];
+    },
+  });
 
   const { data: coupons, isLoading } = useQuery({
     queryKey: ['admin-coupons'],
@@ -104,9 +130,25 @@ export default function CouponsManager() {
     },
   });
 
+  // Fetch coupon_products for all coupons (for badge display)
+  const { data: allCouponProducts } = useQuery({
+    queryKey: ['admin-coupon-products'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('coupon_products')
+        .select('coupon_id, product_id');
+      if (error) throw error;
+      return data as { coupon_id: string; product_id: string }[];
+    },
+  });
+
+  const couponHasProducts = (couponId: string) => {
+    return allCouponProducts?.some(cp => cp.coupon_id === couponId) || false;
+  };
+
   const saveMutation = useMutation({
     mutationFn: async (data: typeof form) => {
-      const payload = {
+      const payload: any = {
         code: data.code.toUpperCase().trim(),
         description: data.description || null,
         discount_type: data.discount_type,
@@ -117,7 +159,10 @@ export default function CouponsManager() {
         valid_from: data.valid_from || null,
         valid_until: data.valid_until || null,
         is_active: data.is_active,
+        exclude_combos: data.exclude_combos,
       };
+
+      let couponId: string;
 
       if (editingCoupon) {
         const { error } = await supabase
@@ -125,15 +170,32 @@ export default function CouponsManager() {
           .update(payload)
           .eq('id', editingCoupon.id);
         if (error) throw error;
+        couponId = editingCoupon.id;
       } else {
-        const { error } = await supabase
+        const { data: inserted, error } = await supabase
           .from('coupons')
-          .insert(payload);
+          .insert(payload)
+          .select('id')
+          .single();
         if (error) throw error;
+        couponId = inserted.id;
+      }
+
+      // Update coupon_products: delete existing and insert new
+      await supabase.from('coupon_products').delete().eq('coupon_id', couponId);
+
+      if (selectedProductIds.length > 0) {
+        const rows = selectedProductIds.map(pid => ({
+          coupon_id: couponId,
+          product_id: pid,
+        }));
+        const { error: cpError } = await supabase.from('coupon_products').insert(rows);
+        if (cpError) throw cpError;
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-coupons'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-coupon-products'] });
       toast({
         title: editingCoupon ? 'Cupom atualizado!' : 'Cupom criado!',
         description: `Código: ${form.code.toUpperCase()}`,
@@ -159,6 +221,7 @@ export default function CouponsManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-coupons'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-coupon-products'] });
       toast({ title: 'Cupom excluído!' });
     },
     onError: (error: any) => {
@@ -183,7 +246,7 @@ export default function CouponsManager() {
     },
   });
 
-  const handleOpenDialog = (coupon?: Coupon) => {
+  const handleOpenDialog = async (coupon?: Coupon) => {
     if (coupon) {
       setEditingCoupon(coupon);
       setForm({
@@ -197,10 +260,19 @@ export default function CouponsManager() {
         valid_from: coupon.valid_from ? coupon.valid_from.slice(0, 16) : '',
         valid_until: coupon.valid_until ? coupon.valid_until.slice(0, 16) : '',
         is_active: coupon.is_active,
+        exclude_combos: coupon.exclude_combos ?? true,
       });
+
+      // Load linked products
+      const { data: linked } = await supabase
+        .from('coupon_products')
+        .select('product_id')
+        .eq('coupon_id', coupon.id);
+      setSelectedProductIds(linked?.map(l => l.product_id) || []);
     } else {
       setEditingCoupon(null);
       setForm(initialFormState);
+      setSelectedProductIds([]);
     }
     setDialogOpen(true);
   };
@@ -209,6 +281,7 @@ export default function CouponsManager() {
     setDialogOpen(false);
     setEditingCoupon(null);
     setForm(initialFormState);
+    setSelectedProductIds([]);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -222,6 +295,14 @@ export default function CouponsManager() {
       return;
     }
     saveMutation.mutate(form);
+  };
+
+  const toggleProductSelection = (productId: string) => {
+    setSelectedProductIds(prev =>
+      prev.includes(productId)
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
   };
 
   const formatCurrency = (value: number) => {
@@ -245,6 +326,13 @@ export default function CouponsManager() {
       return { label: 'Esgotado', variant: 'destructive' as const };
     }
     return { label: 'Ativo', variant: 'default' as const };
+  };
+
+  const typeLabels: Record<string, string> = {
+    pet_tag: 'Tag Pet',
+    business_display: 'Display',
+    nfc_card: 'NFC Card',
+    nfc_tag: 'NFC Tag',
   };
 
   return (
@@ -411,6 +499,60 @@ export default function CouponsManager() {
                   />
                 </div>
 
+                <div className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg">
+                  <div>
+                    <Label htmlFor="exclude_combos">Excluir Combos</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Impede uso em combos (2 Tags, 3 Tags) que já têm desconto
+                    </p>
+                  </div>
+                  <Switch
+                    id="exclude_combos"
+                    checked={form.exclude_combos}
+                    onCheckedChange={(checked) => setForm({ ...form, exclude_combos: checked })}
+                  />
+                </div>
+
+                {/* Product Selection */}
+                <div className="space-y-3">
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <Package className="w-4 h-4" />
+                      Produtos Específicos
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Se nenhum selecionado, o cupom vale para todos os produtos
+                    </p>
+                  </div>
+                  <div className="border border-border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
+                    {products?.map((product) => (
+                      <label
+                        key={product.id}
+                        className="flex items-center gap-3 p-2 rounded-md hover:bg-secondary/50 cursor-pointer"
+                      >
+                        <Checkbox
+                          checked={selectedProductIds.includes(product.id)}
+                          onCheckedChange={() => toggleProductSelection(product.id)}
+                        />
+                        <span className="text-sm flex-1">{product.name}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {typeLabels[product.type] || product.type}
+                        </Badge>
+                      </label>
+                    ))}
+                    {(!products || products.length === 0) && (
+                      <p className="text-sm text-muted-foreground text-center py-2">
+                        Nenhum produto ativo encontrado
+                      </p>
+                    )}
+                  </div>
+                  {selectedProductIds.length > 0 && (
+                    <p className="text-xs text-primary">
+                      {selectedProductIds.length} produto(s) selecionado(s)
+                    </p>
+                  )}
+                </div>
+
                 <div className="flex gap-2 pt-4">
                   <Button type="button" variant="outline" onClick={handleCloseDialog} className="flex-1">
                     Cancelar
@@ -486,6 +628,17 @@ export default function CouponsManager() {
                             )}
                             {coupon.max_discount && coupon.max_discount > 0 && (
                               <div>Máx: {formatCurrency(coupon.max_discount)}</div>
+                            )}
+                            {couponHasProducts(coupon.id) && (
+                              <Badge variant="outline" className="text-xs">
+                                <Package className="w-3 h-3 mr-1" />
+                                Produtos específicos
+                              </Badge>
+                            )}
+                            {coupon.exclude_combos && (
+                              <Badge variant="secondary" className="text-xs">
+                                Sem combos
+                              </Badge>
                             )}
                           </div>
                         </TableCell>

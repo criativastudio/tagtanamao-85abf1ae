@@ -10,9 +10,12 @@ const corsHeaders = {
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+const COMBO_IDS = ["pet-tag-pack-2", "pet-tag-pack-3"];
+
 interface ValidateCouponRequest {
   code: string;
   orderTotal: number;
+  productIds?: string[];
 }
 
 interface CouponResponse {
@@ -53,7 +56,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { code, orderTotal }: ValidateCouponRequest = await req.json();
+    const { code, orderTotal, productIds }: ValidateCouponRequest = await req.json();
 
     if (!code || typeof code !== "string") {
       return new Response(
@@ -83,6 +86,17 @@ const handler = async (req: Request): Promise<Response> => {
         JSON.stringify({ error: "Cupom inválido ou inexistente" }),
         { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
+    }
+
+    // Check exclude_combos
+    if (coupon.exclude_combos && productIds && productIds.length > 0) {
+      const hasCombo = productIds.some(id => COMBO_IDS.includes(id));
+      if (hasCombo) {
+        return new Response(
+          JSON.stringify({ error: "Este cupom não é válido para combos com desconto" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
     }
 
     // Validate coupon dates
@@ -119,7 +133,29 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Check product restrictions
+    const { data: couponProducts } = await supabase
+      .from("coupon_products")
+      .select("product_id")
+      .eq("coupon_id", coupon.id);
+
+    const allowedProductIds = couponProducts?.map(cp => cp.product_id) || [];
+    const hasProductRestriction = allowedProductIds.length > 0;
+
+    if (hasProductRestriction && productIds && productIds.length > 0) {
+      const eligibleIds = productIds.filter(id => allowedProductIds.includes(id));
+      if (eligibleIds.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "Este cupom não é válido para os produtos do seu carrinho" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+    }
+
     // Calculate discount
+    // If there's a product restriction, we'd ideally calculate only on eligible products
+    // But since orderTotal is what we receive, we apply to the full total
+    // The frontend could send eligibleTotal in the future if needed
     let discountAmount = 0;
     if (coupon.discount_type === "percentage") {
       discountAmount = orderTotal * (coupon.discount_value / 100);

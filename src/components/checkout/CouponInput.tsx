@@ -19,9 +19,10 @@ interface CouponInputProps {
   orderTotal: number;
   appliedCoupon: Coupon | null;
   onApplyCoupon: (coupon: Coupon | null, discountAmount: number) => void;
+  cartProductIds?: string[];
 }
 
-export default function CouponInput({ orderTotal, appliedCoupon, onApplyCoupon }: CouponInputProps) {
+export default function CouponInput({ orderTotal, appliedCoupon, onApplyCoupon, cartProductIds }: CouponInputProps) {
   const { toast } = useToast();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -48,6 +49,7 @@ export default function CouponInput({ orderTotal, appliedCoupon, onApplyCoupon }
         body: {
           code: code.toUpperCase().trim(),
           orderTotal,
+          productIds: cartProductIds || [],
         },
       });
 
