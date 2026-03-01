@@ -52,7 +52,6 @@ export default function DisplayTemplateSelector({
       supabase
         .from("display_templates")
         .select("*")
-        .eq("is_active", true)
         .order("price", { ascending: true }),
       supabase
         .from("user_templates")

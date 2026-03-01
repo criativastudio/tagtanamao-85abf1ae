@@ -83,7 +83,6 @@ export default function DisplayTemplateManager() {
     const { data: tpls } = await supabase
       .from("display_templates")
       .select("*")
-      .eq("is_active", true)
       .order("price", { ascending: true });
 
     if (tpls) {
