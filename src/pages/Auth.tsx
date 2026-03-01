@@ -24,6 +24,8 @@ export default function Auth() {
   const fromShop = searchParams.get('from') === 'shop';
   const redirectTo = searchParams.get('redirect') || '/dashboard';
   const [isLogin, setIsLogin] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -394,6 +396,15 @@ export default function Auth() {
             </button>
           </div>
           {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
+          {isLogin && (
+            <button
+              type="button"
+              onClick={() => setIsForgotPassword(true)}
+              className="text-sm text-primary hover:underline mt-1"
+            >
+              Esqueceu sua senha?
+            </button>
+          )}
         </div>
 
         {/* Confirm Password (signup only) */}
@@ -451,16 +462,77 @@ export default function Auth() {
                 <img alt="Tag Tá Na Mão" className="h-10 object-contain" src="/lovable-uploads/c37cfe01-38fd-432c-a969-8e15f789223e.png" />
               </motion.div>
               <h1 className="text-2xl font-bold text-foreground">
-                {isLogin ? 'Entrar na sua conta' : 'Criar nova conta'}
+                {isForgotPassword ? 'Esqueceu sua senha?' : isLogin ? 'Entrar na sua conta' : 'Criar nova conta'}
               </h1>
               <p className="text-muted-foreground mt-2">
-                {isLogin ? 'Acesse suas tags e displays' : 'Crie sua conta para gerenciar seus produtos'}
+                {isForgotPassword ? 'Digite seu email para receber o link de redefinição' : isLogin ? 'Acesse suas tags e displays' : 'Crie sua conta para gerenciar seus produtos'}
               </p>
             </div>
 
             {/* Content - always show account form directly */}
             <AnimatePresence mode="wait">
-              {renderAccountForm()}
+              {isForgotPassword ? (
+                <motion.div
+                  key="forgot"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="space-y-4"
+                >
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Email</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <Input
+                        type="email"
+                        placeholder="seu@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="pl-10 bg-background/50 border-border/50 focus:border-primary"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="hero"
+                    size="lg"
+                    className="w-full"
+                    disabled={forgotPasswordLoading || !email}
+                    onClick={async () => {
+                      setForgotPasswordLoading(true);
+                      try {
+                        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                          redirectTo: `${window.location.origin}/redefinir-senha`,
+                        });
+                        if (error) {
+                          toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+                        } else {
+                          toast({
+                            title: 'Email enviado!',
+                            description: 'Verifique sua caixa de entrada para redefinir a senha.',
+                          });
+                          setIsForgotPassword(false);
+                        }
+                      } finally {
+                        setForgotPasswordLoading(false);
+                      }
+                    }}
+                  >
+                    {forgotPasswordLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                      <>Enviar link de redefinição <ArrowRight className="w-5 h-5 ml-2" /></>
+                    )}
+                  </Button>
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      onClick={() => setIsForgotPassword(false)}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      ← Voltar ao login
+                    </button>
+                  </div>
+                </motion.div>
+              ) : renderAccountForm()}
             </AnimatePresence>
 
             {/* Toggle login/signup */}
