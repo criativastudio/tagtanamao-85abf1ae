@@ -269,6 +269,42 @@ export type Database = {
           },
         ]
       }
+      coupon_products: {
+        Row: {
+          coupon_id: string
+          created_at: string | null
+          id: string
+          product_id: string
+        }
+        Insert: {
+          coupon_id: string
+          created_at?: string | null
+          id?: string
+          product_id: string
+        }
+        Update: {
+          coupon_id?: string
+          created_at?: string | null
+          id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_products_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coupons: {
         Row: {
           code: string
@@ -277,6 +313,7 @@ export type Database = {
           description: string | null
           discount_type: string
           discount_value: number
+          exclude_combos: boolean | null
           id: string
           is_active: boolean | null
           max_discount: number | null
@@ -293,6 +330,7 @@ export type Database = {
           description?: string | null
           discount_type: string
           discount_value: number
+          exclude_combos?: boolean | null
           id?: string
           is_active?: boolean | null
           max_discount?: number | null
@@ -309,6 +347,7 @@ export type Database = {
           description?: string | null
           discount_type?: string
           discount_value?: number
+          exclude_combos?: boolean | null
           id?: string
           is_active?: boolean | null
           max_discount?: number | null

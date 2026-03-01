@@ -1226,6 +1226,7 @@ export default function Checkout() {
                         orderTotal={getCartTotal()}
                         appliedCoupon={appliedCoupon}
                         onApplyCoupon={handleApplyCoupon}
+                        cartProductIds={cart.map(item => item.product.id)}
                       />
                     </div>
 
