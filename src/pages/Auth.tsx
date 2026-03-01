@@ -29,7 +29,6 @@ export default function Auth() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [loginError, setLoginError] = useState('');
   const [errors, setErrors] = useState<{
     email?: string;
     password?: string;
@@ -136,7 +135,6 @@ useEffect(() => {
     e.preventDefault();
     if (!validateForm()) return;
     setIsLoading(true);
-    setLoginError('');
     try {
       if (isLogin) {
   const { data, error } = await supabase.auth.signInWithPassword({
@@ -146,14 +144,11 @@ useEffect(() => {
 
   if (error) {
   if (error.message.includes('Email not confirmed')) {
-    setLoginError('Você precisa confirmar seu email antes de acessar.');
-  } else if (error.message.includes('Invalid login credentials')) {
-    setLoginError('Email ou senha incorretos.');
-  } else {
-    setLoginError('Ocorreu um erro inesperado. Tente novamente.');
-  }
-  return;
-});
+    toast({
+      title: 'Confirme seu email',
+      description: 'Você precisa confirmar seu email antes de acessar. Verifique sua caixa de entrada.',
+      variant: 'destructive'
+    });
   } else if (error.message.includes('Invalid login credentials')) {
     toast({
       title: 'Erro ao entrar',
@@ -171,10 +166,11 @@ useEffect(() => {
 }
 
   if (!data.user.email_confirmed_at) {
-  setLoginError('Você precisa confirmar seu email antes de acessar.');
-  await supabase.auth.signOut();
-  return;
-});
+    toast({
+      title: 'Confirme seu email',
+      description: 'Você precisa confirmar seu email antes de acessar.',
+      variant: 'destructive'
+    });
 
     await supabase.auth.signOut();
     return;
@@ -515,12 +511,5 @@ useEffect(() => {
           </motion.div>
         </div>
       </div>
-    {loginError && (
-  <div className="fixed bottom-0 left-0 w-full flex justify-center pb-6 z-50">
-    <div className="bg-black border border-green-500 text-white px-6 py-4 rounded-xl shadow-lg text-center max-w-md w-[90%]">
-      <p className="text-sm font-medium">{loginError}</p>
-    </div>
-  </div>
-)}
     </div>;
 }
