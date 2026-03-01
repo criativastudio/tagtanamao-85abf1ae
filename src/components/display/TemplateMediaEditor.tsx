@@ -10,11 +10,12 @@ import { useToast } from "@/hooks/use-toast";
 import { compressImage } from "@/lib/imageCompression";
 import {
   Upload, X, Plus, Image, Film, Type,
-  Loader2, Play, Youtube, MousePointer, Navigation, GripVertical
+  Loader2, Play, Youtube, MousePointer, Navigation, GripVertical, Zap
 } from "lucide-react";
 import TemplateTextEditor from "./TemplateTextEditor";
 import TemplateHeroButtonsEditor from "./TemplateHeroButtonsEditor";
 import TemplateBottomNavEditor from "./TemplateBottomNavEditor";
+import TemplateSpecialButtonsEditor from "./TemplateSpecialButtonsEditor";
 
 interface MediaItem {
   url: string;
@@ -334,11 +335,12 @@ export default function TemplateMediaEditor({ displayId, userId, config, onChang
       <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
 
       <Tabs defaultValue="texts" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 text-[10px]">
+        <TabsList className="grid w-full grid-cols-6 text-[10px]">
           <TabsTrigger value="texts" className="gap-1 text-[10px] px-1"><Type className="w-3.5 h-3.5" /> Textos</TabsTrigger>
           <TabsTrigger value="hero" className="gap-1 text-[10px] px-1"><Film className="w-3.5 h-3.5" /> Hero</TabsTrigger>
           <TabsTrigger value="covers" className="gap-1 text-[10px] px-1"><Image className="w-3.5 h-3.5" /> Capas</TabsTrigger>
           <TabsTrigger value="buttons" className="gap-1 text-[10px] px-1"><MousePointer className="w-3.5 h-3.5" /> Botões</TabsTrigger>
+          <TabsTrigger value="actions" className="gap-1 text-[10px] px-1"><Zap className="w-3.5 h-3.5" /> Ações</TabsTrigger>
           <TabsTrigger value="navbar" className="gap-1 text-[10px] px-1"><Navigation className="w-3.5 h-3.5" /> Rodapé</TabsTrigger>
         </TabsList>
 
@@ -458,6 +460,14 @@ export default function TemplateMediaEditor({ displayId, userId, config, onChang
           <TemplateHeroButtonsEditor
             buttons={config.heroButtons || []}
             onChange={(heroButtons) => onChange({ ...config, heroButtons })}
+          />
+        </TabsContent>
+
+        {/* Special Buttons Tab */}
+        <TabsContent value="actions" className="space-y-4">
+          <TemplateSpecialButtonsEditor
+            buttons={(config as any).specialButtons || []}
+            onChange={(specialButtons) => onChange({ ...config, specialButtons } as any)}
           />
         </TabsContent>
 

@@ -30,6 +30,14 @@ interface BottomNavItem {
   badgeCount?: number;
 }
 
+interface SpecialButton {
+  id: string;
+  label: string;
+  url: string;
+  icon: string;
+  enabled?: boolean;
+}
+
 interface TemplateConfig {
   hero?: {
     type: "video" | "image" | "carousel" | "youtube";
@@ -45,6 +53,7 @@ interface TemplateConfig {
   thumbnails?: MediaItem[];
   sections?: { title: string; itemIndexes: number[] }[];
   bottomNav?: BottomNavItem[];
+  specialButtons?: SpecialButton[];
 }
 
 interface NetflixTemplateProps {
@@ -54,6 +63,7 @@ interface NetflixTemplateProps {
   themeColor?: string;
   config: TemplateConfig;
   isPublic?: boolean;
+  onSpecialButtonClick?: (button: SpecialButton) => void;
 }
 
 // Dynamic Lucide icon renderer
@@ -117,6 +127,7 @@ export default function NetflixTemplate({
   themeColor = "#e50914",
   config,
   isPublic = false,
+  onSpecialButtonClick,
 }: NetflixTemplateProps) {
   const [heroIndex, setHeroIndex] = useState(0);
   const [muted, setMuted] = useState(true);
@@ -643,6 +654,25 @@ export default function NetflixTemplate({
         <div className="px-6 py-20 text-center text-white/30 text-sm">
           Adicione capas e thumbnails no editor para preencher esta área
         </div>
+      )}
+
+      {/* Special Buttons */}
+      {(config.specialButtons || []).filter(b => b.enabled).length > 0 && (
+        <section className="px-4 py-6">
+          <div className="flex flex-wrap gap-3 justify-center max-w-lg mx-auto">
+            {(config.specialButtons || []).filter(b => b.enabled).map((btn) => (
+              <button
+                key={btn.id}
+                onClick={() => onSpecialButtonClick?.(btn)}
+                className="flex items-center gap-2.5 px-5 py-3 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 hover:border-white/20 transition-all duration-200 group"
+                style={{ minWidth: "140px" }}
+              >
+                <LucideIcon name={btn.icon} size={18} className="text-white/70 group-hover:text-[#e50914] transition-colors" />
+                <span className="text-sm font-medium text-white/90">{btn.label}</span>
+              </button>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* Footer */}
