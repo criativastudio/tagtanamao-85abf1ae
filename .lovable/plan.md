@@ -1,38 +1,38 @@
 
 
-## Test Results & Findings
+## Plan: Add Special Buttons (Wi-Fi, PIX, Salvar Contato, Agendamento) to Netflix Template
 
-### Current State
-The Netflix Premium template has `is_active = false` and `show_on_landing = true`. The RLS policy fix was applied (SELECT USING true), which is correct.
+### Context
+The bio page (standard template) already has configurable special buttons (Wi-Fi, Salvar Contato, PIX, Agendamento) stored in `business_displays.buttons` as JSONB. The Netflix template currently ignores these buttons entirely — both in the editor and the public page.
 
-### Problem Found
-The `show_on_landing` toggle works for the **landing page** (Products.tsx filters by it), but the **`is_active` toggle is still being used as the main visibility control everywhere**:
-- **Landing page** (`Products.tsx`): filters by `is_active = true` AND `show_on_landing = true` — correct
-- **Internal shop** (`Shop.tsx`): filters by `.eq("is_active", true)` — template hidden when `is_active = false`
-- **Dashboard templates** (`DashboardTemplates.tsx`): filters by `.eq("is_active", true)` — template hidden
-- **Display template manager** (`DisplayTemplateManager.tsx`): filters by `.eq("is_active", true)` — template hidden
+### Changes Required
 
-The user's intent is: `show_on_landing = false` hides from landing, but `is_active` should NOT affect internal views for logged-in users. Internal pages should show all templates regardless of `is_active`.
+#### 1. `src/components/display/NetflixTemplate.tsx`
+- Add `buttons` prop (array of button objects with `id`, `label`, `url`, `icon`, `enabled`)
+- Add `onButtonClick` callback prop for handling special button actions
+- Render enabled buttons in a styled section above the footer (or below thumbnails), matching the Netflix dark theme with red accents
+- Use the existing `LucideIcon` renderer for button icons
 
-### Fix Required
+#### 2. `src/pages/PublicDisplayPage.tsx`
+- When rendering `NetflixTemplate` (line ~338), pass `display.buttons` and a click handler
+- Add the same special button handling logic that already exists for the bio page: Wi-Fi opens `WifiModal`, PIX opens `PixModal`, Contact triggers vCard download, Calendar/Star open URLs
+- Reuse existing `wifiModal`/`pixModal` state and the `WifiModal`/`PixModal` components already imported
 
-#### 1. Internal Shop (`src/pages/customer/Shop.tsx`)
-Remove `.eq("is_active", true)` from the `display_templates` query so all templates appear in the internal shop.
+#### 3. `src/components/display/TemplateMediaEditor.tsx`
+- Add a new tab "Ações" (or extend "Botões" tab) with a dedicated section for special buttons
+- Allow toggling Wi-Fi, Salvar Contato, PIX, and Agendamento on/off
+- When enabled, show the relevant fields from `SpecialButtonFields` (Wi-Fi: SSID/password/encryption; PIX: key/amount/description; Contact: vCard fields; Agendamento: URL)
+- Store these as part of `template_config.specialButtons` array in the same format as bio page buttons
 
-#### 2. Dashboard Templates (`src/components/dashboard/DashboardTemplates.tsx`)
-Remove `.eq("is_active", true)` from the `display_templates` query.
+#### 4. `src/pages/customer/DisplayTemplateManager.tsx`
+- Pass the buttons data through to the preview and save flow — the `template_config` already persists to `business_displays.template_config`
 
-#### 3. Display Template Manager (`src/pages/customer/DisplayTemplateManager.tsx`)
-Remove `.eq("is_active", true)` from the `display_templates` query.
+### Data Flow
+- **Editor**: User configures special buttons in `TemplateMediaEditor` → stored in `template_config.specialButtons`
+- **Save**: `template_config` is saved to `business_displays.template_config` (existing JSONB column)
+- **Public page**: `PublicDisplayPage` reads `template_config.specialButtons` and passes to `NetflixTemplate` + handles click actions with modals
+- No database schema changes needed — uses existing `template_config` JSONB field
 
-#### 4. Landing Page (`src/components/Products.tsx`)
-Already filters by both `is_active = true` and `show_on_landing = true` — keep as-is. Only active templates shown on landing appear publicly.
-
-#### 5. Set Netflix template back to active
-Run a database update: `UPDATE display_templates SET is_active = true, show_on_landing = false WHERE name = 'Netflix Premium'` — makes the template available internally but hidden from landing.
-
-### Summary
-- **Landing page**: shows only `is_active = true` AND `show_on_landing = true`
-- **Internal pages (shop, dashboard, template manager)**: shows ALL templates (no `is_active` filter) so users always see what they purchased
-- Admin controls `show_on_landing` to toggle landing visibility independently
+### Button Rendering in Netflix Theme
+Buttons will appear as a horizontal row of rounded dark cards with icon + label, styled with the Netflix dark aesthetic (dark cards, white text, red accent on hover), placed between the thumbnail sections and the footer.
 
