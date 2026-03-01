@@ -216,14 +216,21 @@ export default function Auth() {
               description: 'Sua conta foi criada e seu produto já está ativado.'
             });
           }
-        } else if (session?.user && skipActivation) {
-          // Shop flow - just account creation, no product activation
-          toast({
-            title: 'Conta criada!',
-            description: 'Sua conta foi criada com sucesso. Continue sua compra.'
-          });
-        }
-        navigate(redirectTo);
+       } else {
+  toast({
+    title: 'Conta criada com sucesso! 🎉',
+    description: 'Enviamos um email para você. Confirme seu cadastro pelo link recebido antes de fazer login.'
+  });
+
+  // Limpa os campos
+  setEmail('');
+  setPassword('');
+  setConfirmPassword('');
+
+  // Volta para tela de login
+  setIsLogin(true);
+}
+       
       }
     } finally {
       setIsLoading(false);
