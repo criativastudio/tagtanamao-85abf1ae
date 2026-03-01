@@ -334,15 +334,55 @@ const PublicDisplayPage = () => {
   // If display has an active premium template, render it
   if (display.active_template_id && display.template_config) {
     const tplConfig = typeof display.template_config === "object" ? display.template_config : {};
+    const specialButtons = Array.isArray(tplConfig.specialButtons) ? tplConfig.specialButtons : [];
+
+    const handleSpecialButtonClick = (btn: { id: string; label: string; url: string; icon: string }) => {
+      if (btn.icon === 'Wifi') {
+        const parts = btn.url.split('|');
+        setWifiModal({ open: true, ssid: parts[0] || '', password: parts[1] || '', encryption: parts[2] || 'WPA' });
+        return;
+      }
+      if (btn.icon === 'QrCode') {
+        const parts = btn.url.split('|');
+        setPixModal({ open: true, pixKey: parts[0] || '', amount: parts[1] || '', description: parts[2] || '' });
+        return;
+      }
+      if (btn.icon === 'Contact') {
+        const vcard = parseVCardData(btn.url);
+        generateVCard(vcard).then(content => downloadVCard(content, vcard.name || 'contato'));
+        return;
+      }
+      if (btn.url) {
+        window.open(btn.url, "_blank");
+      }
+    };
+
     return (
-      <NetflixTemplate
-        businessName={display.business_name || "Empresa"}
-        description={display.description}
-        logoUrl={display.logo_url}
-        themeColor={display.theme_color || "#e50914"}
-        config={tplConfig}
-        isPublic={true}
-      />
+      <>
+        <NetflixTemplate
+          businessName={display.business_name || "Empresa"}
+          description={display.description}
+          logoUrl={display.logo_url}
+          themeColor={display.theme_color || "#e50914"}
+          config={tplConfig}
+          isPublic={true}
+          onSpecialButtonClick={handleSpecialButtonClick}
+        />
+        <WifiModal 
+          open={wifiModal.open}
+          onClose={() => setWifiModal(prev => ({ ...prev, open: false }))}
+          ssid={wifiModal.ssid}
+          password={wifiModal.password}
+          encryption={wifiModal.encryption}
+        />
+        <PixModal 
+          open={pixModal.open}
+          onClose={() => setPixModal(prev => ({ ...prev, open: false }))}
+          pixKey={pixModal.pixKey}
+          amount={pixModal.amount}
+          description={pixModal.description}
+        />
+      </>
     );
   }
 
