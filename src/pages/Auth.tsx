@@ -143,13 +143,27 @@ useEffect(() => {
   });
 
   if (error) {
+  if (error.message.includes('Email not confirmed')) {
+    toast({
+      title: 'Confirme seu email',
+      description: 'Você precisa confirmar seu email antes de acessar. Verifique sua caixa de entrada.',
+      variant: 'destructive'
+    });
+  } else if (error.message.includes('Invalid login credentials')) {
     toast({
       title: 'Erro ao entrar',
       description: 'Email ou senha incorretos.',
       variant: 'destructive'
     });
-    return;
+  } else {
+    toast({
+      title: 'Erro ao entrar',
+      description: 'Ocorreu um erro inesperado. Tente novamente.',
+      variant: 'destructive'
+    });
   }
+  return;
+}
 
   if (!data.user.email_confirmed_at) {
     toast({
