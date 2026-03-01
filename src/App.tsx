@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import ActivateProduct from "./pages/ActivateProduct";
 import NotFound from "./pages/NotFound";
+import ResetPassword from "./pages/ResetPassword";
 import PublicPetPage from "./pages/PublicPetPage";
 import PublicDisplayPage from "./pages/PublicDisplayPage";
 import PublicBioPage from "./pages/PublicBioPage";
@@ -53,6 +54,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/redefinir-senha" element={<ResetPassword />} />
               <Route
                 path="/dashboard"
                 element={
