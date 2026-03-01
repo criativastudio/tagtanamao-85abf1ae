@@ -1,41 +1,38 @@
 
 
-## Plan: Separate Landing Visibility from Template Activation
+## Test Results & Findings
 
-### Root Cause
-The RLS policy `Anyone can view active templates` uses `is_active = true`. When a template is deactivated (`is_active = false`), non-admin users can't see it **anywhere** — not just the landing page. The `show_on_landing` column already exists but the `is_active` toggle still controls global visibility via RLS.
+### Current State
+The Netflix Premium template has `is_active = false` and `show_on_landing = true`. The RLS policy fix was applied (SELECT USING true), which is correct.
 
-### Changes
+### Problem Found
+The `show_on_landing` toggle works for the **landing page** (Products.tsx filters by it), but the **`is_active` toggle is still being used as the main visibility control everywhere**:
+- **Landing page** (`Products.tsx`): filters by `is_active = true` AND `show_on_landing = true` — correct
+- **Internal shop** (`Shop.tsx`): filters by `.eq("is_active", true)` — template hidden when `is_active = false`
+- **Dashboard templates** (`DashboardTemplates.tsx`): filters by `.eq("is_active", true)` — template hidden
+- **Display template manager** (`DisplayTemplateManager.tsx`): filters by `.eq("is_active", true)` — template hidden
 
-#### 1. Update RLS Policy (migration)
-Change the SELECT policy on `display_templates` to allow all authenticated users to see all templates, while keeping the `is_active` filter only for anonymous/public access:
+The user's intent is: `show_on_landing = false` hides from landing, but `is_active` should NOT affect internal views for logged-in users. Internal pages should show all templates regardless of `is_active`.
 
-```sql
-DROP POLICY "Anyone can view active templates" ON display_templates;
-CREATE POLICY "Anyone can view active templates" ON display_templates
-  FOR SELECT USING (true);
-```
+### Fix Required
 
-This makes all templates visible to everyone at the database level. Filtering for landing/shop is handled in application code.
+#### 1. Internal Shop (`src/pages/customer/Shop.tsx`)
+Remove `.eq("is_active", true)` from the `display_templates` query so all templates appear in the internal shop.
 
-#### 2. Landing Page (`src/components/Products.tsx`)
-Already filters by `.eq("show_on_landing", true)` — no change needed.
+#### 2. Dashboard Templates (`src/components/dashboard/DashboardTemplates.tsx`)
+Remove `.eq("is_active", true)` from the `display_templates` query.
 
-#### 3. Internal Shop (`src/pages/customer/Shop.tsx`)
-Already filters by `.eq("is_active", true)` — keeps working as intended. Templates hidden from landing but with `is_active = true` remain visible here.
+#### 3. Display Template Manager (`src/pages/customer/DisplayTemplateManager.tsx`)
+Remove `.eq("is_active", true)` from the `display_templates` query.
 
-#### 4. Other internal pages
-- `DisplayTemplateSelector.tsx`, `DisplayTemplateManager.tsx`, `DashboardTemplates.tsx` — all filter by `.eq("is_active", true)` in code, no changes needed.
+#### 4. Landing Page (`src/components/Products.tsx`)
+Already filters by both `is_active = true` and `show_on_landing = true` — keep as-is. Only active templates shown on landing appear publicly.
 
-#### 5. Admin UI — Replace `is_active` toggle label
-In both `DisplayTemplatesManager.tsx` and `TemplatesTabContent.tsx`:
-- Rename the `is_active` toggle label to "Ativo" for clarity
-- The `show_on_landing` toggle (already labeled "Landing") controls landing visibility independently
-- No functional code change needed — the toggles already work correctly
+#### 5. Set Netflix template back to active
+Run a database update: `UPDATE display_templates SET is_active = true, show_on_landing = false WHERE name = 'Netflix Premium'` — makes the template available internally but hidden from landing.
 
 ### Summary
-The only real fix is the RLS policy. Currently it blocks non-admin users from seeing `is_active = false` templates. By opening SELECT to all rows, the app-level filters (`is_active` for shop, `show_on_landing` for landing) handle visibility correctly.
-
-### Files Modified
-- `display_templates` RLS policy (migration)
+- **Landing page**: shows only `is_active = true` AND `show_on_landing = true`
+- **Internal pages (shop, dashboard, template manager)**: shows ALL templates (no `is_active` filter) so users always see what they purchased
+- Admin controls `show_on_landing` to toggle landing visibility independently
 
