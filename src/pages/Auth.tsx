@@ -54,11 +54,11 @@ export default function Auth() {
   const {
     toast
   } = useToast();
-  useEffect(() => {
-    if (user) {
-      navigate(redirectTo);
-    }
-  }, [user, navigate, redirectTo]);
+useEffect(() => {
+  if (user && user.email_confirmed_at) {
+    navigate(redirectTo);
+  }
+}, [user, navigate, redirectTo]);
   const validateForm = () => {
     const newErrors: typeof errors = {};
     try {
@@ -137,9 +137,38 @@ export default function Auth() {
     setIsLoading(true);
     try {
       if (isLogin) {
-        const {
-          error
-        } = await signIn(email, password);
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) {
+    toast({
+      title: 'Erro ao entrar',
+      description: 'Email ou senha incorretos.',
+      variant: 'destructive'
+    });
+    return;
+  }
+
+  if (!data.user.email_confirmed_at) {
+    toast({
+      title: 'Confirme seu email',
+      description: 'Você precisa confirmar seu email antes de acessar.',
+      variant: 'destructive'
+    });
+
+    await supabase.auth.signOut();
+    return;
+  }
+
+  toast({
+    title: 'Bem-vindo!',
+    description: 'Login realizado com sucesso.'
+  });
+
+  navigate(redirectTo);
+}
         if (error) {
           if (error.message.includes('Invalid login credentials')) {
             toast({
@@ -219,9 +248,9 @@ export default function Auth() {
         } else if (session?.user && skipActivation) {
           // Shop flow - just account creation, no product activation
           toast({
-            title: 'Conta criada!',
-            description: 'Sua conta foi criada com sucesso. Continue sua compra.'
-          });
+  title: 'Conta criada!',
+  description: 'Enviamos um email de confirmação. Verifique sua caixa de entrada antes de acessar.'
+});
         }
         navigate(redirectTo);
       }
