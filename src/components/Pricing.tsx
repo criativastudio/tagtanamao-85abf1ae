@@ -27,7 +27,7 @@ const pricingPlans = [
   {
     name: "2 Tags Pet",
     price: "119,90",
-    originalPrice: "139,80",
+    originalPrice: "159,80",
     description: "Ideal para famílias com 2 pets",
     features: [
       "2 Tags Pet QR Code Premium",
@@ -43,7 +43,7 @@ const pricingPlans = [
   {
     name: "3 Tags Pet",
     price: "159,90",
-    originalPrice: "209,70",
+    originalPrice: "239,70",
     description: "Melhor custo-benefício",
     features: [
       "3 Tags Pet QR Code Premium",
