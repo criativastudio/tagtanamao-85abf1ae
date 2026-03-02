@@ -210,7 +210,7 @@ export default function Shop() {
         {/* Benefits */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           {[
-            { icon: Truck, title: "Frete Grátis", desc: "Envio rápido" },
+            { icon: Truck, title: "Envio rápido", desc: "Atendemos todo estado de Rondônia" },
             { icon: CreditCard, title: "Pagamento Seguro", desc: "PIX, Boleto ou Cartão" },
             { icon: Check, title: "Garantia 1 Ano", desc: "Material Premium" },
           ].map((benefit, index) => (
