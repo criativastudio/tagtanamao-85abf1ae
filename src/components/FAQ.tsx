@@ -5,7 +5,7 @@ const faqs = [
   {
     question: "Como funciona a Tag Pet QR Code?",
     answer:
-      "A tag possui um QR Code único que, quando escaneado por qualquer smartphone, direciona para uma página personalizada do seu pet. Além disso, você recebe a localização de quem scaneou a tag (enviada mediante autorização de quem escaneia o QR Code).",
+      "A tag possui um QR Code único que, quando escaneado por qualquer smartphone, direciona para uma página personalizada do seu pet. Além disso, você recebe automaticamente a localização de quem escaneou via WhatsApp.",
   },
   {
     question: "Preciso de aplicativo para usar?",
