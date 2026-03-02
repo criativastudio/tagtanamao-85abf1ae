@@ -1,7 +1,19 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingCart, Plus, Minus, ArrowRight, Package, Truck, CreditCard, Check, X, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  ShoppingCart,
+  Plus,
+  Minus,
+  ArrowRight,
+  Package,
+  Truck,
+  CreditCard,
+  Check,
+  X,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,15 +48,8 @@ export default function Shop() {
     setLoadingProducts(true);
 
     const [productsRes, templatesRes] = await Promise.all([
-      supabase
-        .from("products")
-        .select("*")
-        .eq("is_active", true)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("display_templates")
-        .select("*")
-        .order("created_at", { ascending: false }),
+      supabase.from("products").select("*").eq("is_active", true).order("created_at", { ascending: false }),
+      supabase.from("display_templates").select("*").order("created_at", { ascending: false }),
     ]);
 
     if (productsRes.error) {
@@ -205,7 +210,7 @@ export default function Shop() {
         {/* Benefits */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           {[
-            { icon: Truck, title: "Frete Grátis", desc: "Em todo o Brasil" },
+            { icon: Truck, title: "Frete Grátis", desc: "Envio rápido" },
             { icon: CreditCard, title: "Pagamento Seguro", desc: "PIX, Boleto ou Cartão" },
             { icon: Check, title: "Garantia 1 Ano", desc: "Material Premium" },
           ].map((benefit, index) => (
@@ -283,9 +288,7 @@ export default function Shop() {
                           {(() => {
                             const badge = getProductTypeBadge(product.type);
                             return (
-                              <span className={`text-xs px-2 py-1 rounded ${badge.colorClass}`}>
-                                {badge.label}
-                              </span>
+                              <span className={`text-xs px-2 py-1 rounded ${badge.colorClass}`}>{badge.label}</span>
                             );
                           })()}
                         </div>
@@ -387,11 +390,14 @@ export default function Shop() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
+            style={{ backgroundColor: "rgba(0, 0, 0, 0.9)" }}
             onClick={() => setLightboxData(null)}
           >
             <button
-              onClick={(e) => { e.stopPropagation(); setLightboxData(null); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxData(null);
+              }}
               className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10"
             >
               <X className="w-6 h-6 text-white" />
@@ -399,13 +405,23 @@ export default function Shop() {
             {lightboxData.images.length > 1 && (
               <>
                 <button
-                  onClick={(e) => { e.stopPropagation(); setLightboxData(prev => prev ? { ...prev, index: (prev.index - 1 + prev.images.length) % prev.images.length } : null); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLightboxData((prev) =>
+                      prev ? { ...prev, index: (prev.index - 1 + prev.images.length) % prev.images.length } : null,
+                    );
+                  }}
                   className="absolute left-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10"
                 >
                   <ChevronLeft className="w-6 h-6 text-white" />
                 </button>
                 <button
-                  onClick={(e) => { e.stopPropagation(); setLightboxData(prev => prev ? { ...prev, index: (prev.index + 1) % prev.images.length } : null); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLightboxData((prev) =>
+                      prev ? { ...prev, index: (prev.index + 1) % prev.images.length } : null,
+                    );
+                  }}
                   className="absolute right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10"
                 >
                   <ChevronRight className="w-6 h-6 text-white" />
@@ -426,8 +442,11 @@ export default function Shop() {
                 {lightboxData.images.map((_, i) => (
                   <button
                     key={i}
-                    onClick={(e) => { e.stopPropagation(); setLightboxData(prev => prev ? { ...prev, index: i } : null); }}
-                    className={`w-2.5 h-2.5 rounded-full transition-colors ${i === lightboxData.index ? 'bg-white' : 'bg-white/40'}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLightboxData((prev) => (prev ? { ...prev, index: i } : null));
+                    }}
+                    className={`w-2.5 h-2.5 rounded-full transition-colors ${i === lightboxData.index ? "bg-white" : "bg-white/40"}`}
                   />
                 ))}
               </div>
