@@ -1227,6 +1227,7 @@ export default function Checkout() {
                         appliedCoupon={appliedCoupon}
                         onApplyCoupon={handleApplyCoupon}
                         cartProductIds={cart.map(item => item.product.id)}
+                        cartItems={cart.map(item => ({ productId: item.product.id, unitPrice: item.product.price, quantity: item.quantity }))}
                       />
                     </div>
 

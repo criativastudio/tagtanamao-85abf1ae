@@ -12,10 +12,17 @@ const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const COMBO_IDS = ["pet-tag-pack-2", "pet-tag-pack-3"];
 
+interface CartItem {
+  productId: string;
+  unitPrice: number;
+  quantity: number;
+}
+
 interface ValidateCouponRequest {
   code: string;
   orderTotal: number;
   productIds?: string[];
+  items?: CartItem[];
 }
 
 interface CouponResponse {
@@ -56,7 +63,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { code, orderTotal, productIds }: ValidateCouponRequest = await req.json();
+    const { code, orderTotal, productIds, items }: ValidateCouponRequest = await req.json();
 
     if (!code || typeof code !== "string") {
       return new Response(
@@ -88,14 +95,23 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Check exclude_combos
-    if (coupon.exclude_combos && productIds && productIds.length > 0) {
-      const hasCombo = productIds.some(id => COMBO_IDS.includes(id));
-      if (hasCombo) {
-        return new Response(
-          JSON.stringify({ error: "Este cupom não é válido para combos com desconto" }),
-          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-        );
+    // Check exclude_combos — instead of rejecting, calculate eligible total
+    let comboOnly = false;
+    let eligibleTotal = orderTotal;
+
+    if (coupon.exclude_combos && items && items.length > 0) {
+      const nonComboItems = items.filter(item => !COMBO_IDS.includes(item.productId));
+      eligibleTotal = nonComboItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+      
+      if (eligibleTotal === 0) {
+        comboOnly = true;
+      }
+    } else if (coupon.exclude_combos && productIds && productIds.length > 0) {
+      // Fallback: if items not sent but productIds sent, check if ALL are combos
+      const allCombos = productIds.every(id => COMBO_IDS.includes(id));
+      if (allCombos) {
+        comboOnly = true;
+        eligibleTotal = 0;
       }
     }
 
@@ -152,25 +168,25 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Calculate discount
-    // If there's a product restriction, we'd ideally calculate only on eligible products
-    // But since orderTotal is what we receive, we apply to the full total
-    // The frontend could send eligibleTotal in the future if needed
+    // Calculate discount based on eligible total (excludes combos when applicable)
     let discountAmount = 0;
-    if (coupon.discount_type === "percentage") {
-      discountAmount = orderTotal * (coupon.discount_value / 100);
-    } else {
-      discountAmount = coupon.discount_value;
-    }
+    
+    if (!comboOnly) {
+      if (coupon.discount_type === "percentage") {
+        discountAmount = eligibleTotal * (coupon.discount_value / 100);
+      } else {
+        discountAmount = Math.min(coupon.discount_value, eligibleTotal);
+      }
 
-    // Apply max discount cap
-    if (coupon.max_discount && discountAmount > coupon.max_discount) {
-      discountAmount = coupon.max_discount;
-    }
+      // Apply max discount cap
+      if (coupon.max_discount && discountAmount > coupon.max_discount) {
+        discountAmount = coupon.max_discount;
+      }
 
-    // Can't discount more than order total
-    if (discountAmount > orderTotal) {
-      discountAmount = orderTotal;
+      // Can't discount more than order total
+      if (discountAmount > orderTotal) {
+        discountAmount = orderTotal;
+      }
     }
 
     // Return only necessary coupon info (not all fields)
@@ -185,10 +201,10 @@ const handler = async (req: Request): Promise<Response> => {
       discountAmount: Math.round(discountAmount * 100) / 100, // Round to 2 decimals
     };
 
-    console.log("Coupon validated:", response.code, "discount:", response.discountAmount);
+    console.log("Coupon validated:", response.code, "discount:", response.discountAmount, "comboOnly:", comboOnly);
 
     return new Response(
-      JSON.stringify({ success: true, coupon: response }),
+      JSON.stringify({ success: true, coupon: response, comboOnly }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
 

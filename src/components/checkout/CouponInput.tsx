@@ -20,9 +20,10 @@ interface CouponInputProps {
   appliedCoupon: Coupon | null;
   onApplyCoupon: (coupon: Coupon | null, discountAmount: number) => void;
   cartProductIds?: string[];
+  cartItems?: { productId: string; unitPrice: number; quantity: number }[];
 }
 
-export default function CouponInput({ orderTotal, appliedCoupon, onApplyCoupon, cartProductIds }: CouponInputProps) {
+export default function CouponInput({ orderTotal, appliedCoupon, onApplyCoupon, cartProductIds, cartItems }: CouponInputProps) {
   const { toast } = useToast();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -50,6 +51,7 @@ export default function CouponInput({ orderTotal, appliedCoupon, onApplyCoupon, 
           code: code.toUpperCase().trim(),
           orderTotal,
           productIds: cartProductIds || [],
+          items: cartItems || [],
         },
       });
 
@@ -82,10 +84,17 @@ export default function CouponInput({ orderTotal, appliedCoupon, onApplyCoupon, 
         discountAmount
       );
       
-      toast({
-        title: 'Cupom aplicado!',
-        description: `Desconto de R$ ${discountAmount.toFixed(2)} aplicado.`,
-      });
+      if (data.comboOnly) {
+        toast({
+          title: 'Cupom vinculado',
+          description: 'O desconto não se aplica a combos, mas o cupom foi registrado para esta compra.',
+        });
+      } else {
+        toast({
+          title: 'Cupom aplicado!',
+          description: `Desconto de R$ ${discountAmount.toFixed(2)} aplicado.`,
+        });
+      }
 
     } catch (error: any) {
       console.error('Coupon validation error:', error);
