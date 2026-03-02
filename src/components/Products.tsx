@@ -22,7 +22,11 @@ const Products = () => {
     queryKey: ["landing-products"],
     queryFn: async () => {
       const [productsRes, templatesRes] = await Promise.all([
-        supabase.from("products").select("*").eq("is_active", true).order("created_at", { ascending: false }),
+        supabase
+          .from("products")
+          .select("*")
+          .eq("is_active", true)
+          .order("created_at", { ascending: false }),
         supabase
           .from("display_templates")
           .select("*")
@@ -121,7 +125,7 @@ const Products = () => {
   };
 
   return (
-    <section id="display" className="relative py-24 overflow-hidden">
+    <section id="produtos" className="relative py-24 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 bg-grid opacity-20" />
 
