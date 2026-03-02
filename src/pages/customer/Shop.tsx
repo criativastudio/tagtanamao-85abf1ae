@@ -203,7 +203,7 @@ export default function Shop() {
             Segurança Inteligente para <span className="text-gradient">Seu Pet</span>
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Proteja seu melhor amigo com tecnologia de ponta. QR Codes dinâmicos com localização em tempo real.
+            Proteja seu melhor amigo com tecnologia. Notificação imediata com a localização da leitura do QR Code..
           </p>
         </motion.div>
 
