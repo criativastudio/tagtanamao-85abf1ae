@@ -132,7 +132,7 @@ const Pricing = () => {
   };
 
   return (
-    <section id="produtos" className="relative py-24 overflow-hidden">
+    <section id="precos" className="relative py-24 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 bg-radial-gradient" />
 
