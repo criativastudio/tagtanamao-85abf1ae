@@ -55,7 +55,7 @@ const pricingPlans = [
       "Notificações via WhatsApp",
       "Gestão centralizada",
       "Suporte",
-      "23,00% OFF por tempo limitado",
+      "33,00% OFF por tempo limitado",
     ],
     popular: false,
   },
