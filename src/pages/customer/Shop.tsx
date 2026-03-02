@@ -212,7 +212,7 @@ export default function Shop() {
           {[
             { icon: Truck, title: "Envio rápido", desc: "Atendemos todo estado de Rondônia" },
             { icon: CreditCard, title: "Pagamento Seguro", desc: "PIX, Boleto ou Cartão" },
-            { icon: Check, title: "Garantia 1 Ano", desc: "Material Premium" },
+            { icon: Check, title: "Garantia 90 dias", desc: "Material resistente e de alta qualidade" },
           ].map((benefit, index) => (
             <motion.div
               key={benefit.title}
