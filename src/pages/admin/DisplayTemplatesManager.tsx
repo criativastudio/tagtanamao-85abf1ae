@@ -205,7 +205,7 @@ export default function DisplayTemplatesManager() {
   const deactivateDisplay = async (displayId: string) => {
     const { error } = await supabase
       .from("business_displays")
-      .update({ active_template_id: null, template_config: {} })
+      .update({ active_template_id: null })
       .eq("id", displayId);
 
     if (error) {

@@ -218,7 +218,7 @@ export default function TemplatesTabContent() {
   };
 
   const deactivateDisplay = async (displayId: string) => {
-    const { error } = await supabase.from('business_displays').update({ active_template_id: null, template_config: {} }).eq('id', displayId);
+    const { error } = await supabase.from('business_displays').update({ active_template_id: null }).eq('id', displayId);
     if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     else { toast({ title: 'Template desativado' }); fetchData(); }
   };
