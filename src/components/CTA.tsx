@@ -31,14 +31,11 @@ const CTA = () => {
             que seu amigo irá voltar para casa.
           </p>
 
-         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-          <a href="precos">
-          <Button variant="hero" size="xl">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+            <Button variant="hero" size="xl">
               Comprar com Desconto
-                 <ArrowRight className="w-5 h-5" />
-              </Button>
-            </a>
-          </div>
+              <ArrowRight className="w-5 h-5" />
+            </Button>
 
             <a
               href="https://wa.me/5569993248849?text=Olá!%20Vim%20pelo%20site%20e%20quero%20comprar%20uma%20tag%20de%20identificação%20ou%20um%20display%20QR%20Code.%20Pode%20me%20ajudar?%20Meu%20nome%20é:"
