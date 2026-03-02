@@ -1,28 +1,33 @@
 
 
-## Plano: Corrigir desativação do template Netflix
+## Plano: Cupons aceitos em compras com combo, mas desconto aplicado apenas nos itens não-combo
 
-### Problema
-Ao desativar o template, o código faz `update({ active_template_id: null, template_config: {} })` — isso apaga todo o `template_config` (mídias, textos, botões especiais). Quando o usuário reativa, os dados foram perdidos.
+### Problema atual
+Quando `exclude_combos = true` e o carrinho contém um combo, o edge function **rejeita o cupom inteiro** (retorna erro 400). O usuário não consegue usar o cupom, e a compra não é vinculada ao cupom para métricas.
 
-### Correção
-Remover `template_config: {}` de todas as chamadas de desativação. Apenas setar `active_template_id: null`. Assim os dados ficam preservados no `template_config` e, ao reativar, tudo é restaurado.
+### Solução
+Em vez de rejeitar, o edge function deve **aceitar o cupom** mas calcular o desconto apenas sobre os itens que **não são combo**. O frontend precisa enviar os preços individuais dos itens para que o cálculo seja feito corretamente no backend.
 
-### Arquivos afetados (4 ocorrências)
+### Alterações
 
-1. **`src/components/display/DisplayTemplateSelector.tsx`** (linha 113)
-   - `update({ active_template_id: null })` — remover `template_config: {}`
+#### 1. Edge function `supabase/functions/validate-coupon/index.ts`
+- Receber novo campo `items` no body: `{ productId: string, unitPrice: number, quantity: number }[]`
+- Quando `exclude_combos = true`, filtrar os itens removendo combos (IDs `pet-tag-pack-*`)
+- Calcular `eligibleTotal` somando apenas os itens não-combo
+- Se `eligibleTotal = 0` (só combos no carrinho), retornar `discountAmount: 0` com flag `comboOnly: true` e mensagem informativa (mas **não rejeitar**)
+- Aplicar o desconto sobre `eligibleTotal` em vez de `orderTotal`
+- Retornar o cupom normalmente para que seja vinculado ao pedido
 
-2. **`src/pages/customer/DisplayTemplateManager.tsx`** (linha 132)
-   - Mesmo fix
+#### 2. `src/components/checkout/CouponInput.tsx`
+- Adicionar prop `cartItems: { productId: string, unitPrice: number, quantity: number }[]`
+- Enviar `items` no body da chamada ao edge function
+- Tratar resposta com `comboOnly: true` mostrando toast informativo ("Cupom vinculado, mas desconto não se aplica a combos")
 
-3. **`src/pages/admin/DisplayTemplatesManager.tsx`** (linha 208)
-   - Mesmo fix
+#### 3. `src/pages/customer/Checkout.tsx`
+- Passar `cartItems` ao `CouponInput` com os dados de preço/quantidade do carrinho
 
-4. **`src/components/admin/TemplatesTabContent.tsx`** (linha 221)
-   - Mesmo fix
-
-### Comportamento após correção
-- **Desativar** → `active_template_id = null`, página pública exibe layout padrão (Bio Page), dados do Netflix permanecem em `template_config`
-- **Reativar** → `active_template_id` volta ao ID do template, todos os dados anteriores são restaurados automaticamente
+### Comportamento esperado
+- Carrinho com combo + produto normal: desconto aplica só no produto normal, cupom vinculado ao pedido
+- Carrinho só com combos: cupom aceito com desconto R$ 0,00, vinculado ao pedido para métricas
+- Carrinho sem combos: comportamento normal (desconto total)
 
