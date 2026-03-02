@@ -32,7 +32,7 @@ const CTA = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-            <Button variant="#precos" size="xl">
+            <Button variant="hero" size="xl">
               Comprar com Desconto
               <ArrowRight className="w-5 h-5" />
             </Button>
