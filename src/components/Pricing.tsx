@@ -14,7 +14,7 @@ const pricingPlans = [
     originalPrice: "79,90",
     description: "Perfeito para quem tem um pet",
     features: [
-      "1 Tag Pet QR Code Premium",
+      "1 Tag Pet QR Code",
       "Página personalizada do pet"
       "Adicione informação de recompensa",
       "Geolocalização (enviada mediante autorização de quem escaneia o QR Code)",
@@ -31,7 +31,7 @@ const pricingPlans = [
     originalPrice: "159,80",
     description: "Ideal para famílias com 2 pets",
     features: [
-      "2 Tags Pet QR Code Premium",
+      "2 Tags Pet QR Code",
       "Páginas personalizadas do pet",
       "Adicione informação de recompensa",
       "Geolocalização (enviada mediante autorização de quem escaneia o QR Code)",
@@ -48,7 +48,7 @@ const pricingPlans = [
     originalPrice: "239,70",
     description: "Melhor custo-benefício",
     features: [
-      "3 Tags Pet QR Code Premium",
+      "3 Tags Pet QR Code",
       "Páginas personalizadas do pet",
       "Adicione informação de recompensa",
       "Geolocalização (enviada mediante autorização de quem escaneia o QR Code)",
