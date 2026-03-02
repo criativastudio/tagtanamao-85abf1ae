@@ -13,11 +13,11 @@ const Navbar = () => {
     loading
   } = useAuth();
   const navLinks = [{
-    name: "Produtos",
-    href: "#produtos"
+    name: "Displays",
+    href: "#displays"
   }, {
-    name: "Preços",
-    href: "#precos"
+    name: "Tag Pet",
+    href: "#tagpet
   }, {
     name: "Como Funciona",
     href: "#como-funciona"
