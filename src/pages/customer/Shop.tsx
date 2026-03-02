@@ -200,7 +200,7 @@ export default function Shop() {
         {/* Hero */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Tags QR Premium para seu <span className="text-gradient">Pet</span>
+            Segurança Inteligente para <span className="text-gradient">Seu Pet</span>
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Proteja seu melhor amigo com tecnologia de ponta. QR Codes dinâmicos com localização em tempo real.
