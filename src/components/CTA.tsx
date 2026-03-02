@@ -32,6 +32,7 @@ const CTA = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+            <a href="#preco" className="hover:text-primary transition-colors">
             <Button variant="hero" size="xl">
               Comprar com Desconto
               <ArrowRight className="w-5 h-5" />
