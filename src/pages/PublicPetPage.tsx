@@ -101,7 +101,7 @@ const PublicPetPage = () => {
         setLoading(false);
         return;
       }
-console.log("Número que está sendo enviado:", numeroWhatsapp);
+
       try {
         // Fetch pet tag via secure edge function that respects privacy settings
         
