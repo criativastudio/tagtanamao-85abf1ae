@@ -10,6 +10,7 @@ export interface Product {
   is_active: boolean | null;
   gallery_images: string[] | null;
   created_at: string | null;
+  visibility?: string;
 }
 
 export interface Order {
