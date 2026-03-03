@@ -48,7 +48,7 @@ export default function Shop() {
     setLoadingProducts(true);
 
     const [productsRes, templatesRes] = await Promise.all([
-      supabase.from("products").select("*").eq("is_active", true).order("created_at", { ascending: false }),
+      supabase.from("products").select("*").eq("is_active", true).in("visibility", ["shop", "both"]).order("created_at", { ascending: false }),
       supabase.from("display_templates").select("*").order("created_at", { ascending: false }),
     ]);
 

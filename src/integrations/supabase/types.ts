@@ -938,6 +938,7 @@ export type Database = {
           name: string
           price: number
           type: string
+          visibility: string
           weight: number | null
           width: number | null
         }
@@ -953,6 +954,7 @@ export type Database = {
           name: string
           price: number
           type: string
+          visibility?: string
           weight?: number | null
           width?: number | null
         }
@@ -968,6 +970,7 @@ export type Database = {
           name?: string
           price?: number
           type?: string
+          visibility?: string
           weight?: number | null
           width?: number | null
         }

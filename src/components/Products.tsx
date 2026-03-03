@@ -26,6 +26,7 @@ const Products = () => {
           .from("products")
           .select("*")
           .eq("is_active", true)
+          .in("visibility", ["landing", "both"])
           .order("created_at", { ascending: false }),
         supabase
           .from("display_templates")

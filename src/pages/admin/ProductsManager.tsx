@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -38,7 +39,7 @@ export default function ProductsManager() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [activeTab, setActiveTab] = useState<string>('pet_tag');
 
-  const [formData, setFormData] = useState({ name: '', description: '', price: '', type: 'pet_tag', is_active: true });
+  const [formData, setFormData] = useState({ name: '', description: '', price: '', type: 'pet_tag', is_active: true, visibility: 'both' });
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
 
@@ -60,12 +61,12 @@ export default function ProductsManager() {
     const type = forceType || activeTab;
     if (product) {
       setEditingProduct(product);
-      setFormData({ name: product.name, description: product.description || '', price: product.price.toString(), type: product.type, is_active: product.is_active ?? true });
+      setFormData({ name: product.name, description: product.description || '', price: product.price.toString(), type: product.type, is_active: product.is_active ?? true, visibility: (product as any).visibility || 'both' });
       setImageUrl(product.image_url);
       setGalleryImages(product.gallery_images || []);
     } else {
       setEditingProduct(null);
-      setFormData({ name: '', description: '', price: '', type, is_active: true });
+      setFormData({ name: '', description: '', price: '', type, is_active: true, visibility: 'both' });
       setImageUrl(null);
       setGalleryImages([]);
     }
@@ -80,6 +81,7 @@ export default function ProductsManager() {
     const productData = {
       name: formData.name, description: formData.description || null, price: parseFloat(formData.price),
       type: formData.type, is_active: formData.is_active, image_url: imageUrl, gallery_images: galleryImages,
+      visibility: formData.visibility,
     };
     const { error } = editingProduct
       ? await supabase.from('products').update(productData).eq('id', editingProduct.id)
@@ -221,6 +223,23 @@ export default function ProductsManager() {
               <div className="flex items-center justify-between">
                 <Label htmlFor="is_active">Produto Ativo</Label>
                 <Switch id="is_active" checked={formData.is_active} onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))} />
+              </div>
+              <div className="space-y-3">
+                <Label>Visibilidade</Label>
+                <RadioGroup value={formData.visibility} onValueChange={(value) => setFormData(prev => ({ ...prev, visibility: value }))}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="landing" id="vis-landing" />
+                    <Label htmlFor="vis-landing" className="font-normal cursor-pointer">Mostrar apenas na Landing Page</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="shop" id="vis-shop" />
+                    <Label htmlFor="vis-shop" className="font-normal cursor-pointer">Mostrar apenas na Loja</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="both" id="vis-both" />
+                    <Label htmlFor="vis-both" className="font-normal cursor-pointer">Mostrar em ambos</Label>
+                  </div>
+                </RadioGroup>
               </div>
             </div>
             <DialogFooter>
