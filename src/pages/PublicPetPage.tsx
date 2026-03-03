@@ -104,7 +104,6 @@ const PublicPetPage = () => {
 
       try {
         // Fetch pet tag via secure edge function that respects privacy settings
-        
         const { data, error } = await supabase.functions.invoke("get-pet-tag", {
           body: { qrCode },
         });
