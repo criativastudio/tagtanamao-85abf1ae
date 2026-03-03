@@ -1,31 +1,20 @@
 
 
-## Plano: Campo de visibilidade por produto
+## Status: Não implementado
 
-### Banco de dados
-Adicionar coluna `visibility` na tabela `products` com 3 valores possíveis: `landing`, `shop`, `both` (default: `both`).
+A funcionalidade de visibilidade por produto **ainda não foi implementada**. O plano foi aprovado na conversa anterior, mas nenhuma alteração foi executada:
 
-```sql
-ALTER TABLE products ADD COLUMN visibility TEXT NOT NULL DEFAULT 'both';
-```
+- **Banco de dados**: A coluna `visibility` **não existe** na tabela `products`.
+- **Admin**: O formulário de criação/edição **não possui** o campo de seleção (Landing / Loja / Ambos).
+- **Landing Page** (`src/components/Products.tsx`): **Não filtra** por visibilidade.
+- **Loja** (`src/pages/customer/Shop.tsx`): **Não filtra** por visibilidade.
+- **Tipo** (`src/types/ecommerce.ts`): **Não possui** o campo `visibility`.
 
-### Admin (`src/pages/admin/ProductsManager.tsx`)
-Adicionar ao formulário de criação/edição um campo RadioGroup com 3 opções:
-- Mostrar apenas na Landing Page (`landing`)
-- Mostrar apenas na Loja (`shop`)
-- Mostrar em ambos (`both`)
+### Plano de implementação
 
-O `formData` ganha o campo `visibility` (default `both`). O `handleOpenEditor` carrega o valor salvo. O `handleSaveProduct` inclui `visibility` no `productData`.
-
-### Tipo (`src/types/ecommerce.ts`)
-Adicionar `visibility: string` ao `Product` interface.
-
-### Landing Page (`src/components/Products.tsx`)
-Filtrar produtos regulares: adicionar `.in('visibility', ['landing', 'both'])` na query.
-
-### Loja (`src/pages/customer/Shop.tsx`)
-Filtrar produtos regulares: adicionar `.in('visibility', ['shop', 'both'])` na query.
-
-### Templates (`display_templates`)
-Templates já possuem controle `show_on_landing` separado. Esse novo campo aplica-se apenas à tabela `products`.
+1. **Migração**: Adicionar coluna `visibility TEXT NOT NULL DEFAULT 'both'` à tabela `products`.
+2. **Tipo**: Adicionar `visibility: string` ao `Product` em `src/types/ecommerce.ts`.
+3. **Admin** (`src/pages/admin/ProductsManager.tsx`): Adicionar RadioGroup ao formulário com as 3 opções, incluir `visibility` no `formData`, `handleOpenEditor` e `handleSaveProduct`.
+4. **Landing Page** (`src/components/Products.tsx`): Adicionar `.in('visibility', ['landing', 'both'])` na query.
+5. **Loja** (`src/pages/customer/Shop.tsx`): Adicionar `.in('visibility', ['shop', 'both'])` na query.
 
