@@ -3,6 +3,13 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
 
 const CTA = () => {
+  const handleScrollToPricing = () => {
+    const section = document.getElementById("precos");
+    if (section) {
+      section.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
     <section className="relative py-24 overflow-hidden">
       {/* Background effects */}
@@ -32,7 +39,7 @@ const CTA = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-            <Button variant="hero" size="xl">
+            <Button variant="hero" size="xl" onClick={handleScrollToPricing}>
               Comprar com Desconto
               <ArrowRight className="w-5 h-5" />
             </Button>
